@@ -17,20 +17,20 @@ class UIManager {
   }
 
   init() {
-    this.applyTheme(state.settings.theme || 'green');
+    this.applyTheme(state.settings.theme || 'navy');
     this.bindEvents();
     this.renderAll();
     this.initConfettiCanvas();
   }
 
   applyTheme(themeName) {
-    document.documentElement.setAttribute('data-theme', themeName);
+    const activeTheme = ['navy', 'sand', 'midnight'].includes(themeName) ? themeName : 'navy';
+    document.documentElement.setAttribute('data-theme', activeTheme);
     const themeIconEl = document.getElementById('theme-btn-icon');
     if (themeIconEl) {
-      if (themeName === 'yellow') themeIconEl.textContent = '🍯';
-      else if (themeName === 'red') themeIconEl.textContent = '🍅';
-      else if (themeName === 'obsidian') themeIconEl.textContent = '🌑';
-      else themeIconEl.textContent = '🌿';
+      if (activeTheme === 'sand') themeIconEl.textContent = '◇';
+      else if (activeTheme === 'midnight') themeIconEl.textContent = '◆';
+      else themeIconEl.textContent = '◈';
     }
     this.syncModeColors();
   }
@@ -574,13 +574,13 @@ class UIManager {
     const btnToggleTheme = document.getElementById('btn-toggle-theme');
     if (btnToggleTheme) {
       btnToggleTheme.addEventListener('click', () => {
-        const current = state.settings.theme || 'green';
-        const themes = ['green', 'yellow', 'red', 'obsidian'];
+        const current = state.settings.theme || 'navy';
+        const themes = ['navy', 'sand', 'midnight'];
         const nextIndex = (themes.indexOf(current) + 1) % themes.length;
         const nextTheme = themes[nextIndex];
         state.updateSettings({ theme: nextTheme });
         this.applyTheme(nextTheme);
-        const nameMap = { green: '🌿 Forest Sage Green', yellow: '🍯 Golden Honey Yellow', red: '🍅 Classic Crimson Red', obsidian: '🌑 Dark Obsidian' };
+        const nameMap = { navy: 'Navy & Coral', sand: 'Warm Sand', midnight: 'Deep Midnight' };
         notifier.notify('Theme Switched', nameMap[nextTheme] || nextTheme);
       });
     }

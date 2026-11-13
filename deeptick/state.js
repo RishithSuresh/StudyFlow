@@ -26,7 +26,7 @@ const DEFAULT_SETTINGS = {
   volume: 75,                 // 0 - 100
   repeatSound: false,
   repeatCount: 2,
-  theme: 'green',             // 'green', 'yellow', 'red', 'obsidian'
+  theme: 'navy',              // 'navy', 'sand', 'midnight'
   showCompletedTasks: true,
   autoArchiveCompleted: false,
   confirmDelete: true
