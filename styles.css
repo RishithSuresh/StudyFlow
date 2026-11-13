@@ -46,7 +46,7 @@ button,input,select,textarea{font-family:inherit}
 .mini-note p,.profile small{color:#C7D0DD}
 .profile{border-color:rgba(255,255,255,.16)}
 .avatar{background:var(--sf-coral);color:var(--sf-surface)}
-.main{padding:42px clamp(28px,5vw,76px) 28px}
+.main{padding:58px clamp(28px,5vw,76px) 28px}
 .topbar{margin-bottom:42px}
 .eyebrow,.side-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--sf-navy-soft)}
 .topbar h1{font-size:clamp(24px,2.4vw,34px);line-height:1.1;letter-spacing:-1.1px;color:var(--sf-navy)}
@@ -92,9 +92,10 @@ footer{color:var(--sf-navy-soft)}
 /* Focus timer */
 #view-focus{margin:0 -1px;padding:4px 0 18px}
 .focus-mode>.main>footer{display:none}
-.focus-mode>.main{padding-top:0}
+.focus-mode>.main{padding-top:26px}
 .focus-mode>.main>.topbar{margin-bottom:12px}
 .focus-mode #quick-add{display:none}
+body:not(.overview-view) #quick-add{display:none}
 .focus-mode .dt-brand-row{display:none}
 .focus-mode .dt-focus-header{justify-content:flex-end;margin-bottom:14px}
 #confetti-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:30}
@@ -162,6 +163,31 @@ footer{color:var(--sf-navy-soft)}
 .dropdown-item-danger{color:var(--sf-coral)}
 .tasks-empty-state{padding:24px 8px;color:var(--sf-navy-soft);font-size:12px;text-align:center}
 
+/* DeepTick task dialog */
+.modal-dialog{width:min(650px,calc(100% - 32px));padding:0;overflow:hidden;background:var(--sf-surface);color:var(--sf-navy)}
+.modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:28px 30px 18px}
+.modal-title{margin:0;color:var(--sf-navy);font-size:25px;line-height:1.15;letter-spacing:-.7px}
+.modal-close-btn{width:34px;height:34px;border:1px solid var(--sf-border);border-radius:9px;background:var(--sf-sand);color:var(--sf-navy-soft);font-size:20px;line-height:1}
+.modal-close-btn:hover{border-color:var(--sf-coral);color:var(--sf-coral)}
+.modal-body{padding:0 30px 8px}
+.form-group{margin:0 0 17px}
+.form-label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:7px;color:var(--sf-navy);font-size:12px;font-weight:700}
+.form-input,.form-textarea,.form-select{display:block;width:100%;border:1px solid var(--sf-border);border-radius:9px;background:#fff;color:var(--sf-navy);padding:11px 12px;outline:none}
+.form-textarea{min-height:84px;resize:vertical}
+.form-input:focus,.form-textarea:focus,.form-select:focus{border-color:var(--sf-coral);box-shadow:0 0 0 3px rgba(217,107,82,.12)}
+.dual-estimate-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dual-estimate-grid>div:not(.dual-estimate-formula){min-width:0}
+.dual-estimate-formula{grid-column:1 / -1;padding:10px 12px;border-radius:9px;background:var(--sf-sand);color:var(--sf-navy-soft);font-size:11px;line-height:1.45}
+.modal-footer{display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:18px 30px 26px;border-top:1px solid var(--sf-border)}
+.modal-footer-between{justify-content:space-between}
+.modal-footer-actions{display:flex;gap:9px}
+.btn{border:0;border-radius:9px;padding:10px 15px;font-size:12px;font-weight:700}
+.btn-primary{background:var(--sf-coral);color:var(--sf-surface)}
+.btn-primary:hover{background:#B9533D}
+.btn-secondary{background:var(--sf-sand);color:var(--sf-navy)}
+.btn-danger{background:#f8e1db;color:#a64332}
+.text-modal-muted{color:var(--sf-navy-soft)}
+
 @media(max-width:950px){
   .dt-main{grid-template-columns:1fr}
   .timer-box{grid-row:auto;min-height:0}
@@ -169,7 +195,7 @@ footer{color:var(--sf-navy-soft)}
   .bottom-summary-box{order:3}
 }
 @media(max-width:650px){
-  .main{padding:22px 15px}
+  .main{padding:32px 15px}
   .topbar{margin-bottom:28px}
   .topbar h1{font-size:22px}
   .top-actions .icon-btn{display:none}
@@ -183,4 +209,10 @@ footer{color:var(--sf-navy-soft)}
   .section-heading>.primary-btn{align-self:stretch}
   .bottom-summary-box{padding:15px 5px}
   .summary-value{font-size:11px}
+  .modal-header{padding:23px 20px 15px}
+  .modal-title{font-size:21px}
+  .modal-body{padding:0 20px 5px}
+  .modal-footer{padding:15px 20px 20px}
+  .dual-estimate-grid{grid-template-columns:1fr}
+  .dual-estimate-formula{grid-column:auto}
 }
