@@ -12,7 +12,7 @@ let currentView='overview',taskFilter='all',reviewFilter='all',calDate=new Date(
 function loadWorkspaceForUser(userId){storageKey=`${KEY}:${userId}`;try{db={...starter(),...JSON.parse(localStorage.getItem(storageKey)||'{}')}}catch{db=starter()}render()}
 window.addEventListener('studyflow:authenticated',event=>loadWorkspaceForUser(event.detail.user.id));
 function go(v){currentView=v;document.body.classList.toggle('focus-mode',v==='focus');document.body.classList.toggle('overview-view',v==='overview');$$('.view').forEach(x=>x.classList.toggle('active',x.id===`view-${v}`));$$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));let titles={overview:"Good morning. Let's make progress.",subjects:'Your subjects, your progress.',calendar:'Make time for what matters.',tasks:'Everything you need to get done.',reviews:'Turn mistakes into marks.',focus:'A little focus goes a long way.',skills:'Build skills beyond the syllabus.'};$('#page-title').textContent=titles[v];if(v!=='focus')document.title='StudyFlow — Study command centre';render()}
-$('#nav').addEventListener('click',e=>{let b=e.target.closest('[data-view]');if(b)go(b.dataset.view)});
+document.addEventListener('click',e=>{let b=e.target.closest('[data-view]');if(b)go(b.dataset.view)});
 document.addEventListener('click',e=>{let b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
 function progress(){let all=db.subjects.flatMap(s=>s.topics||[]),done=all.filter(t=>t.done).length;return {all:all.length,done,pct:all.length?Math.round(done/all.length*100):0}}
 function taskMeta(t){return `${t.type||'Study'}${t.subject?' · '+t.subject:''}${t.due?' · Due '+fmt(t.due):''}`}
