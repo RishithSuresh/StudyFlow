@@ -2,13 +2,15 @@ const KEY='studyflow-v1';
 const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const uid=()=>Math.random().toString(36).slice(2,10);
 const starter=()=>({subjects:[],tasks:[],events:[],mistakes:[],skills:[],focus:{minutes:{},sessions:0}});
-let db;try{db={...starter(),...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{db=starter()}
-const save=()=>{localStorage.setItem(KEY,JSON.stringify(db));render()};
+let storageKey=KEY,db;try{db={...starter(),...JSON.parse(localStorage.getItem(storageKey)||'{}')}}catch{db=starter()}
+const save=()=>{localStorage.setItem(storageKey,JSON.stringify(db));render()};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
 const toast=m=>{let t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
 let currentView='overview',taskFilter='all',reviewFilter='all',calDate=new Date(),selectedDate=todayISO(),modalAction=null;
+function loadWorkspaceForUser(userId){storageKey=`${KEY}:${userId}`;try{db={...starter(),...JSON.parse(localStorage.getItem(storageKey)||'{}')}}catch{db=starter()}render()}
+window.addEventListener('studyflow:authenticated',event=>loadWorkspaceForUser(event.detail.user.id));
 function go(v){currentView=v;document.body.classList.toggle('focus-mode',v==='focus');document.body.classList.toggle('overview-view',v==='overview');$$('.view').forEach(x=>x.classList.toggle('active',x.id===`view-${v}`));$$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));let titles={overview:"Good morning. Let's make progress.",subjects:'Your subjects, your progress.',calendar:'Make time for what matters.',tasks:'Everything you need to get done.',reviews:'Turn mistakes into marks.',focus:'A little focus goes a long way.',skills:'Build skills beyond the syllabus.'};$('#page-title').textContent=titles[v];if(v!=='focus')document.title='StudyFlow — Study command centre';render()}
 $('#nav').addEventListener('click',e=>{let b=e.target.closest('[data-view]');if(b)go(b.dataset.view)});
 document.addEventListener('click',e=>{let b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});

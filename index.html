@@ -5,7 +5,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-</head><body class="overview-view">
+</head><body class="overview-view auth-pending">
+<section id="auth-gate" class="auth-gate" aria-labelledby="auth-title">
+  <div class="auth-card">
+    <div class="auth-brand"><span class="brand-mark">s.</span><span>studyflow<small>YOUR PRIVATE STUDY SPACE</small></span></div>
+    <div class="auth-eyebrow">WELCOME TO STUDYFLOW</div>
+    <h1 id="auth-title">Make space for your progress.</h1>
+    <p class="auth-intro">Create a private workspace for your subjects, tasks and focus sessions.</p>
+    <div class="auth-tabs" role="tablist">
+      <button type="button" class="auth-tab active" data-auth-mode="signin" role="tab">Sign in</button>
+      <button type="button" class="auth-tab" data-auth-mode="signup" role="tab">Create account</button>
+    </div>
+    <form id="auth-form" class="auth-form">
+      <label id="auth-name-field" hidden>Name<input id="auth-name" name="name" autocomplete="name"></label>
+      <label>Email<input id="auth-email" name="email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" name="password" type="password" minlength="8" autocomplete="current-password" required></label>
+      <p id="auth-error" class="auth-error" role="alert" hidden></p>
+      <button class="primary-btn auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-status" id="auth-status">Your data is private to your account.</p>
+  </div>
+</section>
 <aside class="sidebar">
   <a class="brand" href="#"><span class="brand-mark">s.</span><span>studyflow<small>YOUR STUDY SPACE</small></span></a>
   <div class="side-label">WORKSPACE</div>
@@ -332,4 +352,5 @@
   </dialog>
 
 <script type="module" src="app.js"></script>
-<script type="module" src="deeptick/init.js"></script></body></html>
+<script type="module" src="deeptick/init.js"></script>
+<script type="module" src="auth-client.js"></script></body></html>
