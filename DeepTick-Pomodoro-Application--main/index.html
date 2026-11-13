@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeepTick - Focus & Time Management</title>
+  <meta name="description"
+    content="A minimalist, focused Pomodoro productivity application with dual task estimation, real-time finish time calculation, synthesized audio chimes, and deep analytics.">
+  <meta name="theme-color" content="#ba4949">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+  <!-- Google Fonts: Outfit and JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="/src/css/variables.css">
+  <link rel="stylesheet" href="/src/css/main.css">
+  <link rel="stylesheet" href="/src/css/timer.css">
+  <link rel="stylesheet" href="/src/css/tasks.css">
+  <link rel="stylesheet" href="/src/css/stats.css">
+  <link rel="stylesheet" href="/src/css/modals.css">
+</head>
+
+<body>
+  <!-- Top Progress Bar -->
+  <div id="top-progress-bar"></div>
+
+  <!-- Confetti Canvas for Celebrations -->
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+  <!-- Toast Notification Tray -->
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Centered App Container -->
+  <div class="app-container">
+    <!-- Header Navigation -->
+    <header class="app-header">
+      <a href="#" class="brand">
+        <span class="brand-icon">🍅</span>
+        <span>DeepTick</span>
+      </a>
+
+      <div class="header-actions">
+        <!-- Streak Counter -->
+        <div class="header-streak-badge" title="Daily Streak">
+          <span>🔥</span>
+          <span id="header-streak-count">1d</span>
+        </div>
+
+        <!-- Quick Theme Switcher Button -->
+        <button id="btn-toggle-theme" class="header-btn" title="Switch Theme (Green / Yellow / Red)"
+          aria-label="Switch Theme">
+          <span id="theme-btn-icon">🌿</span>
+        </button>
+
+        <!-- Analytics Button -->
+        <button id="btn-open-analytics" class="header-btn" title="View Focus Report" aria-label="View Focus Report">
+          <span>📊</span>
+        </button>
+
+        <!-- Settings Button -->
+        <button id="btn-open-settings" class="header-btn" title="Open Settings" aria-label="Open Settings">
+          <span>⚙️</span>
+        </button>
+
+        <!-- Shortcuts Button -->
+        <button id="btn-shortcuts-help" class="header-btn" title="Keyboard Shortcuts (?)"
+          aria-label="Keyboard Shortcuts">
+          <span>⌨️</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area: Centered Single Column -->
+    <main>
+      <!-- 1. Central Timer Box -->
+      <section class="timer-box" aria-label="Pomodoro Timer">
+        <!-- Mode Selector Pills -->
+        <div class="timer-mode-pills" role="tablist" aria-label="Timer Mode Switcher">
+          <button class="mode-pill active" data-mode="pomodoro" role="tab" aria-selected="true">Pomodoro</button>
+          <button class="mode-pill" data-mode="short_break" role="tab" aria-selected="false">Short Break</button>
+          <button class="mode-pill" data-mode="long_break" role="tab" aria-selected="false">Long Break</button>
+        </div>
+
+        <!-- Big Bold Countdown Digits with Left - and Right + Adjustments -->
+        <div class="timer-display-area">
+          <button class="adjust-side-btn left" data-adjust="-300" title="Decrease by 5 minutes"
+            aria-label="Decrease 5 minutes">
+            −
+          </button>
+          <div id="timer-digits" class="timer-digits">30:00</div>
+          <button class="adjust-side-btn right" data-adjust="300" title="Increase by 5 minutes"
+            aria-label="Increase 5 minutes">
+            +
+          </button>
+        </div>
+
+        <!-- Primary Controls -->
+        <div class="timer-controls-wrap">
+          <button id="btn-timer-reset" class="btn-icon-control" title="Reset Timer (R)" aria-label="Reset Timer">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+            </svg>
+          </button>
+
+          <button id="btn-timer-toggle" class="btn-start-large" title="Start/Pause Timer (Space)">
+            START
+          </button>
+
+          <button id="btn-timer-skip" class="btn-icon-control" title="Skip Session (S)" aria-label="Skip Session">
+            <svg viewBox="0 0 24 24">
+              <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Active Task Subtitle Banner -->
+        <div id="timer-active-task-pill" class="active-task-label-wrap" title="Click to view tasks">
+          <span id="header-cycle-count" class="active-task-cycle-num">#1 of 4 focus sessions</span>
+          <span id="active-task-name-text" class="active-task-name-text">General Focus Session</span>
+        </div>
+      </section>
+
+      <!-- 2. Centered Tasks List -->
+      <section class="tasks-section" aria-label="Task Management">
+        <div class="tasks-header-row">
+          <span class="tasks-title-text">Tasks</span>
+          <div class="tasks-header-actions">
+            <div class="tasks-dropdown-wrap">
+              <button id="btn-tasks-menu" class="tasks-menu-btn" title="Task options"
+                aria-label="Task options" aria-haspopup="true" aria-expanded="false">
+                ⋮
+              </button>
+              <div id="tasks-dropdown-menu" class="tasks-dropdown-menu" role="menu">
+                <button id="btn-clear-finished-tasks" class="tasks-dropdown-item" role="menuitem">
+                  <span class="dropdown-item-icon">🧹</span>
+                  <span>Clear finished tasks</span>
+                </button>
+                <button id="btn-clear-all-tasks" class="tasks-dropdown-item dropdown-item-danger" role="menuitem">
+                  <span class="dropdown-item-icon">🗑️</span>
+                  <span>Clear all tasks</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tasks Container -->
+        <div id="tasks-list" class="tasks-list" aria-live="polite">
+          <!-- Dynamically populated task cards -->
+        </div>
+
+        <!-- Add Task Button -->
+        <button id="btn-new-task" class="btn-add-task-dashed">
+          <span>+ Add Task</span>
+        </button>
+      </section>
+
+      <!-- 3. Minimalist Bottom Summary Bar -->
+      <footer class="bottom-summary-box">
+        <div class="summary-stat-col">
+          <span class="summary-label">Pomos</span>
+          <span id="metric-daily-pomos" class="summary-value">0 / 4</span>
+        </div>
+        <div class="summary-stat-col">
+          <span class="summary-label">Finish At</span>
+          <span id="estimated-finish-time" class="summary-value">~10:45 PM</span>
+        </div>
+        <div class="summary-stat-col">
+          <span class="summary-label">Focused Time</span>
+          <span id="metric-daily-focus" class="summary-value">0h 00m</span>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- =========================================================================
+       MODALS & DIALOGS
+       ========================================================================= -->
+
+  <!-- 1. Task Create/Edit Modal -->
+  <dialog id="modal-task" class="modal-dialog" aria-labelledby="task-modal-title">
+    <div class="modal-header">
+      <h2 id="task-modal-title" class="modal-title">What are you working on?</h2>
+      <button class="modal-close-btn" data-close-modal aria-label="Close dialog">&times;</button>
+    </div>
+    <form id="form-task">
+      <div class="modal-body">
+        <input type="hidden" id="task-input-id" value="">
+
+        <div class="form-group">
+          <label for="task-input-title" class="form-label">Task Title *</label>
+          <input type="text" id="task-input-title" class="form-input" placeholder="e.g. Study Python Algorithms"
+            required autofocus>
+        </div>
+
+        <div class="form-group">
+          <label for="task-input-desc" class="form-label">Description / Notes (Optional)</label>
+          <textarea id="task-input-desc" class="form-textarea"
+            placeholder="Add key points, links, or notes..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="task-input-priority" class="form-label">Priority</label>
+          <select id="task-input-priority" class="form-select">
+            <option value="high">🔥 High Priority</option>
+            <option value="medium" selected>⚡ Medium Priority</option>
+            <option value="low">🌱 Low Priority</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            <span>Act / Est Pomodoros</span>
+            <span style="font-size: 0.75rem; color: var(--text-modal-muted); font-weight: normal;">Pomodoros ↔
+              Minutes</span>
+          </label>
+          <div class="dual-estimate-grid">
+            <div>
+              <label for="task-input-pomos"
+                style="font-size: 0.8rem; color: var(--text-modal-muted); display: block; margin-bottom: 0.25rem;">Est
+                Pomodoros</label>
+              <input type="number" id="task-input-pomos" class="form-input" min="1" max="50" step="1" value="2">
+            </div>
+            <div>
+              <label for="task-input-mins"
+                style="font-size: 0.8rem; color: var(--text-modal-muted); display: block; margin-bottom: 0.25rem;">Est
+                Minutes</label>
+              <input type="number" id="task-input-mins" class="form-input" min="1" max="1440" step="1" value="60">
+            </div>
+            <div class="dual-estimate-formula">
+              <span>💡 Dual estimation converts automatically based on your Pomodoro duration.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer modal-footer-between">
+        <button type="button" id="btn-delete-task-modal" class="btn btn-danger" style="display: none;">Delete Task</button>
+        <div class="modal-footer-actions">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Task</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 2. Settings Modal (Vertical Single-Page Layout) -->
+  <dialog id="modal-settings" class="modal-dialog" aria-labelledby="settings-modal-title">
+    <div class="modal-header">
+      <h2 id="settings-modal-title" class="modal-title">⚙️ Settings</h2>
+      <button class="modal-close-btn" data-close-modal aria-label="Close settings">&times;</button>
+    </div>
+    <form id="form-settings">
+      <div class="modal-body settings-vertical-body">
+        <!-- Section 1: Timer Durations -->
+        <div class="settings-section">
+          <h3 class="settings-section-header">⏱️ Timer</h3>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Pomodoro Duration</span>
+              <span class="setting-desc">Length of focus session</span>
+            </div>
+            <div class="setting-control">
+              <input type="number" id="setting-pomodoro-duration" class="form-input" min="1" max="120">
+              <span class="setting-unit">min</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Short Break</span>
+              <span class="setting-desc">Rest duration between sessions</span>
+            </div>
+            <div class="setting-control">
+              <input type="number" id="setting-short-break" class="form-input" min="1" max="60">
+              <span class="setting-unit">min</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Long Break</span>
+              <span class="setting-desc">Extended rest duration</span>
+            </div>
+            <div class="setting-control">
+              <input type="number" id="setting-long-break" class="form-input" min="1" max="120">
+              <span class="setting-unit">min</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Long Break Interval</span>
+              <span class="setting-desc">Pomodoros before long break</span>
+            </div>
+            <div class="setting-control">
+              <input type="number" id="setting-long-interval" class="form-input" min="1" max="12">
+              <span class="setting-unit">pomos</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Automation -->
+        <div class="settings-section">
+          <h3 class="settings-section-header">⚡ Automation</h3>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Auto-Start Breaks</span>
+              <span class="setting-desc">Automatically begin break on focus end</span>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-auto-breaks">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Auto-Start Pomodoros</span>
+              <span class="setting-desc">Automatically begin focus when break ends</span>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-auto-pomos">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Confirm Discard / Reset</span>
+              <span class="setting-desc">Warn before resetting running session</span>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-confirm-delete">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Daily Goals -->
+        <div class="settings-section">
+          <h3 class="settings-section-header">🎯 Daily Goals</h3>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Daily Pomodoro Goal</span>
+              <span class="setting-desc">Target focus sessions per day</span>
+            </div>
+            <div class="setting-control">
+              <input type="number" id="setting-daily-pomos" class="form-input" min="1" max="30">
+              <span class="setting-unit">pomos</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Daily Focus Time Goal</span>
+              <span class="setting-desc">Target focus hours</span>
+            </div>
+            <div class="setting-control">
+              <input type="number" id="setting-daily-hours" class="form-input" min="0.5" max="16" step="0.5">
+              <span class="setting-unit">hours</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Primary Target Display</span>
+              <span class="setting-desc">Show pomos or time on footer</span>
+            </div>
+            <div class="setting-control">
+              <select id="setting-goal-type" class="form-select" style="width: 130px;">
+                <option value="pomodoros">Pomodoros</option>
+                <option value="time">Focus Time</option>
+                <option value="both">Both</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Show Completed Tasks</span>
+              <span class="setting-desc">Keep finished tasks in list</span>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-show-completed">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Sounds -->
+        <div class="settings-section">
+          <h3 class="settings-section-header">🔔 Sounds & Alerts</h3>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Sound Notifications</span>
+              <span class="setting-desc">Play synthesized chime on completion</span>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-sound-enabled">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Pomodoro Sound</span>
+              <span class="setting-desc">Focus completion sound</span>
+            </div>
+            <div class="setting-control">
+              <select id="setting-pomo-sound" class="form-select" style="width: 140px;">
+                <option value="bell">🔔 Crystal Bell</option>
+                <option value="digital">📟 Digital Beep</option>
+                <option value="marimba">🪵 Marimba Chord</option>
+                <option value="gong">🧘 Zen Gong</option>
+                <option value="chime">✨ Morning Chime</option>
+                <option value="kitchen">⏲️ Vintage Kitchen</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Break Sound</span>
+              <span class="setting-desc">Rest completion sound</span>
+            </div>
+            <div class="setting-control">
+              <select id="setting-break-sound" class="form-select" style="width: 140px;">
+                <option value="marimba">🪵 Marimba Chord</option>
+                <option value="bell">🔔 Crystal Bell</option>
+                <option value="digital">📟 Digital Beep</option>
+                <option value="gong">🧘 Zen Gong</option>
+                <option value="chime">✨ Morning Chime</option>
+                <option value="kitchen">⏲️ Vintage Kitchen</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Volume (<span id="volume-display-val">75%</span>)</span>
+            </div>
+            <div class="setting-control" style="width: 150px;">
+              <input type="range" id="setting-volume" min="0" max="100" value="75" style="width: 100%;">
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Repeat Sound</span>
+              <span class="setting-desc">Play chime multiple times</span>
+            </div>
+            <div class="setting-control" style="gap: 6px; display: flex;">
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-repeat-sound">
+                <span class="toggle-slider"></span>
+              </label>
+              <input type="number" id="setting-repeat-count" class="form-input" min="1" max="5" value="2"
+                style="width: 50px;">
+            </div>
+          </div>
+
+          <div style="margin-top: 0.5rem;">
+            <button type="button" id="btn-test-sound" class="btn btn-secondary"
+              style="width: 100%; border: 1px solid #cbd5e1;">
+              ▶ Test Sound Preview
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 5: Themes -->
+        <div class="settings-section">
+          <h3 class="settings-section-header">🎨 Theme</h3>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Theme Mode</span>
+              <span class="setting-desc">Dynamic background coloring</span>
+            </div>
+            <div class="setting-control">
+              <select id="setting-theme" class="form-select" style="width: 175px;">
+                <option value="yellow" selected>🍯 Golden Sunny Yellow</option>
+                <option value="green">🌿 Forest Sage Green</option>
+                <option value="red">🍅 Classic Crimson Red</option>
+                <option value="obsidian">🌑 Dark Obsidian Green</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 6: Data Backup & Restore -->
+        <div class="settings-section">
+          <h3 class="settings-section-header">💾 Data Management</h3>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Export Data Backup</span>
+              <span class="setting-desc">JSON backup of tasks & history</span>
+            </div>
+            <div class="setting-control">
+              <button type="button" id="btn-export-json" class="btn btn-secondary"
+                style="border: 1px solid #cbd5e1; font-size: 0.8rem;">Export JSON</button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Export CSV Log</span>
+              <span class="setting-desc">CSV spreadsheet of sessions</span>
+            </div>
+            <div class="setting-control">
+              <button type="button" id="btn-export-csv" class="btn btn-secondary"
+                style="border: 1px solid #cbd5e1; font-size: 0.8rem;">Export CSV</button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Restore Data</span>
+              <span class="setting-desc">Import from JSON file</span>
+            </div>
+            <div class="setting-control">
+              <label class="btn btn-secondary" style="border: 1px solid #cbd5e1; font-size: 0.8rem; cursor: pointer;">
+                Import JSON
+                <input type="file" id="input-import-json" accept=".json" style="display: none;">
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Apply Settings</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 3. Analytics Modal -->
+  <dialog id="modal-analytics" class="modal-dialog" aria-labelledby="analytics-modal-title">
+    <div class="modal-header">
+      <h2 id="analytics-modal-title" class="modal-title">📊 Focus Activity Report</h2>
+      <button class="modal-close-btn" data-close-modal aria-label="Close analytics">&times;</button>
+    </div>
+    <div class="modal-body">
+      <!-- Top Metrics -->
+      <div class="analytics-summary-grid">
+        <div class="analytics-stat-card">
+          <div id="analytics-total-pomos" class="analytics-stat-val">0</div>
+          <div class="analytics-stat-lbl">Weekly Pomodoros</div>
+        </div>
+        <div class="analytics-stat-card">
+          <div id="analytics-total-hours" class="analytics-stat-val">0.0h</div>
+          <div class="analytics-stat-lbl">Weekly Focus Time</div>
+        </div>
+        <div class="analytics-stat-card">
+          <div id="analytics-streak-val" class="analytics-stat-val">1d</div>
+          <div class="analytics-stat-lbl">Active Streak</div>
+        </div>
+      </div>
+
+      <!-- Weekly 7-Day Bar Chart -->
+      <div class="analytics-chart-wrap">
+        <div class="analytics-chart-title">Last 7 Days (Pomodoros)</div>
+        <div id="analytics-weekly-barchart" class="bar-chart-container">
+          <!-- Dynamically populated bars -->
+        </div>
+      </div>
+
+      <!-- Focus Distribution by Task -->
+      <div class="analytics-chart-wrap">
+        <div class="analytics-chart-title">Time by Task</div>
+        <div id="analytics-task-breakdown">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary" data-close-modal>Close</button>
+    </div>
+  </dialog>
+
+  <!-- 4. Keyboard Shortcuts Modal -->
+  <dialog id="modal-shortcuts" class="modal-dialog" style="max-width: 440px;" aria-labelledby="shortcuts-modal-title">
+    <div class="modal-header">
+      <h2 id="shortcuts-modal-title" class="modal-title">⌨️ Keyboard Shortcuts</h2>
+      <button class="modal-close-btn" data-close-modal aria-label="Close shortcuts">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="shortcuts-grid">
+        <div class="shortcut-item">
+          <span>Start / Pause</span>
+          <span class="kbd-key">Space</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Skip Session</span>
+          <span class="kbd-key">S</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Reset Timer</span>
+          <span class="kbd-key">R</span>
+        </div>
+        <div class="shortcut-item">
+          <span>+5 Minutes</span>
+          <span class="kbd-key">+</span>
+        </div>
+        <div class="shortcut-item">
+          <span>-5 Minutes</span>
+          <span class="kbd-key">-</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Add Task</span>
+          <span class="kbd-key">N</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Focus Mode</span>
+          <span class="kbd-key">1</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Short / Long Break</span>
+          <span class="kbd-key">2 / 3</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary" data-close-modal>Got It</button>
+    </div>
+  </dialog>
+
+  <!-- Application Module Script -->
+  <script type="module" src="/src/js/app.js"></script>
+</body>
+
+</html>

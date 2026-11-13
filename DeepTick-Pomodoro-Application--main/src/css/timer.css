@@ -1,0 +1,216 @@
+/* ==========================================================================
+   DeepTick Pomodoro - Minimalist Timer Card Styles
+   ========================================================================== */
+
+.timer-box {
+  background: var(--theme-card);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.25rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.75rem;
+  transition: background var(--transition-mode);
+}
+
+/* Mode Switcher Tabs */
+.timer-mode-pills {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.mode-pill {
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-main);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast), font-weight var(--transition-fast);
+}
+
+.mode-pill:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.mode-pill.active {
+  background: rgba(0, 0, 0, 0.2);
+  font-weight: 700;
+}
+
+/* Big Bold Countdown Digits with Left -5m and Right +5m Adjustments */
+.timer-display-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  margin: 0.5rem 0 1.75rem;
+  width: 100%;
+}
+
+.adjust-side-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--text-main);
+  font-family: var(--font-main);
+  font-size: 1.45rem;
+  font-weight: 600;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.adjust-side-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
+}
+
+.adjust-side-btn:active {
+  transform: scale(0.92);
+}
+
+.timer-digits {
+  font-family: var(--font-digits);
+  font-size: 6.25rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+  user-select: none;
+}
+
+@media (max-width: 480px) {
+  .timer-display-area {
+    gap: 0.75rem;
+  }
+  .timer-digits {
+    font-size: 4.5rem;
+  }
+  .adjust-side-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .timer-digits {
+    font-size: 3.8rem;
+  }
+  .adjust-side-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1rem;
+  }
+}
+
+.adjust-btn:active {
+  transform: scale(0.96);
+}
+
+/* Primary Timer Controls (Start/Pause, Reset, Skip) */
+.timer-controls-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.btn-start-large {
+  background: var(--theme-btn-bg);
+  color: var(--theme-btn-text);
+  border: none;
+  font-family: var(--font-main);
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 2.5rem;
+  height: 55px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-start-large:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.2);
+}
+
+.btn-start-large:active, .btn-start-large.is-active-running {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.btn-icon-control {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-xs);
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.btn-icon-control:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.btn-icon-control svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+/* Active Task Subtitle */
+.active-task-label-wrap {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.active-task-cycle-num {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.active-task-name-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: center;
+  max-width: 380px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
