@@ -20,14 +20,15 @@ StudyFlow is a multi-user study management workspace built with the existing HTM
    npm run db:migrate
    ```
 
-5. Start the API and frontend in separate terminals:
+5. Start the API and frontend together:
 
    ```bash
-   npm run server
    npm run dev
    ```
 
 Open `http://localhost:5173`. Accounts are created through the StudyFlow sign-in screen, and authenticated workspace reads are served by `GET /api/workspace`.
+
+For production-style checks, the API can still be started on its own with `npm run server`.
 
 ## Current backend boundaries
 

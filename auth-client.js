@@ -37,6 +37,7 @@ async function request(path, options = {}) {
 }
 
 function showApp() {
+  document.title = 'StudyFlow — Study command centre';
   document.body.classList.remove('auth-pending', 'auth-required');
   gate.hidden = true;
 }
@@ -47,6 +48,7 @@ function announceAuthentication(user) {
 }
 
 function showGate(message) {
+  document.title = 'StudyFlow — Sign in';
   document.body.classList.remove('auth-pending');
   document.body.classList.add('auth-required');
   gate.hidden = false;
