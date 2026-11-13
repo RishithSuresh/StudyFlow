@@ -1,4 +1,5 @@
-const API_BASE = (window.STUDYFLOW_API_URL || 'http://localhost:3000') + '/api';
+const API_BASE = window.STUDYFLOW_API_URL
+  || (window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api');
 const gate = document.querySelector('#auth-gate');
 const form = document.querySelector('#auth-form');
 const nameField = document.querySelector('#auth-name-field');

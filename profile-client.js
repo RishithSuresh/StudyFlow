@@ -1,4 +1,5 @@
-const API_BASE = (window.STUDYFLOW_API_URL || 'http://localhost:3000') + '/api';
+const API_BASE = window.STUDYFLOW_API_URL
+  || (window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api');
 const profileName = document.querySelector('#profile-name');
 const profileEmail = document.querySelector('#profile-email');
 const profileAvatar = document.querySelector('#profile-avatar');
