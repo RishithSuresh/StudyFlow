@@ -141,7 +141,7 @@ class UIManager {
 
   // 2. Tasks Render
   renderTasks() {
-    const listContainer = document.getElementById('tasks-list');
+    const listContainer = document.getElementById('dt-tasks-list');
     if (!listContainer) return;
 
     const tasks = taskManager.getTasks();
@@ -396,7 +396,7 @@ class UIManager {
     });
 
     // Task List Click Events
-    const taskList = document.getElementById('tasks-list');
+    const taskList = document.getElementById('dt-tasks-list');
     if (taskList) {
       taskList.addEventListener('click', (e) => {
         const target = e.target;
