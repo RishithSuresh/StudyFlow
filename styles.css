@@ -91,6 +91,8 @@ footer{color:var(--sf-navy-soft)}
 
 /* Focus timer */
 #view-focus{margin:0 -1px;padding:4px 0 18px}
+.focus-mode>.main>.topbar,.focus-mode>.main>footer{display:none}
+.focus-mode>.main{padding-top:28px}
 #view-focus #top-progress-bar{position:fixed;top:0;left:0;height:4px;width:0;background:var(--sf-coral);z-index:20;transition:width .25s ease}
 .dt-inner{width:min(100%,960px);margin:0 auto}
 .dt-focus-header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 26px;padding:0 2px}
