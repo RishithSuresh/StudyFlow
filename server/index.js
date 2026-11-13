@@ -44,6 +44,76 @@ app.get('/api/me', requireSession, (req, res) => {
   res.json({ user: req.session.user, session: req.session.session });
 });
 
+app.get('/api/statistics', requireSession, async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const [summary, focus, activeDates] = await Promise.all([
+      query(`
+        SELECT
+          (SELECT COUNT(*) FROM tasks WHERE user_id = $1) AS total_tasks,
+          (SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND completed = TRUE) AS completed_tasks,
+          (SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND completed = FALSE AND due_at < NOW()) AS overdue_tasks,
+          (SELECT COUNT(*) FROM academic_subjects WHERE user_id = $1) AS total_subjects,
+          (SELECT COUNT(*) FROM skills WHERE user_id = $1) AS total_skills
+      `, [userId]),
+      query(`
+        SELECT
+          COUNT(*) FILTER (WHERE mode = 'pomodoro' AND completed = TRUE) AS completed_sessions,
+          COALESCE(SUM(duration_seconds) FILTER (WHERE mode = 'pomodoro' AND completed = TRUE), 0) AS focus_seconds,
+          COALESCE(SUM(duration_seconds) FILTER (
+            WHERE mode = 'pomodoro' AND completed = TRUE
+            AND started_at >= NOW() - INTERVAL '7 days'
+          ), 0) AS weekly_focus_seconds
+        FROM study_sessions
+        WHERE user_id = $1
+      `, [userId]),
+      query(`
+        SELECT DISTINCT started_at::date AS study_date
+        FROM study_sessions
+        WHERE user_id = $1
+          AND mode = 'pomodoro'
+          AND completed = TRUE
+          AND started_at >= NOW() - INTERVAL '365 days'
+        ORDER BY study_date DESC
+      `, [userId])
+    ]);
+
+    const totals = summary.rows[0];
+    const focusTotals = focus.rows[0];
+    const totalTasks = Number(totals.total_tasks);
+    const completedTasks = Number(totals.completed_tasks);
+    const activeDateSet = new Set(activeDates.rows.map(row => String(row.study_date).slice(0, 10)));
+    let streak = 0;
+    const cursor = new Date();
+    if (!activeDateSet.has(cursor.toISOString().slice(0, 10))) {
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
+    while (activeDateSet.has(cursor.toISOString().slice(0, 10))) {
+      streak += 1;
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
+
+    res.json({
+      tasks: {
+        total: totalTasks,
+        completed: completedTasks,
+        overdue: Number(totals.overdue_tasks),
+        completionRate: totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0
+      },
+      focus: {
+        completedSessions: Number(focusTotals.completed_sessions),
+        totalMinutes: Math.round(Number(focusTotals.focus_seconds) / 60),
+        weeklyMinutes: Math.round(Number(focusTotals.weekly_focus_seconds) / 60)
+      },
+      streak,
+      subjects: Number(totals.total_subjects),
+      skills: Number(totals.total_skills)
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get('/api/workspace', requireSession, async (req, res, next) => {
   try {
     const userId = req.session.user.id;

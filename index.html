@@ -37,8 +37,9 @@
     <button class="nav-item" data-view="tasks">☑ <span>Tasks & deadlines</span></button>
     <button class="nav-item" data-view="reviews">↗ <span>Mock test review</span></button>
     <button class="nav-item" data-view="focus">◷ <span>Focus timer</span></button>
+    <button class="nav-item" data-view="profile">◎ <span>My profile</span></button>
   </nav>
-  <div class="sidebar-bottom"><div class="mini-note"><span>✳</span><b>Small steps add up.</b><p>Plan less. Finish more. Keep showing up.</p></div><div class="profile"><div class="avatar">SF</div><div><b>My workspace</b><small>Saved in this browser</small></div></div></div>
+  <div class="sidebar-bottom"><div class="mini-note"><span>✳</span><b>Small steps add up.</b><p>Plan less. Finish more. Keep showing up.</p></div><button id="sidebar-profile" class="profile" type="button" data-view="profile"><div class="avatar">SF</div><div><b id="sidebar-user-name">My workspace</b><small id="sidebar-user-email">Private workspace</small></div></button></div>
 </aside>
 <main class="main">
 <header class="topbar"><div><div class="eyebrow" id="today-label">YOUR STUDY SPACE</div><h1 id="page-title">Good morning. Let's make progress.</h1></div><div class="top-actions"><span class="date-pill" id="today-date"></span><button class="icon-btn" id="notify-btn" title="Enable browser reminders">♧</button><button class="primary-btn" id="quick-add">＋ Add task</button></div></header>
@@ -54,6 +55,12 @@
 <section id="view-tasks" class="view"><div class="section-heading"><div><div class="eyebrow">DON'T LET IT SLIP</div><h2>Tasks & deadlines</h2><p class="muted">Assignments, projects, study targets and exam preparation in one place.</p></div><button class="primary-btn" id="add-task">＋ Add task</button></div><div class="filter-row"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="open">Open</button><button class="filter" data-filter="done">Completed</button></div><div class="panel"><div id="tasks-list" class="task-list empty-state">No tasks added yet.</div></div></section>
 <section id="view-calendar" class="view"><div class="section-heading"><div><div class="eyebrow">PLAN YOUR TIME</div><h2>Calendar</h2><p class="muted">Select a date to view or add events. Events are editable.</p></div><button class="primary-btn" id="calendar-add">＋ Add event</button></div><div class="calendar-layout"><div class="panel calendar-panel"><div class="calendar-head"><button class="icon-btn" id="prev-month">←</button><h3 id="month-label"></h3><button class="icon-btn" id="next-month">→</button><button class="text-btn" id="today-btn">Today</button></div><div class="weekdays"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div><div id="calendar-grid" class="calendar-grid"></div></div><div class="panel day-panel"><div class="panel-title"><div><div class="eyebrow">SELECTED DAY</div><h3 id="selected-date-label"></h3></div><button class="text-btn" id="selected-add">＋ Add</button></div><div id="day-events" class="empty-state">No events for this day.</div></div></div></section>
 <section id="view-reviews" class="view"><div class="section-heading"><div><div class="eyebrow">LEARN FROM EVERY ATTEMPT</div><h2>Mock test review</h2><p class="muted">Record mistakes, understand why they happened and track your corrections.</p></div><button class="primary-btn" id="add-mistake">＋ Log mistake</button></div><div class="review-stats" id="review-stats"></div><div class="filter-row"><button class="filter active" data-review-filter="all">All mistakes</button><button class="filter" data-review-filter="unresolved">Needs review</button><button class="filter" data-review-filter="resolved">Resolved</button></div><div id="mistakes-list" class="mistake-list empty-state">No mistakes logged yet. Add your first mock-test review.</div></section>
+<section id="view-profile" class="view">
+  <div class="section-heading"><div><div class="eyebrow">YOUR PRIVATE WORKSPACE</div><h2>My profile</h2><p class="muted">Track your study habits and use the numbers to plan your next week.</p></div><button id="profile-sign-out" class="secondary-btn" type="button">Sign out</button></div>
+  <div class="profile-identity panel"><div class="profile-avatar avatar" id="profile-avatar">SF</div><div><h3 id="profile-name">Loading profile…</h3><p id="profile-email" class="muted">Loading account details…</p></div></div>
+  <div id="profile-stats" class="profile-stats"><div class="panel empty-state">Loading your statistics…</div></div>
+  <div class="panel profile-guidance"><div class="eyebrow">HOW TO IMPROVE</div><h3 id="profile-guidance-title">Build a consistent rhythm.</h3><p id="profile-guidance-copy" class="muted">Complete a few focus sessions and tasks to unlock useful performance guidance.</p></div>
+</section>
 <section id="view-focus" class="view">
   <div id="top-progress-bar"></div>
   <canvas id="confetti-canvas" aria-hidden="true"></canvas>
@@ -353,4 +360,5 @@
 
 <script type="module" src="app.js"></script>
 <script type="module" src="deeptick/init.js"></script>
-<script type="module" src="auth-client.js"></script></body></html>
+<script type="module" src="auth-client.js"></script>
+<script type="module" src="profile-client.js"></script></body></html>
