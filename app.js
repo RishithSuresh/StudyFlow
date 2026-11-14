@@ -9,6 +9,10 @@ let storageKey=KEY,db;try{db={...starter(),...JSON.parse(localStorage.getItem(st
 db.mockTests = db.mockTests || [];
 db.mistakes = db.mistakes || [];
 const save=()=>{localStorage.setItem(storageKey,JSON.stringify(db));render()};
+window.getStudyFlowTasks = () => (db && db.tasks) ? db.tasks : [];
+window.addStudyFlowTask = (task) => { if(db){ db.tasks = db.tasks || []; db.tasks.push(task); save(); } };
+window.updateStudyFlowTask = (id, updates) => { if(db && db.tasks){ const t = db.tasks.find(x => x.id === id); if(t){ Object.assign(t, updates); save(); } } };
+window.deleteStudyFlowTask = (id) => { if(db && db.tasks){ db.tasks = db.tasks.filter(x => x.id !== id); save(); } };
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});

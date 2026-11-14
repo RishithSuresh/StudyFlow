@@ -111,6 +111,37 @@ class TimerEngine {
     this.syncModeDuration(newMode);
   }
 
+  setCustomDuration(minutes) {
+    const mins = Math.max(1, Math.min(240, parseInt(minutes, 10) || 25));
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+
+    state.updateSettings({ pomodoroDuration: mins });
+    state.updateTimerState({
+      mode: 'pomodoro',
+      tempAdjustmentSeconds: 0,
+      targetSeconds: mins * 60,
+      remainingSeconds: mins * 60,
+      status: 'idle',
+      startTimestamp: null,
+      endTimestamp: null,
+      pauseTimestamp: null
+    });
+
+    const activeTask = taskManager.getActiveTask();
+    if (activeTask) {
+      taskManager.updateTask(activeTask.id, {
+        estimatedMinutes: mins,
+        estimatedPomodoros: 1
+      });
+    }
+
+    state.emit('timer:updated', state.timerState);
+    return mins;
+  }
+
   start() {
     soundManager.initContext();
     const now = Date.now();

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DeepTick Pomodoro - UI Renderer & Interaction Controller (Minimalist)
+   DeepTick Pomodoro - UI Renderer & Interaction Controller
    ========================================================================== */
 
 import { state } from './state.js';
@@ -14,25 +14,14 @@ class UIManager {
   constructor() {
     this.confettiParticles = [];
     this.confettiAnimationId = null;
+    this.chooseTaskSearchQuery = '';
+    this.chooseTaskScopeFilter = 'all';
   }
 
   init() {
-    this.applyTheme(state.settings.theme || 'navy');
     this.bindEvents();
     this.renderAll();
     this.initConfettiCanvas();
-  }
-
-  applyTheme(themeName) {
-    const activeTheme = ['navy', 'sand', 'midnight'].includes(themeName) ? themeName : 'navy';
-    document.documentElement.setAttribute('data-theme', activeTheme);
-    const themeIconEl = document.getElementById('theme-btn-icon');
-    if (themeIconEl) {
-      if (activeTheme === 'sand') themeIconEl.textContent = '◇';
-      else if (activeTheme === 'midnight') themeIconEl.textContent = '◆';
-      else themeIconEl.textContent = '◈';
-    }
-    this.syncModeColors();
   }
 
   syncModeColors() {
@@ -67,6 +56,7 @@ class UIManager {
   renderAll() {
     this.syncModeColors();
     this.renderTimer();
+    this.renderSessionDiffPresets();
     this.renderTasks();
     this.renderStats();
     this.renderSettingsForm();
@@ -85,9 +75,9 @@ class UIManager {
     const timerDigitsEl = document.getElementById('timer-digits');
     if (timerDigitsEl) timerDigitsEl.textContent = timeFormatted;
 
-    const modeLabel = mode === 'pomodoro' ? 'Time to focus!' : mode === 'short_break' ? 'Time for a break!' : 'Time for a long rest!';
-    const taskTitle = activeTask ? ` - ${activeTask.title}` : '';
-    document.title = `${status === 'running' ? '▶ ' : ''}${timeFormatted} - ${modeLabel}${taskTitle}`;
+    const modeLabel = mode === 'pomodoro' ? 'Focus Session' : mode === 'short_break' ? 'Short Break' : 'Long Break';
+    const taskTitle = activeTask ? ` · ${activeTask.title}` : '';
+    document.title = `${status === 'running' ? '▶ ' : ''}${timeFormatted} — ${modeLabel}${taskTitle}`;
 
     // Top progress line
     const topBar = document.getElementById('top-progress-bar');
@@ -101,7 +91,7 @@ class UIManager {
       btn.classList.toggle('active', btn.dataset.mode === mode);
     });
 
-    // Start / Pause Big Button
+    // Start / Pause Button
     const playBtn = document.getElementById('btn-timer-toggle');
     if (playBtn) {
       if (status === 'running') {
@@ -116,7 +106,11 @@ class UIManager {
     // Active Task Banner
     const activeTaskName = document.getElementById('active-task-name-text');
     if (activeTaskName) {
-      activeTaskName.textContent = activeTask ? activeTask.title : 'General Focus Session';
+      if (activeTask) {
+        activeTaskName.textContent = `🎯 ${activeTask.title}`;
+      } else {
+        activeTaskName.textContent = 'General Focus Session (No task selected)';
+      }
     }
 
     const cycleInfo = document.getElementById('header-cycle-count');
@@ -133,10 +127,20 @@ class UIManager {
 
     // Streak
     const streakEl = document.getElementById('header-streak-count');
-    if (streakEl) streakEl.textContent = `${state.streak.currentStreak}d`;
+    if (streakEl) streakEl.textContent = `${state.streak.currentStreak}d Streak`;
   }
 
-  // 2. Tasks Render
+  // 2. Session Differentiation Presets Render
+  renderSessionDiffPresets() {
+    const currentMins = state.settings.pomodoroDuration || 30;
+    const isPomo = state.timerState.mode === 'pomodoro';
+    document.querySelectorAll('.session-diff-chip').forEach(chip => {
+      const mins = parseInt(chip.dataset.diffMins, 10);
+      chip.classList.toggle('active', isPomo && mins === currentMins);
+    });
+  }
+
+  // 3. Tasks List Render
   renderTasks() {
     const listContainer = document.getElementById('dt-tasks-list');
     if (!listContainer) return;
@@ -146,8 +150,18 @@ class UIManager {
 
     if (tasks.length === 0) {
       listContainer.innerHTML = `
-        <div class="tasks-empty-state">
-          No tasks added yet. Click <strong>+ Add Task</strong> to get started!
+        <div class="tasks-empty-state-card">
+          <div class="tasks-empty-icon">🎯</div>
+          <div class="tasks-empty-title">No focus tasks selected</div>
+          <p class="tasks-empty-desc">Choose from your existing StudyFlow tasks or add an extra task for this focus session.</p>
+          <div class="tasks-empty-actions">
+            <button type="button" class="btn btn-primary btn-sm btn-action-choose-existing">
+              📋 Choose Existing Task
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm btn-action-add-new">
+              ➕ Add Extra Task
+            </button>
+          </div>
         </div>
       `;
       return;
@@ -157,6 +171,7 @@ class UIManager {
       const isActive = task.id === activeTaskId;
       const isOver = task.completedPomodoros > task.estimatedPomodoros;
       const excessCount = task.completedPomodoros - task.estimatedPomodoros;
+      const mins = task.estimatedMinutes || (task.estimatedPomodoros * (state.settings.pomodoroDuration || 30));
 
       return `
         <div class="task-item ${isActive ? 'is-active-task' : ''} ${task.isCompleted ? 'is-completed' : ''}" data-task-id="${task.id}">
@@ -169,20 +184,23 @@ class UIManager {
           </div>
 
           <div class="task-right-wrap">
-            <span class="task-pomos-badge">${task.completedPomodoros} / ${task.estimatedPomodoros}</span>
+            <button type="button" class="task-duration-pill" data-action="set-task-duration" data-mins="${mins}" title="Click to set timer to this task's duration (${mins} min)">
+              ⏱️ ${mins}m
+            </button>
+            <span class="task-pomos-badge" title="Completed pomos">${task.completedPomodoros} / ${task.estimatedPomodoros}</span>
             ${isOver ? `<span class="task-excess-pill">+${excessCount}</span>` : ''}
             <div class="task-actions-group">
+              <button class="task-action-btn task-focus-btn" data-action="set-task-duration" data-mins="${mins}" title="Focus on this task and set timer" aria-label="Focus on this task">
+                🎯
+              </button>
               <button class="task-action-btn task-edit-btn" data-action="edit-task" data-task-id="${task.id}" title="Edit Task" aria-label="Edit Task">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
               </button>
-              <button class="task-action-btn task-delete-btn" data-action="delete-task" data-task-id="${task.id}" title="Delete Task" aria-label="Delete Task">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
+              <button class="task-action-btn task-remove-btn" data-action="remove-focus" data-task-id="${task.id}" title="Remove from this focus session" aria-label="Remove from session">
+                ✕
               </button>
             </div>
           </div>
@@ -191,7 +209,71 @@ class UIManager {
     }).join('');
   }
 
-  // 3. Stats & Estimated Finish Time Render
+  // 4. Choose Existing Tasks Modal Render
+  renderChooseTaskModal() {
+    const listContainer = document.getElementById('choose-task-list');
+    const searchInput = document.getElementById('choose-task-search');
+    const hintEl = document.getElementById('choose-task-count-hint');
+    if (!listContainer) return;
+
+    const query = searchInput ? searchInput.value.trim() : this.chooseTaskSearchQuery;
+    const scope = this.chooseTaskScopeFilter || 'all';
+
+    const tasks = taskManager.getAvailableStudyFlowTasks(query, scope);
+
+    if (hintEl) {
+      hintEl.textContent = `${tasks.length} task${tasks.length === 1 ? '' : 's'} available in workspace`;
+    }
+
+    if (tasks.length === 0) {
+      listContainer.innerHTML = `
+        <div class="choose-task-empty">
+          <div style="font-size: 26px; margin-bottom: 8px;">📋</div>
+          <p style="margin: 0; font-size: 13px; font-weight: 600; color: var(--sf-navy);">
+            ${query ? 'No matching tasks found.' : 'No open tasks found in your workspace.'}
+          </p>
+          <p style="margin: 4px 0 0; font-size: 12px; color: var(--sf-navy-soft);">
+            You can add new tasks directly using "+ Add Extra Task".
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    listContainer.innerHTML = tasks.map(t => {
+      const isDaily = t.scope === 'daily' || t.due === new Date().toISOString().slice(0, 10);
+      return `
+        <div class="choose-task-item ${t.isInFocus ? 'already-in-focus' : ''}" data-task-id="${t.id}">
+          <div class="choose-task-main">
+            <div class="choose-task-title-row">
+              <span class="choose-scope-tag ${isDaily ? 'scope-daily' : 'scope-overall'}">
+                ${isDaily ? '☀️ Daily' : '📋 Overall'}
+              </span>
+              <span class="choose-task-title">${this.escapeHtml(t.title || 'Untitled')}</span>
+            </div>
+            <div class="choose-task-meta">
+              ${t.subject ? `<span class="meta-tag">📚 ${this.escapeHtml(t.subject)}</span>` : ''}
+              ${t.due ? `<span class="meta-tag">📅 Due ${this.escapeHtml(t.due)}</span>` : ''}
+              ${t.note ? `<span class="meta-desc">${this.escapeHtml(t.note)}</span>` : ''}
+            </div>
+          </div>
+          <div class="choose-task-btn-wrap">
+            ${t.isInFocus ? `
+              <button type="button" class="btn btn-secondary btn-sm" disabled style="opacity: 0.65; cursor: default;">
+                ✓ Added
+              </button>
+            ` : `
+              <button type="button" class="btn btn-primary btn-sm" data-choose-add-id="${t.id}">
+                + Add to Focus
+              </button>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 5. Stats & Estimated Finish Time Render
   renderStats() {
     const daily = state.getDailyStats();
     const { settings } = state;
@@ -214,7 +296,7 @@ class UIManager {
     if (finishTimeEl) finishTimeEl.textContent = estimation.finishTimeFormatted;
   }
 
-  // 4. Settings Form Population
+  // 6. Settings Form Population
   renderSettingsForm() {
     const { settings } = state;
     this.setInputValue('setting-pomodoro-duration', settings.pomodoroDuration);
@@ -241,13 +323,11 @@ class UIManager {
 
     this.setCheckboxValue('setting-repeat-sound', settings.repeatSound);
     this.setInputValue('setting-repeat-count', settings.repeatCount);
-
-    this.setInputValue('setting-theme', settings.theme);
   }
 
   setInputValue(id, val) {
     const el = document.getElementById(id);
-    if (el) el.value = val;
+    if (el && val !== undefined) el.value = val;
   }
 
   setCheckboxValue(id, val) {
@@ -339,6 +419,7 @@ class UIManager {
   bindEvents() {
     state.on('timer:updated', () => {
       this.renderTimer();
+      this.renderSessionDiffPresets();
       this.renderStats();
     });
 
@@ -358,7 +439,7 @@ class UIManager {
 
     state.on('streak:updated', () => {
       const streakEl = document.getElementById('header-streak-count');
-      if (streakEl) streakEl.textContent = `${state.streak.currentStreak}d`;
+      if (streakEl) streakEl.textContent = `${state.streak.currentStreak}d Streak`;
     });
 
     state.on('celebration:goal_reached', () => {
@@ -371,8 +452,44 @@ class UIManager {
       btn.addEventListener('click', (e) => {
         const mode = e.currentTarget.dataset.mode;
         timer.setMode(mode);
+        this.renderSessionDiffPresets();
       });
     });
+
+    // Session Differentiation Presets
+    document.querySelectorAll('.session-diff-chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        const mins = parseInt(e.currentTarget.dataset.diffMins, 10);
+        if (mins) {
+          timer.setCustomDuration(mins);
+          this.renderSessionDiffPresets();
+          notifier.notify('Duration Set', `Timer configured for ${mins} minutes for this session.`);
+        }
+      });
+    });
+
+    // Custom Duration Apply Button
+    const btnCustomSession = document.getElementById('btn-apply-custom-session');
+    const inputCustomSession = document.getElementById('custom-session-mins');
+    if (btnCustomSession && inputCustomSession) {
+      btnCustomSession.addEventListener('click', () => {
+        const mins = parseInt(inputCustomSession.value, 10);
+        if (mins && mins >= 1 && mins <= 240) {
+          timer.setCustomDuration(mins);
+          this.renderSessionDiffPresets();
+          inputCustomSession.value = '';
+          notifier.notify('Duration Set', `Timer set to ${mins} minutes.`);
+        } else {
+          notifier.notify('Invalid Duration', 'Please enter a duration between 1 and 240 minutes.', { type: 'warn' });
+        }
+      });
+      inputCustomSession.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          btnCustomSession.click();
+        }
+      });
+    }
 
     // Primary Controls
     const btnToggle = document.getElementById('btn-timer-toggle');
@@ -390,10 +507,11 @@ class UIManager {
     if (btnSkip) btnSkip.addEventListener('click', () => timer.skip());
 
     // +/- Quick adjustments
-    document.querySelectorAll('.adjust-btn, .adjust-side-btn').forEach(btn => {
+    document.querySelectorAll('.adjust-side-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const delta = parseInt(e.currentTarget.dataset.adjust, 10);
         timer.adjustTime(delta);
+        this.renderSessionDiffPresets();
       });
     });
 
@@ -402,16 +520,52 @@ class UIManager {
     if (taskList) {
       taskList.addEventListener('click', (e) => {
         const target = e.target;
+
+        // Empty state buttons
+        if (target.closest('.btn-action-choose-existing')) {
+          this.openChooseTaskModal();
+          return;
+        }
+        if (target.closest('.btn-action-add-new')) {
+          this.openTaskModal(null);
+          return;
+        }
+
         const taskItem = target.closest('.task-item');
         if (!taskItem) return;
         const taskId = taskItem.dataset.taskId;
 
+        // Toggle complete
         if (target.classList.contains('task-check-circle') || target.dataset.action === 'toggle-complete') {
           e.stopPropagation();
           taskManager.toggleComplete(taskId);
           return;
         }
 
+        // Set duration to this task's time
+        const durationBtn = target.closest('[data-action="set-task-duration"]');
+        if (durationBtn) {
+          e.stopPropagation();
+          const mins = parseInt(durationBtn.dataset.mins, 10);
+          if (mins) {
+            timer.setCustomDuration(mins);
+            taskManager.setActiveTask(taskId);
+            this.renderSessionDiffPresets();
+            notifier.notify('Active Task Set', `Timer set to ${mins}m for this task.`);
+          }
+          return;
+        }
+
+        // Remove from session
+        const removeBtn = target.closest('[data-action="remove-focus"]');
+        if (removeBtn) {
+          e.stopPropagation();
+          taskManager.removeTaskFromFocus(taskId);
+          notifier.notify('Task Removed', 'Removed from this focus session.');
+          return;
+        }
+
+        // Edit
         const editBtn = target.closest('[data-action="edit-task"]');
         if (editBtn) {
           e.stopPropagation();
@@ -419,6 +573,7 @@ class UIManager {
           return;
         }
 
+        // Delete permanently
         const deleteBtn = target.closest('[data-action="delete-task"]');
         if (deleteBtn) {
           e.stopPropagation();
@@ -426,6 +581,7 @@ class UIManager {
           return;
         }
 
+        // Click task body -> set as active
         taskManager.setActiveTask(taskId);
       });
     }
@@ -446,6 +602,25 @@ class UIManager {
           tasksDropdownMenu.classList.remove('is-open');
           btnTasksMenu.setAttribute('aria-expanded', 'false');
         }
+      });
+    }
+
+    // Choose existing tasks buttons
+    const btnChooseExisting = document.getElementById('btn-choose-existing-task');
+    if (btnChooseExisting) {
+      btnChooseExisting.addEventListener('click', () => this.openChooseTaskModal());
+    }
+
+    const btnChooseHeader = document.getElementById('btn-choose-existing-header');
+    if (btnChooseHeader) {
+      btnChooseHeader.addEventListener('click', () => this.openChooseTaskModal());
+    }
+
+    const btnChooseMenu = document.getElementById('btn-choose-existing-menu');
+    if (btnChooseMenu) {
+      btnChooseMenu.addEventListener('click', () => {
+        tasksDropdownMenu?.classList.remove('is-open');
+        this.openChooseTaskModal();
       });
     }
 
@@ -471,22 +646,68 @@ class UIManager {
         tasksDropdownMenu?.classList.remove('is-open');
         btnTasksMenu?.setAttribute('aria-expanded', 'false');
         if (state.tasks.length === 0) {
-          notifier.notify('Info', 'No tasks to clear.');
+          notifier.notify('Info', 'No focus tasks to clear.');
           return;
         }
 
         if (state.settings.confirmDelete) {
-          const confirmed = window.confirm('Are you sure you want to clear all tasks from the queue?');
+          const confirmed = window.confirm('Clear all tasks from this focus session? (Original tasks in StudyFlow are preserved)');
           if (!confirmed) return;
         }
 
         const count = taskManager.clearAllTasks();
-        notifier.notify('All Tasks Cleared', `${count} task${count > 1 ? 's' : ''} removed from queue.`, { type: 'warn' });
+        notifier.notify('Session Cleared', `${count} task${count > 1 ? 's' : ''} removed from focus session.`, { type: 'warn' });
       });
     }
 
     // Modal Triggers
     this.bindModalTriggers();
+    this.bindChooseTaskModalEvents();
+  }
+
+  bindChooseTaskModalEvents() {
+    const searchInput = document.getElementById('choose-task-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        this.chooseTaskSearchQuery = e.target.value.trim();
+        this.renderChooseTaskModal();
+      });
+    }
+
+    document.querySelectorAll('.choose-filter-pill').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.choose-filter-pill').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        this.chooseTaskScopeFilter = e.currentTarget.dataset.chooseScope || 'all';
+        this.renderChooseTaskModal();
+      });
+    });
+
+    const chooseList = document.getElementById('choose-task-list');
+    if (chooseList) {
+      chooseList.addEventListener('click', (e) => {
+        const addBtn = e.target.closest('[data-choose-add-id]');
+        if (addBtn) {
+          const taskId = addBtn.dataset.chooseAddId;
+          const task = taskManager.addExistingTaskToFocus(taskId);
+          if (task) {
+            notifier.notify('Task Added', `Added "${task.title}" to focus session.`, { type: 'success' });
+            this.renderChooseTaskModal();
+          }
+        }
+      });
+    }
+  }
+
+  openChooseTaskModal() {
+    const modal = document.getElementById('modal-choose-existing-task');
+    if (!modal) return;
+    this.chooseTaskSearchQuery = '';
+    const searchInput = document.getElementById('choose-task-search');
+    if (searchInput) searchInput.value = '';
+    this.renderChooseTaskModal();
+    modal.showModal();
+    if (searchInput) setTimeout(() => searchInput.focus(), 60);
   }
 
   bindModalTriggers() {
@@ -539,7 +760,6 @@ class UIManager {
       });
     }
 
-
     // Volume Slider
     const volumeSlider = document.getElementById('setting-volume');
     if (volumeSlider) {
@@ -569,31 +789,6 @@ class UIManager {
         e.preventDefault();
         this.handleSettingsFormSubmit();
         modalSettings.close();
-      });
-    }
-
-    // Quick Header Theme Toggle Button
-    const btnToggleTheme = document.getElementById('btn-toggle-theme');
-    if (btnToggleTheme) {
-      btnToggleTheme.addEventListener('click', () => {
-        const current = state.settings.theme || 'navy';
-        const themes = ['navy', 'sand', 'midnight'];
-        const nextIndex = (themes.indexOf(current) + 1) % themes.length;
-        const nextTheme = themes[nextIndex];
-        state.updateSettings({ theme: nextTheme });
-        this.applyTheme(nextTheme);
-        const nameMap = { navy: 'Navy & Coral', sand: 'Warm Sand', midnight: 'Deep Midnight' };
-        notifier.notify('Theme Switched', nameMap[nextTheme] || nextTheme);
-      });
-    }
-
-    // Theme selector inside settings modal
-    const themeSelect = document.getElementById('setting-theme');
-    if (themeSelect) {
-      themeSelect.addEventListener('change', (e) => {
-        const selected = e.currentTarget.value;
-        state.updateSettings({ theme: selected });
-        this.applyTheme(selected);
       });
     }
 
@@ -686,11 +881,11 @@ class UIManager {
         document.getElementById('task-input-mins').value = task.estimatedMinutes || (task.estimatedPomodoros * pomoDuration);
       }
     } else {
-      if (titleEl) titleEl.textContent = 'What are you working on?';
+      if (titleEl) titleEl.textContent = 'Add Extra Task for Focus Session';
       if (btnDeleteModal) btnDeleteModal.style.display = 'none';
       document.getElementById('task-input-priority').value = 'medium';
-      document.getElementById('task-input-pomos').value = '2';
-      document.getElementById('task-input-mins').value = 2 * pomoDuration;
+      document.getElementById('task-input-pomos').value = '1';
+      document.getElementById('task-input-mins').value = pomoDuration;
     }
 
     modal.showModal();
@@ -731,7 +926,7 @@ class UIManager {
         estimatedPomodoros,
         estimatedMinutes
       });
-      notifier.notify('Task Updated', `"${title}" has been updated.`);
+      notifier.notify('Task Updated', `"${title}" updated.`);
     } else {
       taskManager.createTask({
         title,
@@ -740,7 +935,7 @@ class UIManager {
         estimatedPomodoros,
         estimatedMinutes
       });
-      notifier.notify('Task Created', `"${title}" added to queue.`, { type: 'success' });
+      notifier.notify('Task Added', `"${title}" added to focus session.`, { type: 'success' });
     }
 
     document.getElementById('modal-task')?.close();
@@ -768,7 +963,6 @@ class UIManager {
     const volume = parseInt(document.getElementById('setting-volume').value, 10) || 75;
     const repeatSound = document.getElementById('setting-repeat-sound').checked;
     const repeatCount = parseInt(document.getElementById('setting-repeat-count').value, 10) || 1;
-    const theme = document.getElementById('setting-theme').value;
 
     state.updateSettings({
       pomodoroDuration: Math.max(1, pomoDur),
@@ -787,66 +981,57 @@ class UIManager {
       breakSound,
       volume,
       repeatSound,
-      repeatCount,
-      theme
+      repeatCount
     });
 
-    this.applyTheme(theme);
     if (state.timerState.status === 'idle') {
       timer.syncModeDuration(state.timerState.mode);
     }
+    this.renderSessionDiffPresets();
     notifier.notify('Settings Saved', 'Your timer preferences have been updated.', { type: 'success' });
   }
 
   renderAnalyticsModal() {
-    const weekly = analytics.getWeeklyStats();
-    const taskBreakdown = analytics.getTaskBreakdown();
+    const weeklyData = analytics.getWeeklySessionCounts();
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const maxVal = Math.max(...weeklyData, 4);
 
-    const totalPomosEl = document.getElementById('analytics-total-pomos');
-    if (totalPomosEl) totalPomosEl.textContent = weekly.totalWeeklyPomos;
-
-    const totalHoursEl = document.getElementById('analytics-total-hours');
-    if (totalHoursEl) totalHoursEl.textContent = `${weekly.totalWeeklyHours}h`;
-
-    const streakValEl = document.getElementById('analytics-streak-val');
-    if (streakValEl) streakValEl.textContent = `${state.streak.currentStreak}d`;
-
-    // 7-day Bar Chart
-    const barContainer = document.getElementById('analytics-weekly-barchart');
-    if (barContainer) {
-      const maxPomos = Math.max(1, ...weekly.days.map(d => d.pomodoros));
-      barContainer.innerHTML = weekly.days.map(d => {
-        const heightPercent = Math.max(8, Math.round((d.pomodoros / maxPomos) * 100));
+    const barchartEl = document.getElementById('analytics-weekly-barchart');
+    if (barchartEl) {
+      barchartEl.innerHTML = weeklyData.map((val, idx) => {
+        const pct = Math.round((val / maxVal) * 100);
         return `
-          <div class="bar-col" title="${d.date}: ${d.pomodoros} Pomodoros (${d.focusMinutes}m)">
-            <div class="bar-fill" style="height: ${heightPercent}%;"></div>
-            <span class="bar-lbl">${d.dayName}</span>
+          <div class="barchart-col">
+            <div class="barchart-bar-wrap">
+              <div class="barchart-bar" style="height: ${pct}%;" title="${val} Pomos"></div>
+            </div>
+            <div class="barchart-label">${days[idx]}</div>
           </div>
         `;
       }).join('');
     }
 
-    // Task Breakdown
-    const breakdownContainer = document.getElementById('analytics-task-breakdown');
-    if (breakdownContainer) {
-      if (taskBreakdown.length === 0) {
-        breakdownContainer.innerHTML = `<div style="color: var(--text-modal-muted); font-size: 0.85rem; padding: 0.5rem 0;">No completed task sessions yet.</div>`;
+    const totalHoursEl = document.getElementById('analytics-total-hours');
+    if (totalHoursEl) totalHoursEl.textContent = `${analytics.getWeeklyFocusHours().toFixed(1)}h`;
+
+    const totalPomosEl = document.getElementById('analytics-total-pomos');
+    if (totalPomosEl) totalPomosEl.textContent = analytics.getWeeklyTotalPomodoros();
+
+    const streakValEl = document.getElementById('analytics-streak-val');
+    if (streakValEl) streakValEl.textContent = `${state.streak.currentStreak}d`;
+
+    const breakdownEl = document.getElementById('analytics-task-breakdown');
+    if (breakdownEl) {
+      const breakdown = analytics.getTaskFocusBreakdown();
+      if (breakdown.length === 0) {
+        breakdownEl.innerHTML = '<p class="subtle" style="padding: 12px 0;">No completed task sessions recorded yet.</p>';
       } else {
-        const totalMinutes = taskBreakdown.reduce((acc, t) => acc + t.minutes, 0) || 1;
-        breakdownContainer.innerHTML = taskBreakdown.slice(0, 5).map(t => {
-          const pct = Math.round((t.minutes / totalMinutes) * 100);
-          return `
-            <div style="margin-bottom: 0.65rem;">
-              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem;">
-                <span>${this.escapeHtml(t.title)}</span>
-                <span style="font-family: var(--font-mono); color: var(--text-modal-muted);">${t.count} Pomo (${t.minutes}m)</span>
-              </div>
-              <div style="height: 5px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                <div style="width: ${pct}%; height: 100%; background: #222222;"></div>
-              </div>
-            </div>
-          `;
-        }).join('');
+        breakdownEl.innerHTML = breakdown.slice(0, 5).map(item => `
+          <div class="analytics-task-row">
+            <span class="analytics-task-title">${this.escapeHtml(item.title)}</span>
+            <span class="analytics-task-time">${Math.round(item.seconds / 60)}m</span>
+          </div>
+        `).join('');
       }
     }
   }

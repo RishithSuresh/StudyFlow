@@ -37,69 +37,111 @@ class TaskManager {
     state.updateTimerState({ activeTaskId: id });
   }
 
-  syncFromStudyFlow() {
+  getStudyFlowTasksFromStorage() {
     try {
-      let sfDb = null;
-      let targetKey = null;
-
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (k === 'studyflow-v1' || k?.startsWith('studyflow-v1:')) {
           const raw = localStorage.getItem(k);
           if (raw) {
-            try {
-              const parsed = JSON.parse(raw);
-              if (parsed && Array.isArray(parsed.tasks)) {
-                sfDb = parsed;
-                targetKey = k;
-                break;
-              }
-            } catch {}
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.tasks)) {
+              return parsed.tasks;
+            }
           }
         }
       }
+    } catch {}
+    return [];
+  }
 
-      if (!sfDb || !Array.isArray(sfDb.tasks) || sfDb.tasks.length === 0) {
-        return;
-      }
+  syncFromStudyFlow() {
+    try {
+      const sfTasks = window.getStudyFlowTasks ? window.getStudyFlowTasks() : this.getStudyFlowTasksFromStorage();
+      if (!Array.isArray(sfTasks) || sfTasks.length === 0) return;
 
-      const today = new Date().toISOString().slice(0, 10);
-      const pomoDuration = state.settings.pomodoroDuration || 30;
-      const existingMap = new Map(state.tasks.map(t => [t.id, t]));
+      const sfMap = new Map(sfTasks.map(t => [t.id, t]));
+      let changed = false;
 
-      const syncedTasks = sfDb.tasks.map(t => {
-        const existing = existingMap.get(t.id);
-        const isToday = t.due === today || t.scope === 'daily';
-        return {
-          id: t.id,
-          title: t.title || 'Untitled Task',
-          description: t.note || (t.subject ? `Subject: ${t.subject}` : ''),
-          priority: isToday ? 'high' : 'medium',
-          estimatedPomodoros: existing?.estimatedPomodoros || 2,
-          estimatedMinutes: (existing?.estimatedPomodoros || 2) * pomoDuration,
-          completedPomodoros: existing?.completedPomodoros || 0,
-          actualFocusedSeconds: existing?.actualFocusedSeconds || 0,
-          isCompleted: Boolean(t.done),
-          createdAt: existing?.createdAt || new Date().toISOString(),
-          completedAt: t.done ? (existing?.completedAt || new Date().toISOString()) : null,
-          source: 'studyflow'
-        };
+      const updated = state.tasks.map(task => {
+        const sfTask = sfMap.get(task.id);
+        if (sfTask && Boolean(sfTask.done) !== Boolean(task.isCompleted)) {
+          changed = true;
+          return {
+            ...task,
+            isCompleted: Boolean(sfTask.done),
+            completedAt: sfTask.done ? (task.completedAt || new Date().toISOString()) : null
+          };
+        }
+        return task;
       });
 
-      // Filter out old sample mock tasks if user has real StudyFlow tasks
-      const sfIds = new Set(sfDb.tasks.map(t => t.id));
-      const focusOnly = state.tasks.filter(t => !sfIds.has(t.id) && !t.id.startsWith('task-sample-'));
-
-      state.updateTasks([...syncedTasks, ...focusOnly]);
-
-      const activeTask = this.getActiveTask();
-      if (!activeTask || activeTask.isCompleted) {
-        const nextActive = syncedTasks.find(t => !t.isCompleted) || focusOnly.find(t => !t.isCompleted);
-        if (nextActive) this.setActiveTask(nextActive.id);
+      if (changed) {
+        state.updateTasks(updated);
       }
     } catch (e) {
       console.warn('Failed to sync tasks from StudyFlow:', e);
     }
+  }
+
+  getAvailableStudyFlowTasks(searchQuery = '', scopeFilter = 'all') {
+    const sfTasks = window.getStudyFlowTasks ? window.getStudyFlowTasks() : this.getStudyFlowTasksFromStorage();
+    if (!Array.isArray(sfTasks)) return [];
+
+    const inFocusIds = new Set(state.tasks.map(t => t.id));
+    const today = new Date().toISOString().slice(0, 10);
+
+    return sfTasks.filter(t => {
+      if (t.done) return false;
+      const isDaily = t.scope === 'daily' || t.due === today;
+      if (scopeFilter === 'daily' && !isDaily) return false;
+      if (scopeFilter === 'overall' && isDaily) return false;
+
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = (t.title || '').toLowerCase().includes(q);
+        const matchSubj = (t.subject || '').toLowerCase().includes(q);
+        const matchNote = (t.note || '').toLowerCase().includes(q);
+        if (!matchTitle && !matchSubj && !matchNote) return false;
+      }
+      return true;
+    }).map(t => ({
+      ...t,
+      isInFocus: inFocusIds.has(t.id)
+    }));
+  }
+
+  addExistingTaskToFocus(sfTaskId) {
+    const sfTasks = window.getStudyFlowTasks ? window.getStudyFlowTasks() : this.getStudyFlowTasksFromStorage();
+    const sfTask = sfTasks.find(t => t.id === sfTaskId);
+    if (!sfTask) return null;
+
+    const existing = state.tasks.find(t => t.id === sfTaskId);
+    if (existing) {
+      this.setActiveTask(existing.id);
+      return existing;
+    }
+
+    const pomoDuration = state.settings.pomodoroDuration || 30;
+    const newTask = {
+      id: sfTask.id,
+      title: sfTask.title || 'Untitled Task',
+      description: sfTask.note || (sfTask.subject ? `Subject: ${sfTask.subject}` : ''),
+      priority: sfTask.scope === 'daily' ? 'high' : 'medium',
+      estimatedPomodoros: 1,
+      estimatedMinutes: pomoDuration,
+      completedPomodoros: 0,
+      actualFocusedSeconds: 0,
+      isCompleted: Boolean(sfTask.done),
+      createdAt: new Date().toISOString(),
+      completedAt: null,
+      source: 'studyflow'
+    };
+
+    const updatedTasks = [newTask, ...state.tasks];
+    state.updateTasks(updatedTasks);
+    this.setActiveTask(newTask.id);
+    return newTask;
   }
 
   createTask({ title, description = '', priority = 'medium', estimatedPomodoros = 1, estimatedMinutes = null }) {
@@ -123,7 +165,8 @@ class TaskManager {
       actualFocusedSeconds: 0,
       isCompleted: false,
       createdAt: new Date().toISOString(),
-      completedAt: null
+      completedAt: null,
+      source: 'focus'
     };
 
     const updatedTasks = [newTask, ...state.tasks];
@@ -133,8 +176,8 @@ class TaskManager {
       this.setActiveTask(newTask.id);
     }
 
-    // Sync to StudyFlow's tasks
-    this.createTaskInStudyFlow({
+    // Sync to StudyFlow workspace tasks
+    const sfTaskObj = {
       id: newTask.id,
       title: newTask.title,
       note: newTask.description,
@@ -142,7 +185,13 @@ class TaskManager {
       scope: 'daily',
       due: new Date().toISOString().slice(0, 10),
       done: false
-    });
+    };
+
+    if (window.addStudyFlowTask) {
+      window.addStudyFlowTask(sfTaskObj);
+    } else {
+      this.createTaskInStudyFlow(sfTaskObj);
+    }
 
     return newTask;
   }
@@ -185,7 +234,17 @@ class TaskManager {
 
     state.updateTasks(updatedTasks);
 
-    // Update title/note in StudyFlow if present
+    if (window.updateStudyFlowTask) {
+      window.updateStudyFlowTask(id, {
+        ...(updates.title ? { title: updates.title } : {}),
+        ...(updates.description !== undefined ? { note: updates.description } : {})
+      });
+    } else {
+      this.updateTaskInStudyFlow(id, updates);
+    }
+  }
+
+  updateTaskInStudyFlow(id, updates) {
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
@@ -223,7 +282,12 @@ class TaskManager {
     });
 
     state.updateTasks(updatedTasks);
-    this.syncTaskCompletionToStudyFlow(id, nowDone);
+
+    if (window.updateStudyFlowTask) {
+      window.updateStudyFlowTask(id, { done: nowDone });
+    } else {
+      this.syncTaskCompletionToStudyFlow(id, nowDone);
+    }
   }
 
   syncTaskCompletionToStudyFlow(id, isDone) {
@@ -241,6 +305,51 @@ class TaskManager {
                 localStorage.setItem(k, JSON.stringify(parsed));
                 window.dispatchEvent(new CustomEvent('studyflow:tasks-updated'));
               }
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  removeTaskFromFocus(id) {
+    const updatedTasks = state.tasks.filter(t => t.id !== id);
+    state.updateTasks(updatedTasks);
+
+    if (state.timerState.activeTaskId === id) {
+      const nextActive = updatedTasks.length > 0 ? updatedTasks[0].id : null;
+      this.setActiveTask(nextActive);
+    }
+  }
+
+  deleteTask(id) {
+    const updatedTasks = state.tasks.filter(t => t.id !== id);
+    state.updateTasks(updatedTasks);
+
+    if (state.timerState.activeTaskId === id) {
+      const nextActive = updatedTasks.length > 0 ? updatedTasks[0].id : null;
+      this.setActiveTask(nextActive);
+    }
+
+    if (window.deleteStudyFlowTask) {
+      window.deleteStudyFlowTask(id);
+    } else {
+      this.deleteTaskInStudyFlow(id);
+    }
+  }
+
+  deleteTaskInStudyFlow(id) {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k === 'studyflow-v1' || k?.startsWith('studyflow-v1:')) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.tasks)) {
+              parsed.tasks = parsed.tasks.filter(t => t.id !== id);
+              localStorage.setItem(k, JSON.stringify(parsed));
+              window.dispatchEvent(new CustomEvent('studyflow:tasks-updated'));
             }
           }
         }
@@ -278,16 +387,6 @@ class TaskManager {
     });
 
     state.updateTasks(updatedTasks);
-  }
-
-  deleteTask(id) {
-    const updatedTasks = state.tasks.filter(t => t.id !== id);
-    state.updateTasks(updatedTasks);
-
-    if (state.timerState.activeTaskId === id) {
-      const nextActive = updatedTasks.length > 0 ? updatedTasks[0].id : null;
-      this.setActiveTask(nextActive);
-    }
   }
 
   clearFinishedTasks() {

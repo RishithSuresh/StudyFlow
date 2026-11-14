@@ -4,7 +4,7 @@
 
 const STORAGE_KEYS = {
   SETTINGS: 'deeptick_settings_v1',
-  TASKS: 'deeptick_tasks_v1',
+  TASKS: 'deeptick_tasks_v2',
   SESSIONS: 'deeptick_sessions_v1',
   TIMER_STATE: 'deeptick_timer_state_v1',
   STREAK: 'deeptick_streak_v1'
@@ -26,46 +26,20 @@ const DEFAULT_SETTINGS = {
   volume: 75,                 // 0 - 100
   repeatSound: false,
   repeatCount: 2,
-  theme: 'navy',              // 'navy', 'sand', 'midnight'
+  theme: 'navy',
   showCompletedTasks: true,
   autoArchiveCompleted: false,
   confirmDelete: true
 };
 
-const DEFAULT_TASKS = [
-  {
-    id: 'task-sample-1',
-    title: 'Study Deep Work Strategies',
-    description: 'Read chapter 3 and take structured notes on timeboxing.',
-    priority: 'high',
-    estimatedPomodoros: 2,
-    estimatedMinutes: 60,
-    completedPomodoros: 1,
-    actualFocusedSeconds: 1800,
-    isCompleted: false,
-    createdAt: new Date().toISOString(),
-    completedAt: null
-  },
-  {
-    id: 'task-sample-2',
-    title: 'Build Project Documentation',
-    description: 'Document the architecture, features, and key calculation rules.',
-    priority: 'medium',
-    estimatedPomodoros: 3,
-    estimatedMinutes: 90,
-    completedPomodoros: 0,
-    actualFocusedSeconds: 0,
-    isCompleted: false,
-    createdAt: new Date().toISOString(),
-    completedAt: null
-  }
-];
+const DEFAULT_TASKS = [];
 
 class StateStore {
   constructor() {
     this.events = {};
     this.settings = this.load(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
-    this.tasks = this.load(STORAGE_KEYS.TASKS, DEFAULT_TASKS);
+    const storedTasks = this.load(STORAGE_KEYS.TASKS, DEFAULT_TASKS);
+    this.tasks = (Array.isArray(storedTasks) ? storedTasks : []).filter(t => !t.id?.startsWith('task-sample-'));
     this.sessions = this.load(STORAGE_KEYS.SESSIONS, []);
     this.timerState = this.load(STORAGE_KEYS.TIMER_STATE, null);
     this.streak = this.load(STORAGE_KEYS.STREAK, { currentStreak: 1, lastActiveDate: new Date().toISOString().slice(0, 10) });
