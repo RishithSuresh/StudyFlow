@@ -42,40 +42,8 @@
   <div class="sidebar-bottom"><div class="mini-note"><span>✳</span><b>Small steps add up.</b><p>Plan less. Finish more. Keep showing up.</p></div><button id="sidebar-profile" class="profile" type="button" data-view="profile"><div class="avatar">SF</div><div><b id="sidebar-user-name">My workspace</b><small id="sidebar-user-email">Private workspace</small></div></button></div>
 </aside>
 <main class="main">
-<header class="topbar"><div><div class="eyebrow" id="today-label">YOUR STUDY SPACE</div><h1 id="page-title">Good morning. Let's make progress.</h1></div><div class="top-actions"><span class="date-pill" id="today-date"></span><button class="secondary-btn" id="btn-open-manual" title="StudyFlow Feature Manual & Guide">📖 Guide &amp; Manual</button><button class="icon-btn" id="notify-btn" title="Enable browser reminders">♧</button><button class="primary-btn" id="quick-add">＋ Add task</button></div></header>
+<header class="topbar"><div><div class="eyebrow" id="today-label">YOUR STUDY SPACE</div><h1 id="page-title">Good morning. Let's make progress.</h1></div><div class="top-actions"><span class="date-pill" id="today-date"></span><button type="button" class="btn-page-guide" data-open-guide="overview" title="How Overview Works">ℹ️ How it works</button><button class="icon-btn" id="notify-btn" title="Enable browser reminders">♧</button><button class="primary-btn" id="quick-add">＋ Add task</button></div></header>
 <section id="view-overview" class="view active">
-  <!-- Overview Page Manual Card -->
-  <div class="page-manual-card" id="manual-overview">
-    <div class="page-manual-toggle" data-toggle-manual="overview">
-      <div class="manual-toggle-left">
-        <span>📖</span>
-        <b>Overview Feature Manual</b>
-        <span class="manual-badge">How this page works</span>
-      </div>
-      <span class="manual-chevron">▼</span>
-    </div>
-    <div class="page-manual-body">
-      <p class="manual-intro">Your scholar command centre unites your daily study priorities, overall syllabus progress, and upcoming milestones in one unified view.</p>
-      <div class="manual-feature-grid">
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>📊</span><b>Overall Syllabus</b><span class="manual-item-tag">Curriculum</span></div>
-          <p>Aggregates topic completion across all academic &amp; GATE subjects. Check off topics in the Subjects tab to move this progress bar forward.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>☀️</span><b>Today's Priorities</b><span class="manual-item-tag">Daily Tasks</span></div>
-          <p>Surfaces urgent daily study tasks due today. Complete tasks directly with the checkbox. Unfinished daily tasks automatically carry forward tomorrow with a missed remark.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>🗓️</span><b>Upcoming Deadlines</b><span class="manual-item-tag">Milestones</span></div>
-          <p>Strictly monitors long-term overall task milestones, term submissions, and calendar events. Daily tasks are excluded here to keep major deadlines distinct.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>⏱️</span><b>Focus Minutes Today</b><span class="manual-item-tag">DeepTick</span></div>
-          <p>Shows total minutes of deep focus logged today. Click "Start a focus session" to launch the DeepTick Pomodoro timer immediately.</p>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <div class="hero-row"><div class="hero-card"><div class="eyebrow light">YOUR PROGRESS, AT A GLANCE</div><h2>Make today<br>count.</h2><p>One clear next step is better than a perfect plan.</p><button class="light-btn" data-go="focus">Start a focus session ↗</button><div class="orb o1"></div><div class="orb o2"></div></div>
   <div class="progress-card"><div class="card-head"><div><div class="eyebrow">OVERALL SYLLABUS</div><h3 id="overall-percent">0% complete</h3></div><span class="ring-icon">◌</span></div><div class="progress-track large"><span id="overall-bar"></span></div><div class="progress-foot"><span id="topic-count">0 of 0 topics completed</span><span class="muted">Across all subjects</span></div><div class="divider"></div><div class="stat-grid"><div><strong id="task-open">0</strong><small>Open tasks</small></div><div><strong id="task-due">0</strong><small>Due this week</small></div><div><strong id="focus-today">0</strong><small>Focus minutes today</small></div></div></div></div>
@@ -90,42 +58,11 @@
       <h2>GATE & academic syllabus</h2>
       <p class="muted">Keep GATE subjects and college subjects organised, with topic-by-topic progress.</p>
     </div>
-    <button class="primary-btn" id="add-subject">＋ Add subject</button>
-  </div>
-
-  <!-- Subjects Page Manual Card -->
-  <div class="page-manual-card" id="manual-subjects">
-    <div class="page-manual-toggle" data-toggle-manual="subjects">
-      <div class="manual-toggle-left">
-        <span>📖</span>
-        <b>Syllabus &amp; OCR Feature Manual</b>
-        <span class="manual-badge">How this page works</span>
-      </div>
-      <span class="manual-chevron">▼</span>
-    </div>
-    <div class="page-manual-body">
-      <p class="manual-intro">Organize every course subject, extract syllabus topics from lecture handouts via AI Optical Character Recognition (OCR), and track mastery topic-by-topic.</p>
-      <div class="manual-feature-grid">
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>＋</span><b>Add Subject</b><span class="manual-item-tag">Management</span></div>
-          <p>Create subjects with code (e.g. CS201), semester/term, and syllabus topic lists. Each topic line becomes an interactive checkbox.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>📷</span><b>Syllabus OCR Import</b><span class="manual-item-tag">AI Powered</span></div>
-          <p>Upload a photo or screenshot of your syllabus or lecture schedule. Built-in Tesseract OCR automatically reads the text and extracts topic lines into checkboxes.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>☑️</span><b>Topic Checklists</b><span class="manual-item-tag">Mastery</span></div>
-          <p>Check off topics as you complete lectures, readings, or revisions. Mastery percentages update across the entire app and your Scholar Profile.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>✏️</span><b>Edit &amp; Delete</b><span class="manual-item-tag">Controls</span></div>
-          <p>Use "Edit" to add newly introduced course topics or reorganize units. Deleting a subject cleans up associated topics safely.</p>
-        </div>
-      </div>
+    <div class="heading-actions-cluster">
+      <button type="button" class="btn-page-guide" data-open-guide="subjects">ℹ️ How it works</button>
+      <button class="primary-btn" id="add-subject">＋ Add subject</button>
     </div>
   </div>
-
   <div id="subjects-list" class="subject-list"></div>
 </section>
 
@@ -136,37 +73,14 @@
       <h2>Extra skills</h2>
       <p class="muted">Track the skills you want to build alongside GATE and college. Add learning milestones and target dates.</p>
     </div>
-    <button class="primary-btn" id="add-skill">＋ Add skill</button>
-  </div>
-
-  <!-- Extra Skills Page Manual Card -->
-  <div class="page-manual-card" id="manual-skills">
-    <div class="page-manual-toggle" data-toggle-manual="skills">
-      <div class="manual-toggle-left">
-        <span>📖</span>
-        <b>Extra Skills Feature Manual</b>
-        <span class="manual-badge">How this page works</span>
-      </div>
-      <span class="manual-chevron">▼</span>
-    </div>
-    <div class="page-manual-body">
-      <p class="manual-intro">Track practical skills outside traditional academic syllabi (e.g., Python, Cloud, Machine Learning, System Design, Professional Speaking).</p>
-      <div class="manual-feature-grid">
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>🚀</span><b>Add Skill Plan</b><span class="manual-item-tag">Learning</span></div>
-          <p>Define new skills with learning category, target completion date, and current proficiency (Beginner, Basic, Intermediate, Advanced).</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>🎯</span><b>Milestone Checklists</b><span class="manual-item-tag">Execution</span></div>
-          <p>Deconstruct large skills into step-by-step milestones (one per line). Complete milestones sequentially to advance skill mastery.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>⏳</span><b>Target Deadlines</b><span class="manual-item-tag">Pacing</span></div>
-          <p>Assign target completion dates to keep your self-taught learning accountable alongside heavy semester college workloads.</p>
-        </div>
-      </div>
+    <div class="heading-actions-cluster">
+      <button type="button" class="btn-page-guide" data-open-guide="skills">ℹ️ How it works</button>
+      <button class="primary-btn" id="add-skill">＋ Add skill</button>
     </div>
   </div>
+  <div class="skill-summary" id="skill-summary"></div>
+  <div class="skill-grid" id="skills-list"></div>
+</section>
 
   <div class="skill-summary" id="skill-summary"></div>
   <div class="skill-grid" id="skills-list"></div>
@@ -180,41 +94,9 @@
       <p class="muted">Organize daily study commitments alongside long-term project milestones and deadlines.</p>
     </div>
     <div class="heading-actions-cluster">
+      <button type="button" class="btn-page-guide" data-open-guide="tasks">ℹ️ How it works</button>
       <button class="primary-btn" id="add-daily-task" type="button">＋ Add daily task</button>
       <button class="secondary-btn" id="add-overall-task" type="button">＋ Add overall task</button>
-    </div>
-  </div>
-
-  <!-- Tasks Page Manual Card -->
-  <div class="page-manual-card" id="manual-tasks">
-    <div class="page-manual-toggle" data-toggle-manual="tasks">
-      <div class="manual-toggle-left">
-        <span>📖</span>
-        <b>Tasks &amp; Execution Feature Manual</b>
-        <span class="manual-badge">How this page works</span>
-      </div>
-      <span class="manual-chevron">▼</span>
-    </div>
-    <div class="page-manual-body">
-      <p class="manual-intro">StudyFlow provides two dedicated task engines to separate immediate daily study commitments from long-term academic milestones.</p>
-      <div class="manual-feature-grid">
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>☀️</span><b>Daily Tasks</b><span class="manual-item-tag">Immediate</span></div>
-          <p>Tasks committed for today. If any daily task is uncompleted when the day passes, StudyFlow automatically rolls it over to the next day with an explicit <code>⚠️ Missed &amp; Carried Forward</code> remark so work is never forgotten.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>📋</span><b>Overall Tasks</b><span class="manual-item-tag">Milestones</span></div>
-          <p>Master backlog for multi-day assignments, term projects, thesis preparation, and exam dates. These exclusively populate the Overview's Upcoming Deadlines.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>🔍</span><b>Scope Tabs &amp; Status Filters</b><span class="manual-item-tag">Navigation</span></div>
-          <p>Switch between ☀️ Daily, 📋 Overall, or 📑 All. Filter by Open, Completed, or isolate carried-over tasks with the <code>⚠️ Carried Over</code> button.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>⏰</span><b>Reminders &amp; Pomo Estimation</b><span class="manual-item-tag">DeepTick</span></div>
-          <p>Set browser push notifications for exact reminder times, attach course subjects, and assign estimated pomodoro focus blocks.</p>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -273,41 +155,9 @@
       <p class="muted">Track your exams, classes, milestones, and task deadlines all in one interactive view.</p>
     </div>
     <div class="heading-actions-cluster">
+      <button type="button" class="btn-page-guide" data-open-guide="calendar">ℹ️ How it works</button>
       <button class="primary-btn" id="calendar-add">＋ Add Event</button>
       <button class="secondary-btn" id="calendar-add-task">＋ Add Deadline</button>
-    </div>
-  </div>
-
-  <!-- Calendar Page Manual Card -->
-  <div class="page-manual-card" id="manual-calendar">
-    <div class="page-manual-toggle" data-toggle-manual="calendar">
-      <div class="manual-toggle-left">
-        <span>📖</span>
-        <b>Calendar &amp; Schedule Feature Manual</b>
-        <span class="manual-badge">How this page works</span>
-      </div>
-      <span class="manual-chevron">▼</span>
-    </div>
-    <div class="page-manual-body">
-      <p class="manual-intro">Plan exams, project submissions, class sessions, and deadlines with an equally spaced 7-day grid and selected day agenda.</p>
-      <div class="manual-feature-grid">
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>📊</span><b>Month Highlights Bar</b><span class="manual-item-tag">Metrics</span></div>
-          <p>Instant breakdown of total scheduled events, overall deadlines, and daily tasks due in the active month.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>🏷️</span><b>Filter Chips (All / Events / Deadlines)</b><span class="manual-item-tag">Filtering</span></div>
-          <p>Filter cell badges in real time to isolate 📅 Events, 🟠 Overall Deadlines, or ☀️ Daily tasks without page reloads.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>🗓️</span><b>Equally Spaced 7-Day Grid</b><span class="manual-item-tag">Layout</span></div>
-          <p>All Monday–Sunday columns are strictly identical in width. Mini-pills truncate cleanly with "+X more" indicators so the layout never distorts.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>📋</span><b>Selected Day Agenda</b><span class="manual-item-tag">Actionable</span></div>
-          <p>Click any day to open its full agenda. Check off tasks inline directly from the calendar, edit event times, or add new items pre-filled to that date.</p>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -382,49 +232,9 @@
       <p class="muted">Upload your test papers (PDF or image), track marks, log question mistakes, and automatically uncover your weakest topics.</p>
     </div>
     <div class="heading-actions-cluster">
+      <button type="button" class="btn-page-guide" data-open-guide="reviews">ℹ️ How it works</button>
       <button class="primary-btn" id="upload-test-btn">＋ Upload test paper</button>
       <button class="secondary-btn" id="add-mistake">＋ Quick mistake</button>
-    </div>
-  </div>
-
-  <!-- Mock Test Paper Manual Card -->
-  <div class="page-manual-card" id="manual-reviews">
-    <div class="page-manual-toggle" data-toggle-manual="reviews">
-      <div class="manual-toggle-left">
-        <span>📖</span>
-        <b>Mock Test Paper &amp; Review Manual</b>
-        <span class="manual-badge">How to review papers</span>
-      </div>
-      <span class="manual-chevron">▼</span>
-    </div>
-    <div class="page-manual-body">
-      <p class="manual-intro">This system transforms test attempts into academic gains. Upload actual written papers, log question mistakes, and let StudyFlow automatically uncover your weakest syllabus topics.</p>
-      <div class="manual-feature-grid">
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>📄</span><b>Upload Test Paper</b><span class="manual-item-tag">Paper Storage</span></div>
-          <p>Attach your written exam as a PDF or image (PNG, JPG, WebP). Files are stored offline in browser IndexedDB with automatic thumbnail generation.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>👁️</span><b>Full Paper Lightbox Viewer</b><span class="manual-item-tag">Reader</span></div>
-          <p>Click "View paper" on any test card to inspect your full written paper in high resolution with download capabilities and zoom.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>❌</span><b>Mistake Classification Logger</b><span class="manual-item-tag">Analysis</span></div>
-          <p>Log mistakes by Question Number, Marks Lost, and Mistake Type (<code>Conceptual</code>, <code>Calculation</code>, <code>Silly / Reading</code>, <code>Time management</code>, <code>Unattempted</code>). Record the correct approach and the key lesson to prevent repeats.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>🧠</span><b>Automated Topic Weakness Engine</b><span class="manual-item-tag">Analytics</span></div>
-          <p>StudyFlow analyzes mark losses across all tests and ranks syllabus topics by total marks lost, pinpointing exactly which topics need revision first.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>💡</span><b>Exam Strategy &amp; Pointers</b><span class="manual-item-tag">Strategy</span></div>
-          <p>Record exam pacing rules, negative marking traps, and actionable guidelines in the dedicated pointers box for each mock test.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>✓</span><b>Resolution Workflow</b><span class="manual-item-tag">Mastery</span></div>
-          <p>Once you thoroughly re-solve and understand a question, mark it "Resolved". The question turns green and updates your revision metrics.</p>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -466,37 +276,9 @@
       <p class="muted">Track your study velocity, examine weekly graphs, uncover weak spots, and get data-driven recommendations.</p>
     </div>
     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <button type="button" class="btn-page-guide" data-open-guide="profile">ℹ️ How it works</button>
       <button id="profile-refresh-btn" class="secondary-btn" type="button">↻ Refresh data</button>
       <button id="profile-sign-out" class="secondary-btn" type="button">Sign out</button>
-    </div>
-  </div>
-
-  <!-- Scholar Profile Manual Card -->
-  <div class="page-manual-card" id="manual-profile">
-    <div class="page-manual-toggle" data-toggle-manual="profile">
-      <div class="manual-toggle-left">
-        <span>📖</span>
-        <b>Analytics &amp; Profile Feature Manual</b>
-        <span class="manual-badge">How this page works</span>
-      </div>
-      <span class="manual-chevron">▼</span>
-    </div>
-    <div class="page-manual-body">
-      <p class="manual-intro">Your scholar dashboard provides visual analytics on study habits, syllabus mastery distributions, and automated study recommendations.</p>
-      <div class="manual-feature-grid">
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>📊</span><b>Weekly Study Hours Chart</b><span class="manual-item-tag">Graph</span></div>
-          <p>Visual bar breakdown of hours logged Monday through Sunday. Hover over bars to see daily focus times and maintain consistent study velocity.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>🎯</span><b>Subject Mastery Breakdown</b><span class="manual-item-tag">Syllabus</span></div>
-          <p>Visual meters showing topic completion percentages per subject to easily identify neglected course modules.</p>
-        </div>
-        <div class="manual-feature-item">
-          <div class="manual-item-head"><span>💡</span><b>Intelligent Study Recommendations</b><span class="manual-item-tag">AI Guidance</span></div>
-          <p>Dynamic coaching prompts synthesized from upcoming deadlines, mock test weakest topics, and recent study streaks.</p>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -631,43 +413,10 @@
           <span class="btn-icon">⌨️</span>
           <span class="btn-text">Shortcuts</span>
         </button>
-      </div>
-    </div>
-
-    <!-- Focus Timer Manual Card -->
-    <div class="page-manual-card" id="manual-focus" style="margin: 0 0 16px;">
-      <div class="page-manual-toggle" data-toggle-manual="focus">
-        <div class="manual-toggle-left">
-          <span>📖</span>
-          <b>Focus Timer &amp; Pomodoro Manual</b>
-          <span class="manual-badge">How this page works</span>
-        </div>
-        <span class="manual-chevron">▼</span>
-      </div>
-      <div class="page-manual-body">
-        <p class="manual-intro">DeepTick delivers science-backed focus intervals with cycle tracking, session presets, and dynamic completion time calculations.</p>
-        <div class="manual-feature-grid">
-          <div class="manual-feature-item">
-            <div class="manual-item-head"><span>⏱️</span><b>Session Differentiation Presets</b><span class="manual-item-tag">Presets</span></div>
-            <p>Choose 15m (Quick Sprint), 25m (Standard Pomodoro), 30m (Study Block), 45m (Deep Session), or 60m (Intense Focus). Clicking any preset instantly sets the clock duration.</p>
-          </div>
-          <div class="manual-feature-item">
-            <div class="manual-item-head"><span>🍅</span><b>Pomodoro Cycle Rounds</b><span class="manual-item-tag">Intervals</span></div>
-            <p>Displays <code>🍅 Round X of 4 · (Long break after round 4)</code>. Each cycle consists of 4 focus rounds separated by 5m short breaks, followed by a rewarding 15m long break after round 4.</p>
-          </div>
-          <div class="manual-feature-item">
-            <div class="manual-item-head"><span>📋</span><b>Assign Focus Tasks</b><span class="manual-item-tag">Tracking</span></div>
-            <p>Click "Choose Existing Task" to attach a StudyFlow task to your timer, or "+ Add Extra Task" for impromptu work. Tracks completed vs estimated pomodoros.</p>
-          </div>
-          <div class="manual-feature-item">
-            <div class="manual-item-head"><span>📊</span><b>Today's Pomo Goal vs Cycle Count</b><span class="manual-item-tag">Clarity</span></div>
-            <p>The footer tracks your daily goal (e.g. 0 / 4 Pomos completed today), while the timer banner tracks your position in the 4-round break cycle.</p>
-          </div>
-          <div class="manual-feature-item">
-            <div class="manual-item-head"><span>🏁</span><b>Dynamic Finish At Calculation</b><span class="manual-item-tag">Estimation</span></div>
-            <p>Calculates the exact wall-clock time you will complete your queued work. Displays <code>--:--</code> when idle so it never projects imaginary marathon sessions.</p>
-          </div>
-        </div>
+        <button type="button" class="dt-header-pill" data-open-guide="focus" title="How Focus Timer Works">
+          <span class="btn-icon">ℹ️</span>
+          <span class="btn-text">How it works</span>
+        </button>
       </div>
     </div>
 
@@ -899,43 +648,12 @@
         <div class="test-badges-row" id="detail-badges-row"></div>
       </div>
       <div class="detail-header-actions">
+        <button type="button" class="btn btn-secondary btn-sm" data-open-guide="reviews" title="Paper Review Instructions">ℹ️ Paper Guide</button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-edit-test-details">✏️ Edit test</button>
         <button type="button" class="modal-close-btn" data-close-detail-modal aria-label="Close dialog">&times;</button>
       </div>
     </div>
     <div class="modal-body test-detail-body">
-      <!-- Paper Review Manual & Feature Guide -->
-      <div class="page-manual-card" style="margin-bottom: 16px;">
-        <div class="page-manual-toggle" data-toggle-manual="test-detail">
-          <div class="manual-toggle-left">
-            <span>📖</span>
-            <b>How to Review This Paper &amp; Analyze Mistakes</b>
-            <span class="manual-badge">Paper Guide</span>
-          </div>
-          <span class="manual-chevron">▼</span>
-        </div>
-        <div class="page-manual-body">
-          <div class="manual-feature-grid">
-            <div class="manual-feature-item">
-              <div class="manual-item-head"><span>📄</span><b>Inspect Paper File</b><span class="manual-item-tag">Preview</span></div>
-              <p>Click "View paper" on the right to open your original written test sheet or solution PDF in the high-res viewer.</p>
-            </div>
-            <div class="manual-feature-item">
-              <div class="manual-item-head"><span>❌</span><b>Log Each Mistake</b><span class="manual-item-tag">Mistake Log</span></div>
-              <p>Click "＋ Log mistake" for any missed question. Categorize into Conceptual, Calculation, Silly mistake, Time management, or Unattempted.</p>
-            </div>
-            <div class="manual-feature-item">
-              <div class="manual-item-head"><span>🧠</span><b>Weakest Topics</b><span class="manual-item-tag">Analytics</span></div>
-              <p>StudyFlow automatically tallies total marks lost per syllabus topic to calculate and rank your weakest areas in this test.</p>
-            </div>
-            <div class="manual-feature-item">
-              <div class="manual-item-head"><span>💡</span><b>Next Test Pointers</b><span class="manual-item-tag">Strategy</span></div>
-              <p>Jot down pacing notes, negative marking warnings, or concept rules in the pointers box at the bottom.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Paper & Description Banner -->
       <div class="test-info-banner panel">
         <div class="test-desc-col">

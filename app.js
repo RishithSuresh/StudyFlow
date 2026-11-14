@@ -916,6 +916,17 @@ function render(){renderOverview();renderSubjects();renderSkills();renderTasks()
 function field(label,name,type='text',value='',extra=''){return `<div class="field"><label>${label}</label><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></div>`}
 function selectField(label,name,options,value=''){return `<div class="field"><label>${label}</label><select name="${name}">${options.map(o=>`<option ${o[0]===value?'selected':''} value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></div>`}
 function area(label,name,value=''){return `<div class="field"><label>${label}</label><textarea name="${name}">${esc(value)}</textarea></div>`}
+function openManualTab(tabKey){
+  const dialog=$('#modal-feature-manual');
+  if(!dialog) return;
+  const targetKey=tabKey||currentView||'overview';
+  const targetBtn=$(`[data-manual-tab="${targetKey}"]`);
+  $$('.manual-tab-btn').forEach(btn=>btn.classList.toggle('active',btn===targetBtn));
+  $$('.manual-panel-view').forEach(panel=>panel.classList.toggle('active',panel.id===`manual-tab-content-${targetKey}`));
+  if(!dialog.open) dialog.showModal();
+}
+window.openManualTab=openManualTab;
+
 function openModal(title,fields,handler){$('#modal-title').textContent=title;$('#modal-fields').innerHTML=fields;modalAction=handler;$('#item-dialog').showModal()}
 $('#item-form').addEventListener('submit',e=>{
   if(e.submitter?.value==='cancel'){
@@ -1224,28 +1235,18 @@ document.addEventListener('click',e=>{
     }
   }
 
-  // In-page manual toggle
-  const manualToggle = e.target.closest('.page-manual-toggle');
-  if(manualToggle){
-    const card = manualToggle.closest('.page-manual-card');
-    if(card){
-      card.classList.toggle('is-open');
-    }
+  // Manual & Page Guide handler
+  const guideBtn = b.dataset.openGuide ? b : b.closest('[data-open-guide]');
+  if(guideBtn){
+    e.stopPropagation();
+    openManualTab(guideBtn.dataset.openGuide);
     return;
   }
 
-  // Global manual modal
-  if(b.id === 'btn-open-manual' || b.id === 'sidebar-manual-btn' || b.closest('#btn-open-manual') || b.closest('#sidebar-manual-btn')){
-    const dialog = $('#modal-feature-manual');
-    if(dialog){
-      const viewKey = currentView === 'reviews' ? 'reviews' : currentView;
-      const currentTabBtn = $(`[data-manual-tab="${viewKey}"]`);
-      if(currentTabBtn){
-        $$('.manual-tab-btn').forEach(btn => btn.classList.toggle('active', btn === currentTabBtn));
-        $$('.manual-panel-view').forEach(panel => panel.classList.toggle('active', panel.id === `manual-tab-content-${viewKey}`));
-      }
-      dialog.showModal();
-    }
+  // Global manual modal buttons
+  if(b.id === 'btn-open-manual' || b.id === 'sidebar-manual-btn' || b.closest('#btn-open-manual') || b.closest('#sidebar-manual-btn') || b.dataset.openManual){
+    e.stopPropagation();
+    openManualTab(currentView);
     return;
   }
   if(b.dataset.closeManualModal || b.closest('[data-close-manual-modal]')){
