@@ -178,7 +178,7 @@ class UIManager {
       return `
         <div class="task-item ${isActive ? 'is-active-task' : ''} ${task.isCompleted ? 'is-completed' : ''}" data-task-id="${task.id}">
           <div class="task-left-wrap" data-action="select-task" data-task-id="${task.id}">
-            <button class="task-check-circle ${task.isCompleted ? 'checked' : ''}" data-action="toggle-complete" data-task-id="${task.id}" aria-label="Toggle completion"></button>
+            <button class="task-check-circle ${task.isCompleted ? 'checked' : ''}" data-action="toggle-complete" data-task-id="${task.id}" aria-label="Toggle completion" title="${task.isCompleted ? 'Mark as incomplete' : 'Mark as completed'}">${task.isCompleted ? '<span class="task-check-icon">✓</span>' : ''}</button>
             <div class="task-info-col">
               <span class="task-title-text">${this.escapeHtml(task.title)}</span>
               ${task.description ? `<span class="task-desc-text">${this.escapeHtml(task.description)}</span>` : ''}

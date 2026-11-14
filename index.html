@@ -37,17 +37,16 @@
     <button class="nav-item" data-view="tasks">☑ <span>Tasks & deadlines</span></button>
     <button class="nav-item" data-view="reviews">↗ <span>Mock tests & review</span></button>
     <button class="nav-item" data-view="focus">◷ <span>Focus timer</span></button>
-    <button class="nav-item" id="sidebar-manual-btn" type="button" data-open-manual="all">📖 <span>Feature Manual</span></button>
   </nav>
   <div class="sidebar-bottom"><div class="mini-note"><span>✳</span><b>Small steps add up.</b><p>Plan less. Finish more. Keep showing up.</p></div><button id="sidebar-profile" class="profile" type="button" data-view="profile"><div class="avatar">SF</div><div><b id="sidebar-user-name">My workspace</b><small id="sidebar-user-email">Private workspace</small></div></button></div>
 </aside>
 <main class="main">
-<header class="topbar"><div><div class="eyebrow" id="today-label">YOUR STUDY SPACE</div><h1 id="page-title">Good morning. Let's make progress.</h1></div><div class="top-actions"><span class="date-pill" id="today-date"></span><button type="button" class="btn-page-guide" data-open-guide="overview" title="How Overview Works">ℹ️ How it works</button><button class="icon-btn" id="notify-btn" title="Enable browser reminders">♧</button><button class="primary-btn" id="quick-add">＋ Add task</button></div></header>
+<header class="topbar"><div><div class="eyebrow" id="today-label">YOUR STUDY SPACE</div><h1 id="page-title">Good morning. Let's make progress.</h1></div><div class="top-actions"><span class="date-pill" id="today-date"></span><button class="icon-btn" id="notify-btn" title="Enable browser reminders">♧</button><button class="primary-btn" id="quick-add">＋ Add task</button></div></header>
 <section id="view-overview" class="view active">
 
   <div class="hero-row"><div class="hero-card"><div class="eyebrow light">YOUR PROGRESS, AT A GLANCE</div><h2>Make today<br>count.</h2><p>One clear next step is better than a perfect plan.</p><button class="light-btn" data-go="focus">Start a focus session ↗</button><div class="orb o1"></div><div class="orb o2"></div></div>
   <div class="progress-card"><div class="card-head"><div><div class="eyebrow">OVERALL SYLLABUS</div><h3 id="overall-percent">0% complete</h3></div><span class="ring-icon">◌</span></div><div class="progress-track large"><span id="overall-bar"></span></div><div class="progress-foot"><span id="topic-count">0 of 0 topics completed</span><span class="muted">Across all subjects</span></div><div class="divider"></div><div class="stat-grid"><div><strong id="task-open">0</strong><small>Open tasks</small></div><div><strong id="task-due">0</strong><small>Due this week</small></div><div><strong id="focus-today">0</strong><small>Focus minutes today</small></div></div></div></div>
-  <div class="section-heading"><div><div class="eyebrow">STAY ON TRACK</div><h2>Today's priorities</h2></div><button class="text-btn" data-go="tasks">View all tasks ↗</button></div>
+  <div class="section-heading"><div><div class="eyebrow">STAY ON TRACK</div><h2>Today's priorities</h2></div><div class="heading-actions-cluster"><button type="button" class="btn-page-guide" data-open-guide="overview" title="How Overview Works">ℹ️ How it works</button><button class="text-btn" data-go="tasks">View all tasks ↗</button></div></div>
   <div class="two-col"><div class="panel"><div class="panel-title"><h3>Next up</h3><span class="subtle">Your upcoming work</span></div><div id="today-tasks" class="task-list empty-state">No tasks yet. Add one to get started.</div></div><div class="panel"><div class="panel-title"><h3>Upcoming deadlines</h3><button class="text-btn" data-go="calendar">Calendar ↗</button></div><div id="upcoming-list" class="upcoming-list empty-state">Nothing scheduled yet.</div></div></div>
   <div class="section-heading"><div><div class="eyebrow">GATE & ACADEMICS</div><h2>Subject progress</h2></div><button class="text-btn" data-go="subjects">Manage syllabus ↗</button></div><div id="subject-overview" class="subject-grid"></div>
 </section>
@@ -78,10 +77,6 @@
       <button class="primary-btn" id="add-skill">＋ Add skill</button>
     </div>
   </div>
-  <div class="skill-summary" id="skill-summary"></div>
-  <div class="skill-grid" id="skills-list"></div>
-</section>
-
   <div class="skill-summary" id="skill-summary"></div>
   <div class="skill-grid" id="skills-list"></div>
 </section>
@@ -863,76 +858,76 @@
         <div class="settings-section">
           <h3 class="settings-section-header">⏱️ Timer</h3>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Pomodoro Duration</span><span class="setting-desc">Length of focus session</span></div>
+            <div class="setting-info"><div class="setting-label">Pomodoro Duration</div><div class="setting-desc">Length of focus session</div></div>
             <div class="setting-control"><input type="number" id="setting-pomodoro-duration" class="form-input" min="1" max="120"><span class="setting-unit">min</span></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Short Break</span><span class="setting-desc">Rest duration between sessions</span></div>
+            <div class="setting-info"><div class="setting-label">Short Break</div><div class="setting-desc">Rest duration between sessions</div></div>
             <div class="setting-control"><input type="number" id="setting-short-break" class="form-input" min="1" max="60"><span class="setting-unit">min</span></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Long Break</span><span class="setting-desc">Extended rest duration</span></div>
+            <div class="setting-info"><div class="setting-label">Long Break</div><div class="setting-desc">Extended rest duration</div></div>
             <div class="setting-control"><input type="number" id="setting-long-break" class="form-input" min="1" max="120"><span class="setting-unit">min</span></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Long Break Interval</span><span class="setting-desc">Pomodoros before long break</span></div>
+            <div class="setting-info"><div class="setting-label">Long Break Interval</div><div class="setting-desc">Pomodoros before long break</div></div>
             <div class="setting-control"><input type="number" id="setting-long-interval" class="form-input" min="1" max="12"><span class="setting-unit">pomos</span></div>
           </div>
         </div>
         <div class="settings-section">
           <h3 class="settings-section-header">⚡ Automation</h3>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Auto-Start Breaks</span><span class="setting-desc">Automatically begin break on focus end</span></div>
+            <div class="setting-info"><div class="setting-label">Auto-Start Breaks</div><div class="setting-desc">Automatically begin break on focus end</div></div>
             <div class="setting-control"><label class="toggle-switch"><input type="checkbox" id="setting-auto-breaks"><span class="toggle-slider"></span></label></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Auto-Start Pomodoros</span><span class="setting-desc">Automatically begin focus when break ends</span></div>
+            <div class="setting-info"><div class="setting-label">Auto-Start Pomodoros</div><div class="setting-desc">Automatically begin focus when break ends</div></div>
             <div class="setting-control"><label class="toggle-switch"><input type="checkbox" id="setting-auto-pomos"><span class="toggle-slider"></span></label></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Confirm Discard / Reset</span><span class="setting-desc">Warn before resetting running session</span></div>
+            <div class="setting-info"><div class="setting-label">Confirm Discard / Reset</div><div class="setting-desc">Warn before resetting running session</div></div>
             <div class="setting-control"><label class="toggle-switch"><input type="checkbox" id="setting-confirm-delete"><span class="toggle-slider"></span></label></div>
           </div>
         </div>
         <div class="settings-section">
           <h3 class="settings-section-header">🎯 Daily Goals</h3>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Daily Pomodoro Goal</span><span class="setting-desc">Target focus sessions per day</span></div>
+            <div class="setting-info"><div class="setting-label">Daily Pomodoro Goal</div><div class="setting-desc">Target focus sessions per day</div></div>
             <div class="setting-control"><input type="number" id="setting-daily-pomos" class="form-input" min="1" max="30"><span class="setting-unit">pomos</span></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Daily Focus Time Goal</span><span class="setting-desc">Target focus hours</span></div>
+            <div class="setting-info"><div class="setting-label">Daily Focus Time Goal</div><div class="setting-desc">Target focus hours</div></div>
             <div class="setting-control"><input type="number" id="setting-daily-hours" class="form-input" min="0.5" max="16" step="0.5"><span class="setting-unit">hours</span></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Primary Target Display</span><span class="setting-desc">Show pomos or time on footer</span></div>
+            <div class="setting-info"><div class="setting-label">Primary Target Display</div><div class="setting-desc">Show pomos or time on footer</div></div>
             <div class="setting-control"><select id="setting-goal-type" class="form-select" style="width: 130px;"><option value="pomodoros">Pomodoros</option><option value="time">Focus Time</option><option value="both">Both</option></select></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Show Completed Tasks</span><span class="setting-desc">Keep finished tasks in list</span></div>
+            <div class="setting-info"><div class="setting-label">Show Completed Tasks</div><div class="setting-desc">Keep finished tasks in list</div></div>
             <div class="setting-control"><label class="toggle-switch"><input type="checkbox" id="setting-show-completed"><span class="toggle-slider"></span></label></div>
           </div>
         </div>
         <div class="settings-section">
           <h3 class="settings-section-header">🔔 Sounds &amp; Alerts</h3>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Sound Notifications</span><span class="setting-desc">Play synthesized chime on completion</span></div>
+            <div class="setting-info"><div class="setting-label">Sound Notifications</div><div class="setting-desc">Play synthesized chime on completion</div></div>
             <div class="setting-control"><label class="toggle-switch"><input type="checkbox" id="setting-sound-enabled"><span class="toggle-slider"></span></label></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Pomodoro Sound</span><span class="setting-desc">Focus completion sound</span></div>
+            <div class="setting-info"><div class="setting-label">Pomodoro Sound</div><div class="setting-desc">Focus completion sound</div></div>
             <div class="setting-control"><select id="setting-pomo-sound" class="form-select" style="width: 140px;"><option value="bell">🔔 Crystal Bell</option><option value="digital">📟 Digital Beep</option><option value="marimba">🪵 Marimba Chord</option><option value="gong">🧘 Zen Gong</option><option value="chime">✨ Morning Chime</option><option value="kitchen">⏲️ Vintage Kitchen</option></select></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Break Sound</span><span class="setting-desc">Rest completion sound</span></div>
+            <div class="setting-info"><div class="setting-label">Break Sound</div><div class="setting-desc">Rest completion sound</div></div>
             <div class="setting-control"><select id="setting-break-sound" class="form-select" style="width: 140px;"><option value="marimba">🪵 Marimba Chord</option><option value="bell">🔔 Crystal Bell</option><option value="digital">📟 Digital Beep</option><option value="gong">🧘 Zen Gong</option><option value="chime">✨ Morning Chime</option><option value="kitchen">⏲️ Vintage Kitchen</option></select></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Volume (<span id="volume-display-val">75%</span>)</span></div>
+            <div class="setting-info"><div class="setting-label">Volume (<span id="volume-display-val">75%</span>)</div></div>
             <div class="setting-control" style="width: 150px;"><input type="range" id="setting-volume" min="0" max="100" value="75" style="width: 100%;"></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Repeat Sound</span><span class="setting-desc">Play chime multiple times</span></div>
+            <div class="setting-info"><div class="setting-label">Repeat Sound</div><div class="setting-desc">Play chime multiple times</div></div>
             <div class="setting-control" style="gap: 6px; display: flex;"><label class="toggle-switch"><input type="checkbox" id="setting-repeat-sound"><span class="toggle-slider"></span></label><input type="number" id="setting-repeat-count" class="form-input" min="1" max="5" value="2" style="width: 50px;"></div>
           </div>
           <div style="margin-top: 0.5rem;"><button type="button" id="btn-test-sound" class="btn btn-secondary" style="width: 100%; border: 1px solid #cbd5e1;">▶ Test Sound Preview</button></div>
@@ -940,15 +935,15 @@
         <div class="settings-section">
           <h3 class="settings-section-header">💾 Data Management</h3>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Export Data Backup</span><span class="setting-desc">JSON backup of tasks &amp; history</span></div>
+            <div class="setting-info"><div class="setting-label">Export Data Backup</div><div class="setting-desc">JSON backup of tasks &amp; history</div></div>
             <div class="setting-control"><button type="button" id="btn-export-json" class="btn btn-secondary" style="border: 1px solid #cbd5e1; font-size: 0.8rem;">Export JSON</button></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Export CSV Log</span><span class="setting-desc">CSV spreadsheet of sessions</span></div>
+            <div class="setting-info"><div class="setting-label">Export CSV Log</div><div class="setting-desc">CSV spreadsheet of sessions</div></div>
             <div class="setting-control"><button type="button" id="btn-export-csv" class="btn btn-secondary" style="border: 1px solid #cbd5e1; font-size: 0.8rem;">Export CSV</button></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><span class="setting-label">Restore Data</span><span class="setting-desc">Import from JSON file</span></div>
+            <div class="setting-info"><div class="setting-label">Restore Data</div><div class="setting-desc">Import from JSON file</div></div>
             <div class="setting-control"><label class="btn btn-secondary" style="border: 1px solid #cbd5e1; font-size: 0.8rem; cursor: pointer;">Import JSON<input type="file" id="input-import-json" accept=".json" style="display: none;"></label></div>
           </div>
         </div>
