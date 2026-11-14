@@ -421,6 +421,54 @@ dialog:not([open]){display:none!important}
 .btn-danger{background:#f8e1db;color:#a64332}
 .text-modal-muted{color:var(--sf-navy-soft)}
 
+/* ==========================================================================
+   Focus Modals (Shortcuts, Settings & Analytics)
+   ========================================================================== */
+
+/* 1. Shortcuts Modal */
+.shortcuts-grid{display:flex;flex-direction:column;gap:8px;padding:4px 0}
+.shortcut-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--sf-sand);border:1px solid var(--sf-border);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--sf-navy)}
+.kbd-key{display:inline-flex;align-items:center;justify-content:center;min-width:30px;padding:4px 8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;color:var(--sf-navy);background:#fff;border:1px solid var(--sf-border);border-bottom:2px solid var(--sf-navy-soft);border-radius:6px;box-shadow:0 1px 3px rgba(36,50,74,.08)}
+
+/* 2. Settings Modal */
+.settings-vertical-body{display:flex;flex-direction:column;gap:14px;max-height:65vh;overflow-y:auto;padding:8px 26px}
+.settings-section{background:var(--sf-sand);border:1px solid var(--sf-border);border-radius:14px;padding:14px 16px}
+.settings-section-header{margin:0 0 12px;font-size:12.5px;font-weight:800;color:var(--sf-navy);letter-spacing:-.2px;padding-bottom:6px;border-bottom:1px solid var(--sf-border)}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px solid rgba(221,213,200,.6)}
+.setting-row:last-child{border-bottom:none;padding-bottom:0}
+.setting-info{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.setting-label{font-size:12px;font-weight:700;color:var(--sf-navy);line-height:1.25}
+.setting-desc{font-size:10.5px;color:var(--sf-navy-soft);line-height:1.25}
+.setting-control{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.setting-control .form-input{width:68px;padding:6px 8px;font-size:12px;text-align:center}
+.setting-control .form-select{padding:6px 10px;font-size:12px;border-radius:8px}
+.setting-unit{font-size:11px;font-weight:600;color:var(--sf-navy-soft)}
+
+/* Toggle Switch */
+.toggle-switch{position:relative;display:inline-block;width:42px;height:24px;cursor:pointer;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background-color:var(--sf-border);transition:.2s;border-radius:24px}
+.toggle-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:white;transition:.2s;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle-switch input:checked+.toggle-slider{background-color:var(--sf-coral)}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(18px)}
+
+/* 3. Analytics Modal */
+.analytics-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.analytics-stat-card{background:var(--sf-sand);border:1px solid var(--sf-border);border-radius:12px;padding:12px;text-align:center}
+.analytics-stat-val{font:700 20px 'JetBrains Mono',monospace;color:var(--sf-navy);line-height:1.2}
+.analytics-stat-lbl{font-size:10px;font-weight:600;color:var(--sf-navy-soft);text-transform:uppercase;letter-spacing:.6px;margin-top:3px}
+.analytics-chart-wrap{background:var(--sf-sand);border:1px solid var(--sf-border);border-radius:12px;padding:14px;margin-bottom:12px}
+.analytics-chart-title{font-size:11px;font-weight:700;color:var(--sf-navy);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.bar-chart-container{display:flex;align-items:flex-end;justify-content:space-between;height:120px;gap:6px;padding-top:10px}
+.barchart-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%}
+.barchart-bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.barchart-bar{width:60%;max-width:26px;min-height:4px;background:var(--sf-coral);border-radius:4px 4px 0 0;transition:height .3s}
+.barchart-label{font-size:9.5px;color:var(--sf-navy-soft);margin-top:6px;font-weight:600}
+.analytics-task-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(221,213,200,.6);font-size:11.5px}
+.analytics-task-row:last-child{border-bottom:none}
+.analytics-task-title{font-weight:600;color:var(--sf-navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px}
+.analytics-task-time{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--sf-coral)}
+
 @media(max-width:950px){
   .dt-main{grid-template-columns:1fr}
   .timer-box{grid-row:auto;min-height:0}
