@@ -35,7 +35,7 @@
     <button class="nav-item" data-view="skills">✳ <span>Extra skills</span></button>
     <button class="nav-item" data-view="calendar">▦ <span>Calendar</span></button>
     <button class="nav-item" data-view="tasks">☑ <span>Tasks & deadlines</span></button>
-    <button class="nav-item" data-view="reviews">↗ <span>Mock test review</span></button>
+    <button class="nav-item" data-view="reviews">↗ <span>Mock tests & review</span></button>
     <button class="nav-item" data-view="focus">◷ <span>Focus timer</span></button>
   </nav>
   <div class="sidebar-bottom"><div class="mini-note"><span>✳</span><b>Small steps add up.</b><p>Plan less. Finish more. Keep showing up.</p></div><button id="sidebar-profile" class="profile" type="button" data-view="profile"><div class="avatar">SF</div><div><b id="sidebar-user-name">My workspace</b><small id="sidebar-user-email">Private workspace</small></div></button></div>
@@ -53,7 +53,49 @@
 <section id="view-skills" class="view"><div class="section-heading"><div><div class="eyebrow">GROW BEYOND THE SYLLABUS</div><h2>Extra skills</h2><p class="muted">Track the skills you want to build alongside GATE and college. Add learning milestones and target dates.</p></div><button class="primary-btn" id="add-skill">＋ Add skill</button></div><div class="skill-summary" id="skill-summary"></div><div class="skill-grid" id="skills-list"></div></section>
 <section id="view-tasks" class="view"><div class="section-heading"><div><div class="eyebrow">DON'T LET IT SLIP</div><h2>Tasks & deadlines</h2><p class="muted">Assignments, projects, study targets and exam preparation in one place.</p></div><button class="primary-btn" id="add-task">＋ Add task</button></div><div class="filter-row"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="open">Open</button><button class="filter" data-filter="done">Completed</button></div><div class="panel"><div id="tasks-list" class="task-list empty-state">No tasks added yet.</div></div></section>
 <section id="view-calendar" class="view"><div class="section-heading"><div><div class="eyebrow">PLAN YOUR TIME</div><h2>Calendar</h2><p class="muted">Select a date to view or add events. Events are editable.</p></div><button class="primary-btn" id="calendar-add">＋ Add event</button></div><div class="calendar-layout"><div class="panel calendar-panel"><div class="calendar-head"><button class="icon-btn" id="prev-month">←</button><h3 id="month-label"></h3><button class="icon-btn" id="next-month">→</button><button class="text-btn" id="today-btn">Today</button></div><div class="weekdays"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div><div id="calendar-grid" class="calendar-grid"></div></div><div class="panel day-panel"><div class="panel-title"><div><div class="eyebrow">SELECTED DAY</div><h3 id="selected-date-label"></h3></div><button class="text-btn" id="selected-add">＋ Add</button></div><div id="day-events" class="empty-state">No events for this day.</div></div></div></section>
-<section id="view-reviews" class="view"><div class="section-heading"><div><div class="eyebrow">LEARN FROM EVERY ATTEMPT</div><h2>Mock test review</h2><p class="muted">Record mistakes, understand why they happened and track your corrections.</p></div><button class="primary-btn" id="add-mistake">＋ Log mistake</button></div><div class="review-stats" id="review-stats"></div><div class="filter-row"><button class="filter active" data-review-filter="all">All mistakes</button><button class="filter" data-review-filter="unresolved">Needs review</button><button class="filter" data-review-filter="resolved">Resolved</button></div><div id="mistakes-list" class="mistake-list empty-state">No mistakes logged yet. Add your first mock-test review.</div></section>
+<section id="view-reviews" class="view">
+  <div class="section-heading">
+    <div>
+      <div class="eyebrow">LEARN FROM EVERY ATTEMPT</div>
+      <h2>Mock tests & paper reviews</h2>
+      <p class="muted">Upload your test papers (PDF or image), track marks, log question mistakes, and automatically uncover your weakest topics.</p>
+    </div>
+    <div class="heading-actions-cluster">
+      <button class="primary-btn" id="upload-test-btn">＋ Upload test paper</button>
+      <button class="secondary-btn" id="add-mistake">＋ Quick mistake</button>
+    </div>
+  </div>
+
+  <div class="review-stats" id="mock-test-stats">
+    <div class="review-stat"><strong id="stat-total-tests">0</strong><small>Tests attempted</small></div>
+    <div class="review-stat"><strong id="stat-avg-score">0%</strong><small>Average marks</small></div>
+    <div class="review-stat"><strong id="stat-weakest-topic">—</strong><small>Overall weakest topic</small></div>
+    <div class="review-stat"><strong id="stat-total-mistakes">0</strong><small>Mistakes logged</small></div>
+  </div>
+
+  <div class="test-view-header">
+    <div class="filter-row">
+      <button class="filter active" data-test-tab="tests">Test papers (<span id="test-tab-count">0</span>)</button>
+      <button class="filter" data-test-tab="all-mistakes">All logged mistakes (<span id="mistake-tab-count">0</span>)</button>
+    </div>
+    <div class="test-search-wrap">
+      <input type="text" id="test-search-input" placeholder="Search tests or topics…" class="test-search-box">
+    </div>
+  </div>
+
+  <div id="mock-tests-container">
+    <div id="mock-tests-grid" class="mock-tests-grid"></div>
+  </div>
+
+  <div id="all-mistakes-container" style="display: none;">
+    <div class="filter-row">
+      <button class="filter active" data-review-filter="all">All mistakes</button>
+      <button class="filter" data-review-filter="unresolved">Needs review</button>
+      <button class="filter" data-review-filter="resolved">Resolved</button>
+    </div>
+    <div id="mistakes-list" class="mistake-list empty-state">No mistakes logged yet. Add your first mock-test review.</div>
+  </div>
+</section>
 <section id="view-profile" class="view">
   <div class="section-heading"><div><div class="eyebrow">YOUR PRIVATE WORKSPACE</div><h2>My profile</h2><p class="muted">Track your study habits and use the numbers to plan your next week.</p></div><button id="profile-sign-out" class="secondary-btn" type="button">Sign out</button></div>
   <div class="profile-identity panel"><div class="profile-avatar avatar" id="profile-avatar">SF</div><div><h3 id="profile-name">Loading profile…</h3><p id="profile-email" class="muted">Loading account details…</p></div></div>
@@ -139,6 +181,249 @@
 <footer>StudyFlow <span>·</span> Your progress stays in this browser.</footer>
 </main>
 <dialog id="item-dialog"><form method="dialog" id="item-form"><div class="modal-head"><div><div class="eyebrow" id="modal-eyebrow">NEW ITEM</div><h2 id="modal-title">Add task</h2></div><button class="icon-btn" value="cancel" aria-label="Close">×</button></div><div id="modal-fields"></div><div class="modal-actions"><button class="secondary-btn" value="cancel">Cancel</button><button class="primary-btn" id="modal-save" value="default">Save</button></div></form></dialog>
+
+  <!-- Mock Test & Paper Review Modals -->
+  <!-- 1. Upload/Edit Test Paper Modal -->
+  <dialog id="modal-upload-test" class="modal-dialog" aria-labelledby="test-modal-title">
+    <div class="modal-header">
+      <div>
+        <div class="eyebrow" id="test-modal-eyebrow">NEW TEST PAPER</div>
+        <h2 id="test-modal-title" class="modal-title">Upload mock test paper</h2>
+      </div>
+      <button type="button" class="modal-close-btn" data-close-test-modal aria-label="Close dialog">&times;</button>
+    </div>
+    <form id="form-upload-test">
+      <input type="hidden" name="testId" id="input-test-id">
+      <div class="modal-body">
+        <!-- Paper Upload Dropzone -->
+        <div class="form-group">
+          <label class="form-label">Test paper file (PDF or Image)</label>
+          <div class="paper-dropzone" id="paper-dropzone" tabindex="0" role="button" aria-label="Click or drag paper here">
+            <input type="file" id="paper-file-input" accept="image/*,.pdf,application/pdf" style="display:none">
+            <div class="dropzone-content" id="dropzone-prompt">
+              <span class="dropzone-icon">📄</span>
+              <div class="dropzone-text">
+                <b>Drop your paper here, or <span class="dropzone-browse">browse</span></b>
+                <small>Supports PDF or images (PNG, JPG, WebP)</small>
+              </div>
+            </div>
+            <div class="paper-preview-box" id="dropzone-preview" hidden>
+              <div class="preview-info">
+                <span id="preview-icon" class="preview-type-icon">📄</span>
+                <div class="preview-details">
+                  <b id="preview-filename">paper.pdf</b>
+                  <small id="preview-filesize">0 KB</small>
+                </div>
+              </div>
+              <div id="preview-img-wrap" class="preview-img-wrap" hidden>
+                <img id="preview-thumb-img" alt="Paper thumbnail" class="preview-thumb-img">
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-remove-paper">Change paper</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Title -->
+        <div class="form-group">
+          <label class="form-label" for="test-title">Mock test title / name *</label>
+          <input type="text" id="test-title" name="name" required class="form-input" placeholder="e.g. GATE CS Full Length Mock #1">
+        </div>
+
+        <!-- Marks Grid -->
+        <div class="field-grid">
+          <div class="form-group">
+            <label class="form-label" for="test-marks">Marks obtained *</label>
+            <input type="number" step="0.01" id="test-marks" name="marks" required class="form-input" placeholder="e.g. 68.5">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="test-total-marks">Total marks *</label>
+            <input type="number" step="0.01" id="test-total-marks" name="totalMarks" value="100" required class="form-input" placeholder="e.g. 100">
+          </div>
+        </div>
+
+        <!-- Subject & Date -->
+        <div class="field-grid">
+          <div class="form-group">
+            <label class="form-label" for="test-subject">Subject / Syllabus area</label>
+            <input type="text" id="test-subject" name="subject" class="form-input" list="subject-datalist" placeholder="e.g. Computer Science, Algorithms">
+            <datalist id="subject-datalist"></datalist>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="test-date">Date of test</label>
+            <input type="date" id="test-date" name="date" class="form-input">
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label class="form-label" for="test-description">Description & attempt summary</label>
+          <textarea id="test-description" name="description" class="form-textarea" rows="3" placeholder="Describe the test paper, pacing, which sections felt tough, and overall thoughts..."></textarea>
+        </div>
+
+        <!-- Strategy Pointers -->
+        <div class="form-group">
+          <label class="form-label" for="test-pointers">Initial pointers & notes</label>
+          <textarea id="test-pointers" name="pointers" class="form-textarea" rows="2" placeholder="e.g. Need to revise Tree algorithms; don't spend more than 3 minutes on 2-mark MCQs."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer modal-footer-between">
+        <button type="button" class="btn btn-secondary" data-close-test-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-test">Save test paper</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 2. Detailed Mock Test Modal (Card Click) -->
+  <dialog id="modal-test-detail" class="modal-dialog test-detail-dialog" aria-labelledby="detail-test-title">
+    <div class="modal-header test-detail-header">
+      <div class="test-header-info">
+        <div class="eyebrow">TEST PAPER DETAILS & MISTAKE ANALYSIS</div>
+        <h2 id="detail-test-title" class="modal-title">Mock Test Details</h2>
+        <div class="test-badges-row" id="detail-badges-row"></div>
+      </div>
+      <div class="detail-header-actions">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-edit-test-details">✏️ Edit test</button>
+        <button type="button" class="modal-close-btn" data-close-detail-modal aria-label="Close dialog">&times;</button>
+      </div>
+    </div>
+    <div class="modal-body test-detail-body">
+      <!-- Paper & Description Banner -->
+      <div class="test-info-banner panel">
+        <div class="test-desc-col">
+          <div class="eyebrow">DESCRIPTION</div>
+          <p id="detail-test-desc" class="test-full-desc">No description provided.</p>
+        </div>
+        <div class="test-paper-col" id="detail-paper-container"></div>
+      </div>
+
+      <!-- AUTOMATIC WEAKEST TOPIC SECTION -->
+      <div id="detail-analytics-section" class="topic-analysis-section"></div>
+
+      <!-- Mistakes & Solution Pointers Log -->
+      <div class="mistakes-log-section">
+        <div class="section-heading-sub">
+          <div>
+            <h3 class="sub-title">Logged mistakes & solution pointers</h3>
+            <p class="muted">Add each question or concept where you lost marks. Weakest topics are calculated automatically from these.</p>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-log-mistake-for-test">＋ Log mistake</button>
+        </div>
+
+        <div class="filter-row test-mistake-filters">
+          <button class="filter active" data-test-mistake-filter="all">All mistakes (<span id="detail-filter-all-count">0</span>)</button>
+          <button class="filter" data-test-mistake-filter="unresolved">Needs review (<span id="detail-filter-unresolved-count">0</span>)</button>
+          <button class="filter" data-test-mistake-filter="resolved">Resolved (<span id="detail-filter-resolved-count">0</span>)</button>
+        </div>
+
+        <div id="detail-mistakes-list" class="test-mistakes-container empty-state">
+          No mistakes logged for this test yet.
+        </div>
+      </div>
+
+      <!-- Actionable Pointers & Notes -->
+      <div class="test-pointers-box panel">
+        <div class="panel-title">
+          <div>
+            <div class="eyebrow">EXAM STRATEGY & POINTERS</div>
+            <h3>Pointers for next test</h3>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-save-detail-pointers">Save pointers</button>
+        </div>
+        <textarea id="detail-test-pointers-input" class="form-textarea" rows="2" placeholder="Record takeaways for next time (e.g. speed pacing, topics to revise, traps to avoid)..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer modal-footer-between">
+      <button type="button" class="btn btn-danger" id="btn-delete-current-test">Delete test</button>
+      <button type="button" class="btn btn-primary" data-close-detail-modal>Close</button>
+    </div>
+  </dialog>
+
+  <!-- 3. Log/Edit Mistake Modal -->
+  <dialog id="modal-log-mistake" class="modal-dialog" aria-labelledby="mistake-modal-title">
+    <div class="modal-header">
+      <div>
+        <div class="eyebrow" id="mistake-modal-eyebrow">QUESTION MISTAKE</div>
+        <h2 id="mistake-modal-title" class="modal-title">Log question mistake</h2>
+      </div>
+      <button type="button" class="modal-close-btn" data-close-mistake-modal aria-label="Close dialog">&times;</button>
+    </div>
+    <form id="form-log-mistake">
+      <input type="hidden" name="mistakeId" id="input-mistake-id">
+      <input type="hidden" name="mockTestId" id="input-mistake-testid">
+      <div class="modal-body">
+        <div class="field-grid">
+          <div class="form-group">
+            <label class="form-label" for="mistake-qno">Question # / identifier</label>
+            <input type="text" id="mistake-qno" name="questionNo" class="form-input" placeholder="e.g. Q14, Section B - Q2">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="mistake-topic">Topic / concept *</label>
+            <input type="text" id="mistake-topic" name="topic" required class="form-input" list="mistake-topics-datalist" placeholder="e.g. Dynamic Programming, Cache Memory">
+            <datalist id="mistake-topics-datalist"></datalist>
+          </div>
+        </div>
+
+        <div class="field-grid">
+          <div class="form-group">
+            <label class="form-label" for="mistake-type">Reason / mistake category</label>
+            <select id="mistake-type" name="mistakeType" class="form-select">
+              <option value="Conceptual misunderstanding">Conceptual misunderstanding</option>
+              <option value="Calculation / Numerical error">Calculation / Numerical error</option>
+              <option value="Formula forgotten / wrongly applied">Formula forgotten / wrongly applied</option>
+              <option value="Question misread / missed condition">Question misread / missed condition</option>
+              <option value="Time pressure / rushed attempt">Time pressure / rushed attempt</option>
+              <option value="Silly slip / bubbling error">Silly slip / bubbling error</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="mistake-marks-lost">Marks lost</label>
+            <input type="number" step="0.01" id="mistake-marks-lost" name="marksLost" class="form-input" placeholder="e.g. 1.0, 2.0, 0.33">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="mistake-error">What mistake did you make? *</label>
+          <textarea id="mistake-error" name="error" required class="form-textarea" rows="3" placeholder="Explain your thought process and where you went wrong..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="mistake-correction">Correct concept / solution pointer *</label>
+          <textarea id="mistake-correction" name="correction" required class="form-textarea" rows="3" placeholder="What is the correct concept, formula, or takeaway you should apply next time?"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="mistake-pointers">Extra pointers / note (optional)</label>
+          <input type="text" id="mistake-pointers" name="pointers" class="form-input" placeholder="e.g. Review Cormen ch 15; practise 5 more 0/1 knapsack problems">
+        </div>
+
+        <div class="form-group">
+          <label class="topic" style="padding: 10px; border-radius: 9px; border: 1px solid var(--sf-border); display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="mistake-resolved" name="resolved">
+            <b>Mark as resolved (concept thoroughly understood)</b>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer modal-footer-between">
+        <button type="button" class="btn btn-secondary" data-close-mistake-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-mistake">Save mistake</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 4. Full Paper Viewer / Lightbox Modal -->
+  <dialog id="modal-paper-viewer" class="modal-dialog paper-viewer-dialog" aria-labelledby="viewer-paper-title">
+    <div class="modal-header">
+      <h2 id="viewer-paper-title" class="modal-title">Paper Preview</h2>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <a id="viewer-download-link" class="btn btn-secondary btn-sm" download="paper" target="_blank">⬇ Download</a>
+        <button type="button" class="modal-close-btn" data-close-viewer-modal aria-label="Close dialog">&times;</button>
+      </div>
+    </div>
+    <div class="modal-body viewer-body">
+      <div id="viewer-content" class="viewer-content"></div>
+    </div>
+  </dialog>
 <div id="toast" class="toast"></div>
 
   <!-- DeepTick Modals -->
