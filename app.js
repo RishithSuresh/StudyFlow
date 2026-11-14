@@ -1147,7 +1147,7 @@ $$('[data-close-test-modal]').forEach(b=>b.onclick=()=>$('#modal-upload-test').c
 $$('[data-close-detail-modal]').forEach(b=>b.onclick=()=>{$('#modal-test-detail').close();activeMockTestId=null;renderReviews();});
 $$('[data-close-mistake-modal]').forEach(b=>b.onclick=()=>$('#modal-log-mistake').close());
 $$('[data-close-viewer-modal]').forEach(b=>b.onclick=()=>$('#modal-paper-viewer').close());
-['#modal-upload-test','#modal-test-detail','#modal-log-mistake','#modal-paper-viewer','#item-dialog'].forEach(sel=>{
+['#modal-upload-test','#modal-test-detail','#modal-log-mistake','#modal-paper-viewer','#item-dialog','#modal-feature-manual'].forEach(sel=>{
   const d=$(sel);
   if(d)d.addEventListener('click',e=>{if(e.target===d)d.close()});
 });
@@ -1222,6 +1222,42 @@ document.addEventListener('click',e=>{
       if(activeMockTestId)openMockTestDetail(activeMockTestId);
       toast(m.resolved?'Marked as resolved!':'Marked as needs review.');
     }
+  }
+
+  // In-page manual toggle
+  const manualToggle = e.target.closest('.page-manual-toggle');
+  if(manualToggle){
+    const card = manualToggle.closest('.page-manual-card');
+    if(card){
+      card.classList.toggle('is-open');
+    }
+    return;
+  }
+
+  // Global manual modal
+  if(b.id === 'btn-open-manual' || b.id === 'sidebar-manual-btn' || b.closest('#btn-open-manual') || b.closest('#sidebar-manual-btn')){
+    const dialog = $('#modal-feature-manual');
+    if(dialog){
+      const viewKey = currentView === 'reviews' ? 'reviews' : currentView;
+      const currentTabBtn = $(`[data-manual-tab="${viewKey}"]`);
+      if(currentTabBtn){
+        $$('.manual-tab-btn').forEach(btn => btn.classList.toggle('active', btn === currentTabBtn));
+        $$('.manual-panel-view').forEach(panel => panel.classList.toggle('active', panel.id === `manual-tab-content-${viewKey}`));
+      }
+      dialog.showModal();
+    }
+    return;
+  }
+  if(b.dataset.closeManualModal || b.closest('[data-close-manual-modal]')){
+    $('#modal-feature-manual')?.close();
+    return;
+  }
+  const manualTabBtn = b.dataset.manualTab ? b : b.closest('[data-manual-tab]');
+  if(manualTabBtn){
+    const tabName = manualTabBtn.dataset.manualTab;
+    $$('.manual-tab-btn').forEach(btn => btn.classList.toggle('active', btn === manualTabBtn));
+    $$('.manual-panel-view').forEach(panel => panel.classList.toggle('active', panel.id === `manual-tab-content-${tabName}`));
+    return;
   }
 
   // Previous general handlers
