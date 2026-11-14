@@ -138,6 +138,30 @@ app.get('/api/workspace', requireSession, async (req, res, next) => {
   }
 });
 
+app.post('/api/study-sessions', requireSession, async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const { mode, durationSeconds, taskId, startedAt, endedAt, completed } = req.body;
+    const result = await query(
+      `INSERT INTO study_sessions (user_id, task_id, mode, started_at, ended_at, duration_seconds, completed)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        userId,
+        taskId || null,
+        mode || 'pomodoro',
+        startedAt || new Date().toISOString(),
+        endedAt || new Date().toISOString(),
+        Number(durationSeconds) || 0,
+        completed !== undefined ? Boolean(completed) : true
+      ]
+    );
+    res.status(201).json({ session: result.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.use((error, _req, res, _next) => {
   console.error(error);
   res.status(500).json({ error: 'An unexpected server error occurred.' });

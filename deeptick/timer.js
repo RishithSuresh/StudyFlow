@@ -7,6 +7,59 @@ import { taskManager } from './tasks.js';
 import { soundManager } from './audio.js';
 import { notifier } from './notifications.js';
 
+function syncCompletedSessionToStudyFlow(durationSeconds) {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const mins = Math.max(1, Math.round(durationSeconds / 60));
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k === 'studyflow-v1' || k?.startsWith('studyflow-v1:')) {
+        try {
+          const raw = localStorage.getItem(k);
+          const sfDb = raw ? JSON.parse(raw) : { focus: { minutes: {}, sessions: 0 }, tasks: [] };
+          sfDb.focus = sfDb.focus || { minutes: {}, sessions: 0 };
+          sfDb.focus.minutes = sfDb.focus.minutes || {};
+          sfDb.focus.minutes[today] = (sfDb.focus.minutes[today] || 0) + mins;
+          sfDb.focus.sessions = (sfDb.focus.sessions || 0) + 1;
+          localStorage.setItem(k, JSON.stringify(sfDb));
+        } catch {}
+      }
+    }
+
+    const focusTodayEl = document.getElementById('focus-today');
+    if (focusTodayEl) {
+      const cur = parseInt(focusTodayEl.textContent, 10) || 0;
+      focusTodayEl.textContent = cur + mins;
+    }
+
+    window.dispatchEvent(new CustomEvent('studyflow:focus-recorded', {
+      detail: { minutes: mins, date: today }
+    }));
+  } catch (e) {
+    console.warn('Failed to sync session with StudyFlow:', e);
+  }
+}
+
+async function postSessionToServer(mode, durationSeconds, taskId) {
+  try {
+    const apiBase = window.STUDYFLOW_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api');
+    await fetch(`${apiBase}/study-sessions`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode,
+        durationSeconds,
+        taskId: taskId || null,
+        startedAt: new Date(Date.now() - durationSeconds * 1000).toISOString(),
+        endedAt: new Date().toISOString(),
+        completed: true
+      })
+    });
+  } catch {}
+}
+
 class TimerEngine {
   constructor() {
     this.intervalId = null;
@@ -14,11 +67,9 @@ class TimerEngine {
   }
 
   init() {
-    // If state had a running timer previously when page closed, restore accurately
     if (state.timerState.status === 'running' && state.timerState.endTimestamp) {
       const now = Date.now();
       if (now >= state.timerState.endTimestamp) {
-        // Expired while tab was closed/asleep
         this.onTimerCompleted();
       } else {
         const remaining = Math.round((state.timerState.endTimestamp - now) / 1000);
@@ -32,9 +83,9 @@ class TimerEngine {
 
   getModeDuration(mode) {
     const { settings } = state;
-    if (mode === 'short_break') return settings.shortBreakDuration * 60;
-    if (mode === 'long_break') return settings.longBreakDuration * 60;
-    return settings.pomodoroDuration * 60;
+    if (mode === 'short_break') return (settings.shortBreakDuration || 5) * 60;
+    if (mode === 'long_break') return (settings.longBreakDuration || 15) * 60;
+    return (settings.pomodoroDuration || 30) * 60;
   }
 
   syncModeDuration(mode) {
@@ -42,8 +93,8 @@ class TimerEngine {
     const target = baseSeconds + (mode === 'pomodoro' ? (state.timerState.tempAdjustmentSeconds || 0) : 0);
     state.updateTimerState({
       mode,
-      targetSeconds: target,
-      remainingSeconds: target,
+      targetSeconds: Math.max(30, target),
+      remainingSeconds: Math.max(30, target),
       status: 'idle',
       startTimestamp: null,
       endTimestamp: null,
@@ -61,6 +112,7 @@ class TimerEngine {
   }
 
   start() {
+    soundManager.initContext();
     const now = Date.now();
     const remaining = state.timerState.remainingSeconds > 0 ? state.timerState.remainingSeconds : state.timerState.targetSeconds;
     const endTimestamp = now + remaining * 1000;
@@ -106,7 +158,6 @@ class TimerEngine {
   }
 
   reset(force = false) {
-    // Check if meaningful session in progress
     const elapsed = state.timerState.targetSeconds - state.timerState.remainingSeconds;
     if (!force && state.timerState.status !== 'idle' && elapsed > 30 && state.settings.confirmDelete) {
       const confirmReset = window.confirm('Are you sure you want to reset the current active timer? Progress on this session will not be counted.');
@@ -129,7 +180,6 @@ class TimerEngine {
       this.intervalId = null;
     }
 
-    // Record skipped session in history
     const elapsed = state.timerState.targetSeconds - state.timerState.remainingSeconds;
     if (elapsed > 10) {
       const activeTask = taskManager.getActiveTask();
@@ -146,21 +196,16 @@ class TimerEngine {
       });
     }
 
-    // Advance to next cycle mode
     this.advanceCycle(false);
   }
 
   adjustTime(deltaSeconds) {
-    const minSeconds = 30; // Minimum allowed duration
+    const minSeconds = 30;
     let newRemaining = state.timerState.remainingSeconds + deltaSeconds;
     let newTarget = state.timerState.targetSeconds + deltaSeconds;
 
-    if (newRemaining < minSeconds) {
-      newRemaining = minSeconds;
-    }
-    if (newTarget < minSeconds) {
-      newTarget = minSeconds;
-    }
+    if (newRemaining < minSeconds) newRemaining = minSeconds;
+    if (newTarget < minSeconds) newTarget = minSeconds;
 
     const newTempAdj = (state.timerState.tempAdjustmentSeconds || 0) + deltaSeconds;
     let newEndTimestamp = state.timerState.endTimestamp;
@@ -198,11 +243,11 @@ class TimerEngine {
   }
 
   onTimerCompleted() {
-    const { mode, targetSeconds, activeTaskId, cycleCount } = state.timerState;
+    const { mode, targetSeconds, activeTaskId } = state.timerState;
     const { settings } = state;
     const activeTask = taskManager.getActiveTask();
 
-    // 1. Play completion sound
+    // 1. Play sound
     if (settings.soundEnabled) {
       const soundType = mode === 'pomodoro' ? settings.completionSound : settings.breakSound;
       soundManager.play(soundType, settings.volume, settings.repeatSound ? settings.repeatCount : 1);
@@ -222,16 +267,20 @@ class TimerEngine {
     };
     state.addSession(sessionRecord);
 
-    // 3. If Pomodoro mode, update task stats & show celebration
+    // 3. If Pomodoro mode, sync with StudyFlow and update task
     if (mode === 'pomodoro') {
       if (activeTaskId) {
         taskManager.recordPomodoroSession(activeTaskId, targetSeconds);
       }
 
+      // Sync focus minutes to StudyFlow local db & server
+      syncCompletedSessionToStudyFlow(targetSeconds);
+      postSessionToServer('pomodoro', targetSeconds, activeTaskId);
+
       const updatedTask = activeTaskId ? taskManager.getTask(activeTaskId) : null;
       let taskMsg = 'Great job staying focused!';
       if (updatedTask) {
-        taskMsg = `"${updatedTask.title}" (${updatedTask.completedPomodoros}/${updatedTask.estimatedPomodoros} Pomodoros)`;
+        taskMsg = `"${updatedTask.title}" (${updatedTask.completedPomodoros || 1}/${updatedTask.estimatedPomodoros} Pomodoros)`;
       }
 
       notifier.notify('🎉 Pomodoro Complete!', `${taskMsg} Take a well-deserved break.`, {
@@ -239,13 +288,11 @@ class TimerEngine {
         icon: '🎯'
       });
 
-      // Trigger Confetti if daily goal achieved
       const daily = state.getDailyStats();
       if (daily.pomodorosCompleted >= settings.dailyPomodoroGoal) {
         state.emit('celebration:goal_reached', daily);
       }
     } else {
-      // Break completed
       notifier.notify('☕ Break Completed!', 'Ready to dive into your next focus session?', {
         type: 'break',
         icon: '⚡'
@@ -268,15 +315,15 @@ class TimerEngine {
     if (mode === 'pomodoro') {
       if (cycleCount >= interval) {
         nextMode = 'long_break';
-        nextCycle = 1; // Reset cycle after long break
+        nextCycle = interval;
       } else {
         nextMode = 'short_break';
         nextCycle = cycleCount + (completedNaturally ? 1 : 0);
       }
       autoStart = settings.autoStartBreaks;
     } else {
-      // Returning from break to Pomodoro
       nextMode = 'pomodoro';
+      nextCycle = (mode === 'long_break') ? 1 : cycleCount;
       autoStart = settings.autoStartPomodoros;
     }
 

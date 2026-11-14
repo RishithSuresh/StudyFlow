@@ -244,6 +244,26 @@ body:not(.overview-view) #quick-add{display:none}
 .focus-mode .dt-focus-header{justify-content:flex-end;margin-bottom:14px}
 #confetti-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:30}
 #view-focus #top-progress-bar{position:fixed;top:0;left:0;height:4px;width:0;background:var(--sf-coral);z-index:20;transition:width .25s ease}
+
+/* DeepTick & StudyFlow Theme Variations */
+[data-theme="midnight"]{--sf-navy:#f8fafc;--sf-navy-soft:#94a3b8;--sf-sand:#0b1120;--sf-surface:#1e293b;--sf-border:#334155;--sf-coral:#fb923c;--sf-coral-soft:#431407;--bg:#0b1120}
+[data-theme="midnight"] .timer-box,[data-theme="midnight"] .tasks-section,[data-theme="midnight"] .bottom-summary-box,[data-theme="midnight"] .modal-dialog,[data-theme="midnight"] .panel{background:#1e293b;border-color:#334155;color:#f8fafc}
+[data-theme="midnight"] .form-input,[data-theme="midnight"] .form-textarea,[data-theme="midnight"] .form-select{background:#0f172a;border-color:#334155;color:#f8fafc}
+[data-theme="midnight"] .mode-pill,[data-theme="midnight"] .adjust-side-btn,[data-theme="midnight"] .header-streak-badge,[data-theme="midnight"] .header-btn,[data-theme="midnight"] .modal-close-btn,[data-theme="midnight"] .btn-icon-control{background:#0f172a;border-color:#334155;color:#f8fafc}
+[data-theme="midnight"] .timer-digits{color:#f8fafc}
+
+[data-theme="sand"]{--sf-navy:#382d24;--sf-navy-soft:#6e5e52;--sf-sand:#ede5d8;--sf-surface:#fdfaf4;--sf-border:#d4c8b8;--sf-coral:#c85a3c;--sf-coral-soft:#f4ddd4;--bg:#ede5d8}
+
+/* Break Mode Accents in Timer Box */
+.timer-box.mode-short_break .mode-pill.active{background:#276e3b;color:white}
+.timer-box.mode-short_break .timer-digits{color:#276e3b}
+.timer-box.mode-short_break .btn-start-large{background:#276e3b;box-shadow:0 10px 20px rgba(39,110,59,.22)}
+.timer-box.mode-short_break .btn-start-large:hover{background:#1e562e}
+.timer-box.mode-long_break .mode-pill.active{background:#2b5c7f;color:white}
+.timer-box.mode-long_break .timer-digits{color:#2b5c7f}
+.timer-box.mode-long_break .btn-start-large{background:#2b5c7f;box-shadow:0 10px 20px rgba(43,92,127,.22)}
+.timer-box.mode-long_break .btn-start-large:hover{background:#204560}
+
 .dt-inner{width:min(100%,960px);margin:0 auto}
 .dt-focus-header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 26px;padding:0 2px}
 .dt-brand-row{display:flex;align-items:center;gap:10px;color:var(--sf-navy);font-size:18px;font-weight:800;letter-spacing:-.4px}

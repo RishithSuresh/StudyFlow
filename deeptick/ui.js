@@ -37,33 +37,24 @@ class UIManager {
 
   syncModeColors() {
     const { mode } = state.timerState;
-    const root = document.documentElement;
-
-    if (mode === 'short_break') {
-      root.style.setProperty('--theme-bg', 'var(--color-short-bg)');
-      root.style.setProperty('--theme-card', 'var(--color-short-card)');
-      root.style.setProperty('--theme-card-hover', 'var(--color-short-card-hover)');
-      root.style.setProperty('--theme-btn-text', 'var(--color-short-btn-text)');
-      root.style.setProperty('--theme-accent', 'var(--color-short-accent)');
-    } else if (mode === 'long_break') {
-      root.style.setProperty('--theme-bg', 'var(--color-long-bg)');
-      root.style.setProperty('--theme-card', 'var(--color-long-card)');
-      root.style.setProperty('--theme-card-hover', 'var(--color-long-card-hover)');
-      root.style.setProperty('--theme-btn-text', 'var(--color-long-btn-text)');
-      root.style.setProperty('--theme-accent', 'var(--color-long-accent)');
-    } else {
-      root.style.setProperty('--theme-bg', 'var(--color-pomo-bg)');
-      root.style.setProperty('--theme-card', 'var(--color-pomo-card)');
-      root.style.setProperty('--theme-card-hover', 'var(--color-pomo-card-hover)');
-      root.style.setProperty('--theme-btn-text', 'var(--color-pomo-btn-text)');
-      root.style.setProperty('--theme-accent', 'var(--color-pomo-accent)');
+    const timerBox = document.querySelector('.timer-box');
+    if (timerBox) {
+      timerBox.classList.remove('mode-pomodoro', 'mode-short_break', 'mode-long_break');
+      timerBox.classList.add(`mode-${mode}`);
     }
 
-    const currentBg = getComputedStyle(root).getPropertyValue('--theme-bg').trim();
-    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    if (metaThemeColor && currentBg) {
-      metaThemeColor.setAttribute('content', currentBg);
+    const topBar = document.getElementById('top-progress-bar');
+    if (topBar) {
+      if (mode === 'short_break') topBar.style.backgroundColor = '#276e3b';
+      else if (mode === 'long_break') topBar.style.backgroundColor = '#2b5c7f';
+      else topBar.style.backgroundColor = 'var(--sf-coral)';
     }
+
+    document.querySelectorAll('.mode-pill').forEach(btn => {
+      const isCurrent = btn.dataset.mode === mode;
+      btn.classList.toggle('active', isCurrent);
+      btn.setAttribute('aria-selected', String(isCurrent));
+    });
   }
 
   formatTime(totalSeconds) {
@@ -131,7 +122,13 @@ class UIManager {
     const cycleInfo = document.getElementById('header-cycle-count');
     const interval = settings.longBreakInterval || 4;
     if (cycleInfo) {
-      cycleInfo.textContent = `#${cycleCount} of ${interval} focus sessions`;
+      if (mode === 'pomodoro') {
+        cycleInfo.textContent = `#${cycleCount} of ${interval} focus sessions`;
+      } else if (mode === 'short_break') {
+        cycleInfo.textContent = `☕ Short Break (after session #${cycleCount})`;
+      } else {
+        cycleInfo.textContent = `🌴 Long Break (${interval} sessions completed!)`;
+      }
     }
 
     // Streak
@@ -379,7 +376,12 @@ class UIManager {
 
     // Primary Controls
     const btnToggle = document.getElementById('btn-timer-toggle');
-    if (btnToggle) btnToggle.addEventListener('click', () => timer.toggle());
+    if (btnToggle) {
+      btnToggle.addEventListener('click', () => {
+        soundManager.initContext();
+        timer.toggle();
+      });
+    }
 
     const btnReset = document.getElementById('btn-timer-reset');
     if (btnReset) btnReset.addEventListener('click', () => timer.reset());
@@ -790,6 +792,9 @@ class UIManager {
     });
 
     this.applyTheme(theme);
+    if (state.timerState.status === 'idle') {
+      timer.syncModeDuration(state.timerState.mode);
+    }
     notifier.notify('Settings Saved', 'Your timer preferences have been updated.', { type: 'success' });
   }
 

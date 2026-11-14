@@ -2,16 +2,23 @@
 import { state } from './state.js';
 import { timer } from './timer.js';
 import { ui } from './ui.js';
+import { taskManager } from './tasks.js';
+import { soundManager } from './audio.js';
 import { notifier } from './notifications.js';
 import { setupKeyboardShortcuts } from './shortcuts.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+function boot() {
+  // Sync tasks from StudyFlow workspace first
+  taskManager.syncFromStudyFlow();
+
+  // Initialize UI components and bind event listeners
   ui.init();
 
+  // Setup Keyboard Shortcuts
   setupKeyboardShortcuts({
     onToggleTimer: () => {
-      // Only fire shortcuts when focus view is active
       if (!document.getElementById('view-focus')?.classList.contains('active')) return;
+      soundManager.initContext();
       timer.toggle();
     },
     onSkipTimer: () => {
@@ -41,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Handle visibility changes accurately using timestamps
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && state.timerState.status === 'running') {
       const now = Date.now();
@@ -55,6 +63,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Re-sync tasks and render whenever user switches to the focus view
+  window.addEventListener('studyflow:view-changed', (e) => {
+    if (e.detail?.view === 'focus') {
+      taskManager.syncFromStudyFlow();
+      ui.renderAll();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-view="focus"]') || e.target.closest('[data-go="focus"]')) {
+      setTimeout(() => {
+        taskManager.syncFromStudyFlow();
+        ui.renderAll();
+      }, 50);
+    }
+  });
+
   // Sync focus minutes with StudyFlow's overview stat
   const syncFocusStats = () => {
     const daily = state.getDailyStats();
@@ -65,4 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
   syncFocusStats();
 
   console.log('🍅 DeepTick Pomodoro integrated into StudyFlow.');
-});
+}
+
+// Execute immediately if DOM already loaded (ES modules in Vite), or on DOMContentLoaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
