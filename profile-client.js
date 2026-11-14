@@ -264,12 +264,21 @@ function computeTaskMetrics(tasks, serverTaskStats) {
   const open = Math.max(0, total - completed - overdue);
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : (serverTaskStats?.completionRate || 0);
 
+  const dailyTasks = taskList.filter(t => t.scope === 'daily' || (!t.scope && (!t.due || t.due === today)));
+  const overallTasks = taskList.filter(t => t.scope === 'overall' || (!t.scope && t.due && t.due !== today));
+  const carriedForward = taskList.filter(t => t.isCarriedForward && !t.done).length;
+
   return {
     total,
     completed,
     overdue,
     open,
-    completionRate
+    completionRate,
+    dailyTotal: dailyTasks.length,
+    dailyCompleted: dailyTasks.filter(t => t.done).length,
+    overallTotal: overallTasks.length,
+    overallCompleted: overallTasks.filter(t => t.done).length,
+    carriedForward
   };
 }
 

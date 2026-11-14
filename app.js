@@ -13,20 +13,131 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
 const toast=m=>{let t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
-let currentView='overview',taskFilter='all',reviewFilter='all',calDate=new Date(),selectedDate=todayISO(),modalAction=null;
+let currentView='overview',taskFilter='all',currentTaskScope='daily',taskSearchQuery='',reviewFilter='all',calDate=new Date(),selectedDate=todayISO(),modalAction=null;
 let activeMockTestId=null,testTab='tests',testSearchQuery='',testMistakeFilter='all',selectedPaperFile=null;
 function loadWorkspaceForUser(userId){storageKey=`${KEY}:${userId}`;try{db={...starter(),...JSON.parse(localStorage.getItem(storageKey)||'{}')}}catch{db=starter()}db.mockTests=db.mockTests||[];db.mistakes=db.mistakes||[];render()}
 window.addEventListener('studyflow:authenticated',event=>loadWorkspaceForUser(event.detail.user.id));
-function go(v){currentView=v;document.body.classList.toggle('focus-mode',v==='focus');document.body.classList.toggle('overview-view',v==='overview');$$('.view').forEach(x=>x.classList.toggle('active',x.id===`view-${v}`));$$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));let titles={overview:"Good morning. Let's make progress.",subjects:'Your subjects, your progress.',calendar:'Make time for what matters.',tasks:'Everything you need to get done.',reviews:'Turn mistakes into marks with test analysis.',focus:'A little focus goes a long way.',skills:'Build skills beyond the syllabus.'};$('#page-title').textContent=titles[v];if(v!=='focus')document.title='StudyFlow — Study command centre';render()}
+function go(v){currentView=v;document.body.classList.toggle('focus-mode',v==='focus');document.body.classList.toggle('overview-view',v==='overview');$$('.view').forEach(x=>x.classList.toggle('active',x.id===`view-${v}`));$$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));let titles={overview:"Good morning. Let's make progress.",subjects:'Your subjects, your progress.',calendar:'Make time for what matters.',tasks:'Everything you need to get done.',reviews:'Turn mistakes into marks with test analysis.',focus:'A little focus goes a long way.',skills:'Build skills beyond the syllabus.',profile:'Performance analytics & scholar profile.'};$('#page-title').textContent=titles[v]||'StudyFlow — Study command centre';if(v!=='focus')document.title='StudyFlow — Study command centre';render()}
 document.addEventListener('click',e=>{let b=e.target.closest('[data-view]');if(b)go(b.dataset.view)});
 document.addEventListener('click',e=>{let b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
 function progress(){let all=db.subjects.flatMap(s=>s.topics||[]),done=all.filter(t=>t.done).length;return {all:all.length,done,pct:all.length?Math.round(done/all.length*100):0}}
-function taskMeta(t){return `${t.type||'Study'}${t.subject?' · '+t.subject:''}${t.due?' · Due '+fmt(t.due):''}`}
-function taskRow(t){return `<div class="task-row ${t.done?'done':''}"><input class="check" type="checkbox" data-task-check="${t.id}" ${t.done?'checked':''}><div class="task-main"><b>${esc(t.title)}</b><small>${esc(taskMeta(t))}</small></div>${t.due?`<span class="tag ${t.due<todayISO()&&!t.done?'urgent':''}">${t.due<todayISO()&&!t.done?'Overdue':fmt(t.due)}</span>`:''}<div class="row-actions"><button class="tiny-btn" data-edit-task="${t.id}">Edit</button><button class="tiny-btn" data-delete-task="${t.id}">×</button></div></div>`}
+function rolloverDailyTasks(){
+  const today=todayISO();
+  let changed=false;
+  (db.tasks||[]).forEach(t=>{
+    if(!t.scope){
+      t.scope=(t.due&&t.due!==today)?'overall':'daily';
+    }
+    const isDaily=t.scope==='daily';
+    if(isDaily&&!t.done&&t.due&&t.due<today){
+      if(!t.originalDate)t.originalDate=t.due;
+      t.isCarriedForward=true;
+      t.carryForwardDate=today;
+      t.carryForwardRemark=`Missed on ${fmt(t.originalDate)} (Not completed) — Carried forward to today`;
+      t.due=today;
+      changed=true;
+    }
+  });
+  if(changed){
+    localStorage.setItem(storageKey,JSON.stringify(db));
+  }
+}
+function taskMeta(t){
+  const parts=[t.scope==='daily'?'Daily Task':'Overall Task'];
+  if(t.type)parts.push(t.type);
+  if(t.subject)parts.push(t.subject);
+  if(t.due)parts.push('Due '+fmt(t.due));
+  return parts.join(' · ');
+}
+function taskRow(t){
+  const isOverdue=t.due&&t.due<todayISO()&&!t.done;
+  const isMissedCarried=t.isCarriedForward&&!t.done;
+  const isMissedResolved=t.isCarriedForward&&t.done;
+  return `<div class="task-row ${t.done?'done':''} ${isMissedCarried?'carried-forward-row':''}"><input class="check" type="checkbox" data-task-check="${t.id}" ${t.done?'checked':''}><div class="task-main"><div class="task-title-line"><span class="scope-pill ${t.scope==='daily'?'daily':'overall'}">${t.scope==='daily'?'☀️ Daily':'📋 Overall'}</span><b>${esc(t.title)}</b></div><small>${esc(taskMeta(t))}</small>${isMissedCarried?`<div class="task-missed-remark"><span class="missed-tag">⚠️ Missed & Carried Forward</span><span class="missed-text">${esc(t.carryForwardRemark||`Missed on ${fmt(t.originalDate)}`)}</span></div>`:''}${isMissedResolved?`<div class="task-missed-remark"><span class="resolved-missed-tag">✓ Completed (Was missed on ${fmt(t.originalDate)})</span></div>`:''}${t.note?`<div class="task-note-snippet">${esc(t.note)}</div>`:''}</div><div class="row-actions">${t.due?`<span class="tag ${isOverdue?'urgent':''}">${isOverdue?'Overdue':fmt(t.due)}</span>`:''}<button class="tiny-btn" data-edit-task="${t.id}">Edit</button><button class="tiny-btn" data-delete-task="${t.id}">×</button></div></div>`;
+}
 function renderOverview(){let p=progress();$('#overall-percent').textContent=p.pct+'% complete';$('#overall-bar').style.width=p.pct+'%';$('#topic-count').textContent=`${p.done} of ${p.all} topics completed`;let open=db.tasks.filter(t=>!t.done);$('#task-open').textContent=open.length;let week=new Date();week.setDate(week.getDate()+7);$('#task-due').textContent=open.filter(t=>t.due&&t.due>=todayISO()&&t.due<=week.toISOString().slice(0,10)).length;$('#focus-today').textContent=db.focus.minutes[todayISO()]||0;let next=open.filter(t=>!t.due||t.due>=todayISO()).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')).slice(0,5);$('#today-tasks').className='task-list'+(next.length?'':' empty-state');$('#today-tasks').innerHTML=next.length?next.map(taskRow).join(''):'No open tasks. Enjoy the breathing room.';let upcoming=[...db.tasks.filter(t=>t.due&&!t.done).map(t=>({title:t.title,date:t.due,kind:t.type||'Task'})),...db.events.map(e=>({title:e.title,date:e.date,kind:'Event'}))].filter(x=>x.date>=todayISO()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);$('#upcoming-list').className='upcoming-list'+(upcoming.length?'':' empty-state');$('#upcoming-list').innerHTML=upcoming.length?upcoming.map(x=>`<div class="upcoming-item"><div class="date-tile"><b>${new Date(x.date+'T12:00:00').getDate()}</b><small>${new Date(x.date+'T12:00:00').toLocaleDateString('en',{month:'short'}).toUpperCase()}</small></div><div><b>${esc(x.title)}</b><small>${esc(x.kind)} · ${fmt(x.date)}</small></div></div>`).join(''):'Nothing scheduled yet.';$('#subject-overview').innerHTML=db.subjects.length?db.subjects.slice(0,6).map(subjectCard).join(''):'<div class="panel empty-state">Add your course subjects to see syllabus progress here.</div>'}
 function subjectCard(s){let total=s.topics?.length||0,done=s.topics?.filter(t=>t.done).length||0,p=total?Math.round(done/total*100):0;return `<div class="subject-card"><h3>${esc(s.name)}</h3><p>${esc(s.code||'Course subject')}</p><div class="progress-track"><span style="width:${p}%"></span></div><div class="progress-foot"><span>${done}/${total} topics</span><b>${p}%</b></div></div>`}
 function renderSubjects(){$('#subjects-list').innerHTML=db.subjects.length?db.subjects.map(s=>`<div class="panel subject-detail"><div class="subject-detail-head"><div><h3>${esc(s.name)}</h3><div class="muted">${esc(s.code||'')} ${s.term?'· '+esc(s.term):''}</div></div><div><button class="text-btn" data-edit-subject="${s.id}">Edit</button><button class="text-btn" data-delete-subject="${s.id}">Delete</button></div></div><div class="progress-track" style="margin-top:15px"><span style="width:${s.topics?.length?Math.round(s.topics.filter(t=>t.done).length/s.topics.length*100):0}%"></span></div><div class="topic-list">${(s.topics||[]).map((t,i)=>`<label class="topic"><input type="checkbox" data-topic="${s.id}:${i}" ${t.done?'checked':''}>${esc(t.name)}</label>`).join('')||'<span class="muted">No topics yet. Edit this subject to add syllabus topics.</span>'}</div></div>`).join(''):'<div class="panel empty-state">No subjects yet. Add your first subject and list its syllabus topics.</div>'}
-function renderTasks(){let list=db.tasks.filter(t=>taskFilter==='all'||(taskFilter==='done'?t.done:!t.done)).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'));$('#tasks-list').className='task-list'+(list.length?'':' empty-state');$('#tasks-list').innerHTML=list.length?list.map(taskRow).join(''):'No tasks in this view.'}
+function renderTasks(){
+  rolloverDailyTasks();
+  const allTasks=db.tasks||[];
+  const today=todayISO();
+
+  const dailyTasks=allTasks.filter(t=>t.scope==='daily'||(!t.scope&&(!t.due||t.due===today)));
+  const overallTasks=allTasks.filter(t=>t.scope==='overall'||(!t.scope&&t.due&&t.due!==today));
+  const carriedForwardTasks=allTasks.filter(t=>t.isCarriedForward&&!t.done);
+
+  const badgeDaily=$('#badge-count-daily');
+  const badgeOverall=$('#badge-count-overall');
+  const badgeAll=$('#badge-count-all');
+  if(badgeDaily)badgeDaily.textContent=dailyTasks.length;
+  if(badgeOverall)badgeOverall.textContent=overallTasks.length;
+  if(badgeAll)badgeAll.textContent=allTasks.length;
+
+  let list=allTasks;
+  if(currentTaskScope==='daily')list=dailyTasks;
+  else if(currentTaskScope==='overall')list=overallTasks;
+
+  if(taskFilter==='open')list=list.filter(t=>!t.done);
+  else if(taskFilter==='done')list=list.filter(t=>t.done);
+  else if(taskFilter==='missed')list=list.filter(t=>t.isCarriedForward);
+
+  if(taskSearchQuery){
+    const q=taskSearchQuery.toLowerCase();
+    list=list.filter(t=>(t.title&&t.title.toLowerCase().includes(q))||(t.subject&&t.subject.toLowerCase().includes(q)));
+  }
+
+  list=[...list].sort((a,b)=>{
+    if(a.done!==b.done)return a.done?1:-1;
+    if(a.isCarriedForward!==b.isCarriedForward)return a.isCarriedForward?-1:1;
+    return (a.due||'9999').localeCompare(b.due||'9999');
+  });
+
+  const banner=$('#tasks-rollover-banner');
+  if(banner){
+    if(carriedForwardTasks.length>0){
+      banner.hidden=false;
+      const countText=`${carriedForwardTasks.length} missed daily task${carriedForwardTasks.length>1?'s':''}`;
+      const titleEl=$('#rollover-alert-title');
+      const descEl=$('#rollover-alert-desc');
+      if(titleEl)titleEl.textContent=`${countText} carried forward to today`;
+      if(descEl)descEl.textContent=`Uncompleted daily tasks from past days have rolled over into today's schedule with a missed remark.`;
+    }else{
+      banner.hidden=true;
+    }
+  }
+
+  const progressEl=$('#tasks-quick-progress');
+  if(progressEl){
+    if(currentTaskScope==='daily'){
+      const doneDaily=dailyTasks.filter(t=>t.done).length;
+      const totalDaily=dailyTasks.length;
+      const pct=totalDaily?Math.round(doneDaily/totalDaily*100):0;
+      progressEl.innerHTML=`<span>Today's Daily Progress: <b>${doneDaily}/${totalDaily} done (${pct}%)</b></span>`;
+    }else if(currentTaskScope==='overall'){
+      const doneOverall=overallTasks.filter(t=>t.done).length;
+      const totalOverall=overallTasks.length;
+      progressEl.innerHTML=`<span>Master Backlog: <b>${doneOverall}/${totalOverall} done</b></span>`;
+    }else{
+      const doneAll=allTasks.filter(t=>t.done).length;
+      progressEl.innerHTML=`<span>All Tasks: <b>${doneAll}/${allTasks.length} done</b></span>`;
+    }
+  }
+
+  const container=$('#tasks-list');
+  if(container){
+    container.className='task-list'+(list.length?'':' empty-state');
+    if(!list.length){
+      let emptyMsg='No tasks in this view.';
+      if(currentTaskScope==='daily')emptyMsg='No daily tasks scheduled for today. Click "＋ Add daily task" to plan your day.';
+      else if(currentTaskScope==='overall')emptyMsg='No overall tasks logged. Click "＋ Add overall task" to track project milestones.';
+      else if(taskFilter==='missed')emptyMsg='No carried-over tasks! All past daily tasks were completed.';
+      container.innerHTML=emptyMsg;
+    }else{
+      container.innerHTML=list.map(taskRow).join('');
+    }
+  }
+}
 function renderCalendar(){let y=calDate.getFullYear(),m=calDate.getMonth();$('#month-label').textContent=calDate.toLocaleDateString('en',{month:'long',year:'numeric'});let first=new Date(y,m,1),start=(first.getDay()+6)%7,days=new Date(y,m+1,0).getDate(),prev=new Date(y,m,0).getDate(),cells=[];for(let i=0;i<42;i++){let day=i-start+1,d,other=false;if(day<1){d=new Date(y,m-1,prev+day);other=true}else if(day>days){d=new Date(y,m+1,day-days);other=true}else d=new Date(y,m,day);let iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,has=db.events.some(e=>e.date===iso)||db.tasks.some(t=>t.due===iso&&!t.done);cells.push(`<button class="day-cell ${other?'other':''} ${iso===todayISO()?'today':''} ${iso===selectedDate?'selected':''}" data-day="${iso}"><b>${d.getDate()}</b>${has?'<span class="day-dots"><i></i></span>':''}</button>`)}$('#calendar-grid').innerHTML=cells.join('');$('#selected-date-label').textContent=fmt(selectedDate);let ev=[...db.events.filter(e=>e.date===selectedDate).map(e=>({...e,kind:'Event'})),...db.tasks.filter(t=>t.due===selectedDate).map(t=>({...t,kind:t.type||'Task'}))];$('#day-events').className=ev.length?'':'empty-state';$('#day-events').innerHTML=ev.length?ev.map(e=>`<div class="event-row"><div><b>${esc(e.title)}</b><small>${esc(e.kind)}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note):''}</small></div><button class="tiny-btn" ${e.kind==='Event'?`data-edit-event="${e.id}"`:`data-edit-task="${e.id}"`}>Edit</button></div>`).join(''):'No events or deadlines for this day.'}
 function renderSkills(){
  const skills=db.skills||[];
@@ -604,7 +715,27 @@ document.addEventListener('click',e=>{
     }
   }
 });
-function taskModal(id){let t=db.tasks.find(x=>x.id===id)||{};openModal(id?'Edit task':'Add task',field('Task name','title','text',t.title||'','required')+`<div class="field-grid">${selectField('Type','type',['Study','Assignment','Project','Revision','Exam','Other'].map(x=>[x,x]),t.type||'Study')}${selectField('Subject','subject',[['','No subject'],...db.subjects.map(s=>[s.name,s.name])],t.subject||'')}</div><div class="field-grid">${field('Deadline','due','date',t.due||'')}${field('Reminder time (optional)','reminder','time',t.reminder||'')}</div>${area('Notes','note',t.note||'')}`,d=>{if(id)Object.assign(t,d);else db.tasks.push({id:uid(),...d,done:false});toast(id?'Task updated':'Task added')})}
+function taskModal(id,defaultScope=(currentTaskScope==='overall'?'overall':'daily')){
+  let t=db.tasks.find(x=>x.id===id)||{};
+  const initialScope=t.scope||defaultScope;
+  openModal(
+    id?'Edit task':'Add task',
+    `<div class="field-grid">${selectField('Task Category','scope',[['daily','☀️ Daily Task (For today / specific day)'],['overall','📋 Overall Task (Master backlog / Milestone)']],initialScope)}${selectField('Type','type',['Study','Assignment','Project','Revision','Exam','Practice','Other'].map(x=>[x,x]),t.type||'Study')}</div>`+
+    field('Task name','title','text',t.title||'','required')+
+    `<div class="field-grid">${selectField('Subject','subject',[['','No subject'],...db.subjects.map(s=>[s.name,s.name])],t.subject||'')}${field('Date / Deadline','due','date',t.due||(initialScope==='daily'?todayISO():''))}</div>`+
+    `<div class="field-grid">${field('Reminder time (optional)','reminder','time',t.reminder||'')}</div>`+
+    (t.isCarriedForward?`<div class="field-callout-missed"><strong>⚠️ Carry-Forward Note:</strong><p>${esc(t.carryForwardRemark||`Missed on ${fmt(t.originalDate)}`)}</p></div>`:'')+
+    area('Notes / checklist','note',t.note||''),
+    d=>{
+      if(id){
+        Object.assign(t,d);
+      }else{
+        db.tasks.push({id:uid(),...d,done:false,isCarriedForward:false});
+      }
+      toast(id?'Task updated':(d.scope==='daily'?'Daily task planned for today':'Overall task added'));
+    }
+  );
+}
 function cleanExtractedTopics(text){return text.split(/\r?\n/).map(line=>line.replace(/^[\s•●▪*-]*(?:\d+[\s.)-]*)?/,'').replace(/\s+/g,' ').trim()).filter(line=>line.length>2)}
 async function extractSyllabusTopics(file,preview,status,topicsField){preview.src=URL.createObjectURL(file);preview.hidden=false;status.textContent='Reading syllabus image…';try{const worker=await createWorker('eng');const result=await worker.recognize(file);await worker.terminate();const topics=cleanExtractedTopics(result.data.text);topicsField.value=topics.join('\n');status.textContent=topics.length?`Found ${topics.length} lines. Edit them before saving.`:'No readable topic lines found. Enter them manually.'}catch(error){console.error('Syllabus OCR failed.',error);status.textContent='Could not read the image. Enter the topics manually.'}}
 function subjectModal(id){let s=db.subjects.find(x=>x.id===id)||{};openModal(id?'Edit subject':'Add subject',field('Subject name','name','text',s.name||'','required')+`<div class="field-grid">${field('Subject code','code','text',s.code||'')}${field('Semester / term','term','text',s.term||'')}</div><div class="field"><label for="syllabus-image">Import syllabus image</label><input id="syllabus-image" type="file" accept="image/*"><img id="syllabus-preview" class="syllabus-preview" alt="Syllabus preview" hidden><small id="syllabus-status" class="syllabus-status">Upload a clear syllabus image to extract topic lines.</small></div>${area('Syllabus topics (one per line)','topics',(s.topics||[]).map(t=>t.name).join('\n'))}`,d=>{let topics=d.topics.split('\n').map(x=>x.trim()).filter(Boolean).map(name=>({name,done:(s.topics||[]).some(t=>t.name===name&&t.done)}));if(id)Object.assign(s,{...d,topics});else db.subjects.push({id:uid(),...d,topics});toast(id?'Subject updated':'Subject added')});let imageInput=$('#syllabus-image'),preview=$('#syllabus-preview'),status=$('#syllabus-status'),topicsField=document.querySelector('[name="topics"]');imageInput?.addEventListener('change',()=>{let file=imageInput.files?.[0];if(file)extractSyllabusTopics(file,preview,status,topicsField)})}
@@ -612,7 +743,10 @@ function skillModal(id){let s=(db.skills||[]).find(x=>x.id===id)||{};openModal(i
 function eventModal(id,date=selectedDate){let ev=db.events.find(x=>x.id===id)||{};openModal(id?'Edit event':'Add calendar event',field('Event title','title','text',ev.title||'','required')+`<div class="field-grid">${field('Date','date','date',ev.date||date,'required')}${field('Time','time','time',ev.time||'')}</div>${area('Notes','note',ev.note||'')}`,d=>{if(id)Object.assign(ev,d);else db.events.push({id:uid(),...d});toast(id?'Event updated':'Event added')})}
 function mistakeModal(id){openMistakeModal(id,null)}
 $('#add-skill').onclick=()=>skillModal();
-$('#quick-add').onclick=$('#add-task').onclick=()=>taskModal();
+const addDailyBtn=$('#add-daily-task');if(addDailyBtn)addDailyBtn.onclick=()=>taskModal(null,'daily');
+const addOverallBtn=$('#add-overall-task');if(addOverallBtn)addOverallBtn.onclick=()=>taskModal(null,'overall');
+const quickAddBtn=$('#quick-add');if(quickAddBtn)quickAddBtn.onclick=()=>taskModal(null,currentTaskScope==='overall'?'overall':'daily');
+const addTaskBtn=$('#add-task');if(addTaskBtn)addTaskBtn.onclick=()=>taskModal(null,currentTaskScope==='overall'?'overall':'daily');
 $('#add-subject').onclick=()=>subjectModal();
 $('#calendar-add').onclick=$('#selected-add').onclick=()=>eventModal(null,selectedDate);
 $('#add-mistake').onclick=()=>openMistakeModal(null,activeMockTestId);
@@ -876,6 +1010,17 @@ document.addEventListener('click',e=>{
   if(b.dataset.deleteMistake){db.mistakes=db.mistakes.filter(m=>m.id!==b.dataset.deleteMistake);save();toast('Mistake deleted.')}
   if(b.dataset.toggleMistake){let m=db.mistakes.find(x=>x.id===b.dataset.toggleMistake);if(m){m.resolved=!m.resolved;save()}}
   if(b.dataset.day){selectedDate=b.dataset.day;renderCalendar()}
+  const scopeTab=b.dataset.taskScope?b:b.closest('[data-task-scope]');
+  if(scopeTab){
+    currentTaskScope=scopeTab.dataset.taskScope;
+    $$('[data-task-scope]').forEach(x=>x.classList.toggle('active',x===scopeTab));
+    renderTasks();
+  }
+  if(b.id==='btn-filter-carried-over'||b.closest('#btn-filter-carried-over')){
+    taskFilter='missed';
+    $$('[data-filter]').forEach(x=>x.classList.toggle('active',x.dataset.filter==='missed'));
+    renderTasks();
+  }
 });
 document.addEventListener('change',e=>{let el=e.target;if(el.dataset.taskCheck){let t=db.tasks.find(x=>x.id===el.dataset.taskCheck);t.done=el.checked;save()}if(el.dataset.topic){let [sid,i]=el.dataset.topic.split(':');db.subjects.find(s=>s.id===sid).topics[+i].done=el.checked;save()}if(el.dataset.skillMilestone){let [sid,i]=el.dataset.skillMilestone.split(':');let skill=db.skills.find(s=>s.id===sid);skill.milestones[+i].done=el.checked;if(skill.milestones.length&&skill.milestones.every(m=>m.done))skill.status='Completed';else if(el.checked&&skill.status==='Not started')skill.status='Learning';save()}});
 $$('[data-filter]').forEach(b=>b.onclick=()=>{taskFilter=b.dataset.filter;$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));renderTasks()});
