@@ -413,8 +413,11 @@
 
   <!-- 4. Full Paper Viewer / Lightbox Modal -->
   <dialog id="modal-paper-viewer" class="modal-dialog paper-viewer-dialog" aria-labelledby="viewer-paper-title">
-    <div class="modal-header">
-      <h2 id="viewer-paper-title" class="modal-title">Paper Preview</h2>
+    <div class="modal-header paper-viewer-header">
+      <div>
+        <div class="eyebrow">ATTACHED PAPER</div>
+        <h2 id="viewer-paper-title" class="modal-title" style="font-size: 20px;">Paper Preview</h2>
+      </div>
       <div style="display: flex; gap: 8px; align-items: center;">
         <a id="viewer-download-link" class="btn btn-secondary btn-sm" download="paper" target="_blank">⬇ Download</a>
         <button type="button" class="modal-close-btn" data-close-viewer-modal aria-label="Close dialog">&times;</button>

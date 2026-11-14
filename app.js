@@ -766,6 +766,10 @@ $$('[data-close-test-modal]').forEach(b=>b.onclick=()=>$('#modal-upload-test').c
 $$('[data-close-detail-modal]').forEach(b=>b.onclick=()=>{$('#modal-test-detail').close();activeMockTestId=null;renderReviews();});
 $$('[data-close-mistake-modal]').forEach(b=>b.onclick=()=>$('#modal-log-mistake').close());
 $$('[data-close-viewer-modal]').forEach(b=>b.onclick=()=>$('#modal-paper-viewer').close());
+['#modal-upload-test','#modal-test-detail','#modal-log-mistake','#modal-paper-viewer','#item-dialog'].forEach(sel=>{
+  const d=$(sel);
+  if(d)d.addEventListener('click',e=>{if(e.target===d)d.close()});
+});
 
 // Test search input
 $('#test-search-input')?.addEventListener('input',e=>{
