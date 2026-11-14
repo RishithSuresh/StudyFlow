@@ -97,10 +97,118 @@
   </div>
 </section>
 <section id="view-profile" class="view">
-  <div class="section-heading"><div><div class="eyebrow">YOUR PRIVATE WORKSPACE</div><h2>My profile</h2><p class="muted">Track your study habits and use the numbers to plan your next week.</p></div><button id="profile-sign-out" class="secondary-btn" type="button">Sign out</button></div>
-  <div class="profile-identity panel"><div class="profile-avatar avatar" id="profile-avatar">SF</div><div><h3 id="profile-name">Loading profile…</h3><p id="profile-email" class="muted">Loading account details…</p></div></div>
-  <div id="profile-stats" class="profile-stats"><div class="panel empty-state">Loading your statistics…</div></div>
-  <div class="panel profile-guidance"><div class="eyebrow">HOW TO IMPROVE</div><h3 id="profile-guidance-title">Build a consistent rhythm.</h3><p id="profile-guidance-copy" class="muted">Complete a few focus sessions and tasks to unlock useful performance guidance.</p></div>
+  <div class="section-heading">
+    <div>
+      <div class="eyebrow">COMPREHENSIVE PERFORMANCE DASHBOARD</div>
+      <h2>Study Analytics & Profile</h2>
+      <p class="muted">Track your study velocity, examine weekly graphs, uncover weak spots, and get data-driven recommendations.</p>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <button id="profile-refresh-btn" class="secondary-btn" type="button">↻ Refresh data</button>
+      <button id="profile-sign-out" class="secondary-btn" type="button">Sign out</button>
+    </div>
+  </div>
+
+  <!-- User Identity Card with Health Score & Badges -->
+  <div class="profile-identity panel">
+    <div class="profile-identity-main">
+      <div class="profile-avatar avatar" id="profile-avatar">SF</div>
+      <div>
+        <h3 id="profile-name">Loading profile…</h3>
+        <p id="profile-email" class="muted">Loading account details…</p>
+      </div>
+    </div>
+    <div class="profile-badges-cluster" id="profile-badges-cluster">
+      <!-- Dynamic badges: Streak, Scholar Level, Study Health Score -->
+    </div>
+  </div>
+
+  <!-- High-Impact Statistical KPI Grid -->
+  <div class="profile-section-title">
+    <div>
+      <div class="eyebrow">REAL-TIME PERFORMANCE METRICS</div>
+      <h3>Study Velocity & KPI Summary</h3>
+    </div>
+  </div>
+  <div id="profile-stats" class="profile-stats-grid">
+    <div class="panel empty-state">Loading your statistics…</div>
+  </div>
+
+  <!-- Visual Graphs Row 1: Weekly Focus Chart & Syllabus Mastery -->
+  <div class="profile-graphs-container">
+    <!-- Chart 1: 7-Day Focus Time Bar Chart -->
+    <div class="panel profile-graph-panel">
+      <div class="graph-panel-head">
+        <div>
+          <div class="eyebrow">LAST 7 DAYS FOCUS</div>
+          <h3>Weekly Focus Activity</h3>
+        </div>
+        <span class="graph-legend-badge">Daily Target: 60m</span>
+      </div>
+      <div id="profile-weekly-barchart" class="profile-barchart-wrap">
+        <!-- Injected dynamically -->
+      </div>
+      <div id="profile-weekly-summary" class="graph-summary-strip"></div>
+    </div>
+
+    <!-- Chart 2: Subject Syllabus Coverage -->
+    <div class="panel profile-graph-panel">
+      <div class="graph-panel-head">
+        <div>
+          <div class="eyebrow">SYLLABUS PROGRESS</div>
+          <h3>Subject Mastery Breakdown</h3>
+        </div>
+        <span id="profile-syllabus-total-badge" class="graph-legend-badge">0% Complete</span>
+      </div>
+      <div id="profile-subject-breakdown" class="profile-subject-bars-list">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Visual Graphs Row 2: Mock Test Mistake Distribution & Task Pipeline -->
+  <div class="profile-graphs-container" style="margin-top: 20px;">
+    <!-- Chart 3: Mock Test Mistake Category Distribution -->
+    <div class="panel profile-graph-panel">
+      <div class="graph-panel-head">
+        <div>
+          <div class="eyebrow">MOCK TEST DIAGNOSTICS</div>
+          <h3>Where You Drop Marks (Mistake Types)</h3>
+        </div>
+        <span id="profile-mistake-total-badge" class="graph-legend-badge">0 Mistakes</span>
+      </div>
+      <div id="profile-mistake-breakdown" class="profile-mistake-bars-list">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+
+    <!-- Chart 4: Task Execution Pipeline -->
+    <div class="panel profile-graph-panel">
+      <div class="graph-panel-head">
+        <div>
+          <div class="eyebrow">TASK PIPELINE HEALTH</div>
+          <h3>Task Status & Due Breakdown</h3>
+        </div>
+        <span id="profile-task-rate-badge" class="graph-legend-badge">0% Complete</span>
+      </div>
+      <div id="profile-task-pipeline" class="profile-pipeline-wrap">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Smart Actionable Recommendations Section -->
+  <div class="profile-section-title" style="margin-top: 32px;">
+    <div>
+      <div class="eyebrow">INTELLIGENT STUDY ADVISOR</div>
+      <h3>Actionable Recommendations</h3>
+    </div>
+    <span class="muted" style="font-size: 11px;">Data-driven guidance calculated from your current progress and mistake trends</span>
+  </div>
+
+  <div id="profile-recommendations-grid" class="profile-recommendations-grid">
+    <!-- 4 Categorized recommendation cards injected dynamically -->
+  </div>
 </section>
 <section id="view-focus" class="view">
   <div id="top-progress-bar"></div>
