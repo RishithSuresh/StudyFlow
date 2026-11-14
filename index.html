@@ -180,7 +180,7 @@
 </section>
 <footer>StudyFlow <span>·</span> Your progress stays in this browser.</footer>
 </main>
-<dialog id="item-dialog"><form method="dialog" id="item-form"><div class="modal-head"><div><div class="eyebrow" id="modal-eyebrow">NEW ITEM</div><h2 id="modal-title">Add task</h2></div><button class="icon-btn" value="cancel" aria-label="Close">×</button></div><div id="modal-fields"></div><div class="modal-actions"><button class="secondary-btn" value="cancel">Cancel</button><button class="primary-btn" id="modal-save" value="default">Save</button></div></form></dialog>
+<dialog id="item-dialog"><form method="dialog" id="item-form"><div class="modal-head"><div><div class="eyebrow" id="modal-eyebrow">NEW ITEM</div><h2 id="modal-title">Add task</h2></div><button type="button" class="icon-btn" data-close-item-dialog data-close-modal aria-label="Close" formnovalidate>×</button></div><div id="modal-fields"></div><div class="modal-actions"><button type="button" class="secondary-btn" data-close-item-dialog data-close-modal formnovalidate>Cancel</button><button type="submit" class="primary-btn" id="modal-save" value="default">Save</button></div></form></dialog>
 
   <!-- Mock Test & Paper Review Modals -->
   <!-- 1. Upload/Edit Test Paper Modal -->

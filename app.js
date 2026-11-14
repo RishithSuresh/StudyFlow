@@ -582,7 +582,28 @@ function field(label,name,type='text',value='',extra=''){return `<div class="fie
 function selectField(label,name,options,value=''){return `<div class="field"><label>${label}</label><select name="${name}">${options.map(o=>`<option ${o[0]===value?'selected':''} value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></div>`}
 function area(label,name,value=''){return `<div class="field"><label>${label}</label><textarea name="${name}">${esc(value)}</textarea></div>`}
 function openModal(title,fields,handler){$('#modal-title').textContent=title;$('#modal-fields').innerHTML=fields;modalAction=handler;$('#item-dialog').showModal()}
-$('#item-form').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();if(!modalAction)return;let data=Object.fromEntries(new FormData(e.currentTarget).entries());modalAction(data);$('#item-dialog').close();save()});
+$('#item-form').addEventListener('submit',e=>{
+  if(e.submitter?.value==='cancel'){
+    $('#item-dialog').close();
+    return;
+  }
+  e.preventDefault();
+  if(!modalAction)return;
+  let data=Object.fromEntries(new FormData(e.currentTarget).entries());
+  modalAction(data);
+  $('#item-dialog').close();
+  save();
+});
+document.addEventListener('click',e=>{
+  const closeBtn=e.target.closest('[data-close-modal],[data-close-item-dialog],button[value="cancel"],.modal-head .icon-btn');
+  if(closeBtn){
+    const dialog=closeBtn.closest('dialog');
+    if(dialog){
+      e.preventDefault();
+      dialog.close();
+    }
+  }
+});
 function taskModal(id){let t=db.tasks.find(x=>x.id===id)||{};openModal(id?'Edit task':'Add task',field('Task name','title','text',t.title||'','required')+`<div class="field-grid">${selectField('Type','type',['Study','Assignment','Project','Revision','Exam','Other'].map(x=>[x,x]),t.type||'Study')}${selectField('Subject','subject',[['','No subject'],...db.subjects.map(s=>[s.name,s.name])],t.subject||'')}</div><div class="field-grid">${field('Deadline','due','date',t.due||'')}${field('Reminder time (optional)','reminder','time',t.reminder||'')}</div>${area('Notes','note',t.note||'')}`,d=>{if(id)Object.assign(t,d);else db.tasks.push({id:uid(),...d,done:false});toast(id?'Task updated':'Task added')})}
 function cleanExtractedTopics(text){return text.split(/\r?\n/).map(line=>line.replace(/^[\s•●▪*-]*(?:\d+[\s.)-]*)?/,'').replace(/\s+/g,' ').trim()).filter(line=>line.length>2)}
 async function extractSyllabusTopics(file,preview,status,topicsField){preview.src=URL.createObjectURL(file);preview.hidden=false;status.textContent='Reading syllabus image…';try{const worker=await createWorker('eng');const result=await worker.recognize(file);await worker.terminate();const topics=cleanExtractedTopics(result.data.text);topicsField.value=topics.join('\n');status.textContent=topics.length?`Found ${topics.length} lines. Edit them before saving.`:'No readable topic lines found. Enter them manually.'}catch(error){console.error('Syllabus OCR failed.',error);status.textContent='Could not read the image. Enter the topics manually.'}}
