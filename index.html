@@ -111,7 +111,82 @@
     <div id="tasks-list" class="task-list empty-state">No tasks in this view.</div>
   </div>
 </section>
-<section id="view-calendar" class="view"><div class="section-heading"><div><div class="eyebrow">PLAN YOUR TIME</div><h2>Calendar</h2><p class="muted">Select a date to view or add events. Events are editable.</p></div><button class="primary-btn" id="calendar-add">＋ Add event</button></div><div class="calendar-layout"><div class="panel calendar-panel"><div class="calendar-head"><button class="icon-btn" id="prev-month">←</button><h3 id="month-label"></h3><button class="icon-btn" id="next-month">→</button><button class="text-btn" id="today-btn">Today</button></div><div class="weekdays"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div><div id="calendar-grid" class="calendar-grid"></div></div><div class="panel day-panel"><div class="panel-title"><div><div class="eyebrow">SELECTED DAY</div><h3 id="selected-date-label"></h3></div><button class="text-btn" id="selected-add">＋ Add</button></div><div id="day-events" class="empty-state">No events for this day.</div></div></div></section>
+<section id="view-calendar" class="view">
+  <div class="section-heading">
+    <div>
+      <div class="eyebrow">PLAN YOUR SCHEDULE</div>
+      <h2>Study Calendar &amp; Deadlines</h2>
+      <p class="muted">Track your exams, classes, milestones, and task deadlines all in one interactive view.</p>
+    </div>
+    <div class="heading-actions-cluster">
+      <button class="primary-btn" id="calendar-add">＋ Add Event</button>
+      <button class="secondary-btn" id="calendar-add-task">＋ Add Deadline</button>
+    </div>
+  </div>
+
+  <!-- Calendar Month Highlights Bar -->
+  <div class="calendar-highlights-bar" id="calendar-highlights">
+    <div class="cal-stat-card">
+      <div class="cal-stat-icon">📅</div>
+      <div class="cal-stat-info">
+        <span class="cal-stat-val" id="cal-stat-events">0</span>
+        <span class="cal-stat-lbl">Events This Month</span>
+      </div>
+    </div>
+    <div class="cal-stat-card">
+      <div class="cal-stat-icon">🟠</div>
+      <div class="cal-stat-info">
+        <span class="cal-stat-val" id="cal-stat-deadlines">0</span>
+        <span class="cal-stat-lbl">Overall Deadlines</span>
+      </div>
+    </div>
+    <div class="cal-stat-card">
+      <div class="cal-stat-icon">☀️</div>
+      <div class="cal-stat-info">
+        <span class="cal-stat-val" id="cal-stat-daily">0</span>
+        <span class="cal-stat-lbl">Daily Tasks Due</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="calendar-layout">
+    <div class="panel calendar-panel">
+      <div class="calendar-head">
+        <div class="cal-nav-group">
+          <button class="icon-btn" id="prev-month" title="Previous Month">←</button>
+          <h3 id="month-label"></h3>
+          <button class="icon-btn" id="next-month" title="Next Month">→</button>
+          <button class="text-btn" id="today-btn">Today</button>
+        </div>
+        <div class="cal-filter-group" role="tablist">
+          <button type="button" class="cal-filter-chip active" data-cal-filter="all">All</button>
+          <button type="button" class="cal-filter-chip" data-cal-filter="events">📅 Events</button>
+          <button type="button" class="cal-filter-chip" data-cal-filter="deadlines">🟠 Deadlines</button>
+        </div>
+      </div>
+      <div class="weekdays">
+        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+      </div>
+      <div id="calendar-grid" class="calendar-grid"></div>
+    </div>
+
+    <div class="panel day-panel">
+      <div class="day-panel-head">
+        <div>
+          <div class="eyebrow">SELECTED DAY AGENDA</div>
+          <h3 id="selected-date-label"></h3>
+        </div>
+        <div class="day-panel-actions">
+          <button class="btn btn-secondary btn-sm" id="selected-add" title="Add event on this date">＋ Event</button>
+          <button class="btn btn-secondary btn-sm" id="selected-add-task" title="Add deadline on this date">＋ Task</button>
+        </div>
+      </div>
+      <div id="day-events" class="day-events-container">
+        <!-- Events & deadlines rendered dynamically -->
+      </div>
+    </div>
+  </div>
+</section>
 <section id="view-reviews" class="view">
   <div class="section-heading">
     <div>
@@ -372,8 +447,8 @@
           </button>
         </div>
         <div id="timer-active-task-pill" class="active-task-label-wrap">
-          <span id="header-cycle-count" class="active-task-cycle-num">#1 of 4 focus sessions</span>
-          <span id="active-task-name-text" class="active-task-name-text">General Focus Session</span>
+          <span id="header-cycle-count" class="active-task-cycle-num">🍅 Round 1 of 4 · (Long break after round 4)</span>
+          <span id="active-task-name-text" class="active-task-name-text">Free Focus Session (No task attached)</span>
         </div>
       </section>
       <section class="tasks-section" aria-label="Task Management">
@@ -407,16 +482,19 @@
       </section>
       <footer class="bottom-summary-box">
         <div class="summary-stat-col">
-          <span class="summary-label">Pomos</span>
+          <span class="summary-label">Today's Pomo Goal</span>
           <span id="metric-daily-pomos" class="summary-value">0 / 4</span>
+          <small id="metric-daily-pomos-sub" class="summary-sub">0 of 4 completed today</small>
         </div>
         <div class="summary-stat-col">
-          <span class="summary-label">Finish At</span>
+          <span class="summary-label">Estimated Finish</span>
           <span id="estimated-finish-time" class="summary-value">--:--</span>
+          <small id="finish-time-sub" class="summary-sub">When timer starts</small>
         </div>
         <div class="summary-stat-col">
-          <span class="summary-label">Focused Time</span>
+          <span class="summary-label">Focused Today</span>
           <span id="metric-daily-focus" class="summary-value">0h 00m</span>
+          <small id="metric-daily-focus-sub" class="summary-sub">Daily target: 2h 00m</small>
         </div>
       </footer>
     </div>

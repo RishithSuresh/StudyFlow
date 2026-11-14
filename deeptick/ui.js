@@ -107,9 +107,11 @@ class UIManager {
     const activeTaskName = document.getElementById('active-task-name-text');
     if (activeTaskName) {
       if (activeTask) {
-        activeTaskName.textContent = `🎯 ${activeTask.title}`;
+        const est = activeTask.estimatedPomodoros || 1;
+        const done = activeTask.completedPomodoros || 0;
+        activeTaskName.textContent = `🎯 ${activeTask.title} (${done}/${est} Pomos)`;
       } else {
-        activeTaskName.textContent = 'General Focus Session (No task selected)';
+        activeTaskName.textContent = 'Free Focus Session (No task attached)';
       }
     }
 
@@ -117,11 +119,11 @@ class UIManager {
     const interval = settings.longBreakInterval || 4;
     if (cycleInfo) {
       if (mode === 'pomodoro') {
-        cycleInfo.textContent = `#${cycleCount} of ${interval} focus sessions`;
+        cycleInfo.textContent = `🍅 Round ${cycleCount} of ${interval} · (Long break after round ${interval})`;
       } else if (mode === 'short_break') {
-        cycleInfo.textContent = `☕ Short Break (after session #${cycleCount})`;
+        cycleInfo.textContent = `☕ Short Break (Round ${cycleCount} of ${interval} completed)`;
       } else {
-        cycleInfo.textContent = `🌴 Long Break (${interval} sessions completed!)`;
+        cycleInfo.textContent = `🌴 Long Break (${interval} focus rounds completed!)`;
       }
     }
 
@@ -283,17 +285,34 @@ class UIManager {
     const dailyPomoVal = document.getElementById('metric-daily-pomos');
     if (dailyPomoVal) dailyPomoVal.textContent = `${daily.pomodorosCompleted} / ${goalPomos}`;
 
+    const dailyPomoSub = document.getElementById('metric-daily-pomos-sub');
+    if (dailyPomoSub) {
+      const remaining = Math.max(0, goalPomos - daily.pomodorosCompleted);
+      dailyPomoSub.textContent = remaining === 0 ? '🎉 Daily goal reached!' : `${remaining} more to reach daily goal`;
+    }
+
     const dailyFocusVal = document.getElementById('metric-daily-focus');
+    const dailyFocusGoal = settings.dailyFocusGoalHours || 2;
     if (dailyFocusVal) {
       const hours = Math.floor(daily.focusSeconds / 3600);
       const mins = Math.floor((daily.focusSeconds % 3600) / 60);
       dailyFocusVal.textContent = `${hours}h ${mins}m`;
+    }
+    const dailyFocusSub = document.getElementById('metric-daily-focus-sub');
+    if (dailyFocusSub) {
+      dailyFocusSub.textContent = `Daily target: ${dailyFocusGoal}h 00m`;
     }
 
     // Estimated Finish Time
     const estimation = calculateEstimatedFinishTime();
     const finishTimeEl = document.getElementById('estimated-finish-time');
     if (finishTimeEl) finishTimeEl.textContent = estimation.finishTimeFormatted;
+    const finishSubEl = document.getElementById('finish-time-sub');
+    if (finishSubEl) {
+      finishSubEl.textContent = estimation.finishTimeFormatted === '--:--'
+        ? 'When timer starts'
+        : `${Math.round(estimation.totalRemainingSeconds / 60)}m focus left`;
+    }
   }
 
   // 6. Settings Form Population

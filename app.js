@@ -17,7 +17,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
 const toast=m=>{let t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
-let currentView='overview',taskFilter='all',currentTaskScope='daily',taskSearchQuery='',reviewFilter='all',calDate=new Date(),selectedDate=todayISO(),modalAction=null;
+let currentView='overview',taskFilter='all',currentTaskScope='daily',taskSearchQuery='',reviewFilter='all',calDate=new Date(),selectedDate=todayISO(),calFilter='all',modalAction=null;
 let activeMockTestId=null,testTab='tests',testSearchQuery='',testMistakeFilter='all',selectedPaperFile=null;
 function loadWorkspaceForUser(userId){storageKey=`${KEY}:${userId}`;try{db={...starter(),...JSON.parse(localStorage.getItem(storageKey)||'{}')}}catch{db=starter()}db.mockTests=db.mockTests||[];db.mistakes=db.mistakes||[];render()}
 window.addEventListener('studyflow:authenticated',event=>loadWorkspaceForUser(event.detail.user.id));
@@ -59,7 +59,31 @@ function taskRow(t){
   const isMissedResolved=t.isCarriedForward&&t.done;
   return `<div class="task-row ${t.done?'done':''} ${isMissedCarried?'carried-forward-row':''}"><input class="check" type="checkbox" data-task-check="${t.id}" ${t.done?'checked':''}><div class="task-main"><div class="task-title-line"><span class="scope-pill ${t.scope==='daily'?'daily':'overall'}">${t.scope==='daily'?'☀️ Daily':'📋 Overall'}</span><b>${esc(t.title)}</b></div><small>${esc(taskMeta(t))}</small>${isMissedCarried?`<div class="task-missed-remark"><span class="missed-tag">⚠️ Missed & Carried Forward</span><span class="missed-text">${esc(t.carryForwardRemark||`Missed on ${fmt(t.originalDate)}`)}</span></div>`:''}${isMissedResolved?`<div class="task-missed-remark"><span class="resolved-missed-tag">✓ Completed (Was missed on ${fmt(t.originalDate)})</span></div>`:''}${t.note?`<div class="task-note-snippet">${esc(t.note)}</div>`:''}</div><div class="row-actions">${t.due?`<span class="tag ${isOverdue?'urgent':''}">${isOverdue?'Overdue':fmt(t.due)}</span>`:''}<button class="tiny-btn" data-edit-task="${t.id}">Edit</button><button class="tiny-btn" data-delete-task="${t.id}">×</button></div></div>`;
 }
-function renderOverview(){let p=progress();$('#overall-percent').textContent=p.pct+'% complete';$('#overall-bar').style.width=p.pct+'%';$('#topic-count').textContent=`${p.done} of ${p.all} topics completed`;let open=db.tasks.filter(t=>!t.done);$('#task-open').textContent=open.length;let week=new Date();week.setDate(week.getDate()+7);$('#task-due').textContent=open.filter(t=>t.due&&t.due>=todayISO()&&t.due<=week.toISOString().slice(0,10)).length;$('#focus-today').textContent=db.focus.minutes[todayISO()]||0;let next=open.filter(t=>!t.due||t.due>=todayISO()).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')).slice(0,5);$('#today-tasks').className='task-list'+(next.length?'':' empty-state');$('#today-tasks').innerHTML=next.length?next.map(taskRow).join(''):'No open tasks. Enjoy the breathing room.';let upcoming=[...db.tasks.filter(t=>t.due&&!t.done).map(t=>({title:t.title,date:t.due,kind:t.type||'Task'})),...db.events.map(e=>({title:e.title,date:e.date,kind:'Event'}))].filter(x=>x.date>=todayISO()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);$('#upcoming-list').className='upcoming-list'+(upcoming.length?'':' empty-state');$('#upcoming-list').innerHTML=upcoming.length?upcoming.map(x=>`<div class="upcoming-item"><div class="date-tile"><b>${new Date(x.date+'T12:00:00').getDate()}</b><small>${new Date(x.date+'T12:00:00').toLocaleDateString('en',{month:'short'}).toUpperCase()}</small></div><div><b>${esc(x.title)}</b><small>${esc(x.kind)} · ${fmt(x.date)}</small></div></div>`).join(''):'Nothing scheduled yet.';$('#subject-overview').innerHTML=db.subjects.length?db.subjects.slice(0,6).map(subjectCard).join(''):'<div class="panel empty-state">Add your course subjects to see syllabus progress here.</div>'}
+function renderOverview(){
+  let p=progress();
+  $('#overall-percent').textContent=p.pct+'% complete';
+  $('#overall-bar').style.width=p.pct+'%';
+  $('#topic-count').textContent=`${p.done} of ${p.all} topics completed`;
+  let open=db.tasks.filter(t=>!t.done);
+  $('#task-open').textContent=open.length;
+  let week=new Date();week.setDate(week.getDate()+7);
+  $('#task-due').textContent=open.filter(t=>t.due&&t.due>=todayISO()&&t.due<=week.toISOString().slice(0,10)).length;
+  $('#focus-today').textContent=db.focus.minutes[todayISO()]||0;
+  let next=open.filter(t=>!t.due||t.due>=todayISO()).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')).slice(0,5);
+  $('#today-tasks').className='task-list'+(next.length?'':' empty-state');
+  $('#today-tasks').innerHTML=next.length?next.map(taskRow).join(''):'No open tasks. Enjoy the breathing room.';
+
+  // Upcoming deadlines must be of ONLY overall tasks and calendar events (excluding daily tasks)
+  const isOverallTask=t=>(t.scope==='overall'||(!t.scope&&t.due&&t.due!==todayISO()));
+  let upcoming=[
+    ...db.tasks.filter(t=>isOverallTask(t)&&t.due&&!t.done).map(t=>({title:t.title,date:t.due,kind:t.type||'Overall Task'})),
+    ...db.events.map(e=>({title:e.title,date:e.date,kind:'Event'}))
+  ].filter(x=>x.date>=todayISO()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);
+
+  $('#upcoming-list').className='upcoming-list'+(upcoming.length?'':' empty-state');
+  $('#upcoming-list').innerHTML=upcoming.length?upcoming.map(x=>`<div class="upcoming-item"><div class="date-tile"><b>${new Date(x.date+'T12:00:00').getDate()}</b><small>${new Date(x.date+'T12:00:00').toLocaleDateString('en',{month:'short'}).toUpperCase()}</small></div><div><b>${esc(x.title)}</b><small>${esc(x.kind)} · ${fmt(x.date)}</small></div></div>`).join(''):'No upcoming overall deadlines scheduled.';
+  $('#subject-overview').innerHTML=db.subjects.length?db.subjects.slice(0,6).map(subjectCard).join(''):'<div class="panel empty-state">Add your course subjects to see syllabus progress here.</div>'
+}
 function subjectCard(s){let total=s.topics?.length||0,done=s.topics?.filter(t=>t.done).length||0,p=total?Math.round(done/total*100):0;return `<div class="subject-card"><h3>${esc(s.name)}</h3><p>${esc(s.code||'Course subject')}</p><div class="progress-track"><span style="width:${p}%"></span></div><div class="progress-foot"><span>${done}/${total} topics</span><b>${p}%</b></div></div>`}
 function renderSubjects(){$('#subjects-list').innerHTML=db.subjects.length?db.subjects.map(s=>`<div class="panel subject-detail"><div class="subject-detail-head"><div><h3>${esc(s.name)}</h3><div class="muted">${esc(s.code||'')} ${s.term?'· '+esc(s.term):''}</div></div><div><button class="text-btn" data-edit-subject="${s.id}">Edit</button><button class="text-btn" data-delete-subject="${s.id}">Delete</button></div></div><div class="progress-track" style="margin-top:15px"><span style="width:${s.topics?.length?Math.round(s.topics.filter(t=>t.done).length/s.topics.length*100):0}%"></span></div><div class="topic-list">${(s.topics||[]).map((t,i)=>`<label class="topic"><input type="checkbox" data-topic="${s.id}:${i}" ${t.done?'checked':''}>${esc(t.name)}</label>`).join('')||'<span class="muted">No topics yet. Edit this subject to add syllabus topics.</span>'}</div></div>`).join(''):'<div class="panel empty-state">No subjects yet. Add your first subject and list its syllabus topics.</div>'}
 function renderTasks(){
@@ -142,7 +166,189 @@ function renderTasks(){
     }
   }
 }
-function renderCalendar(){let y=calDate.getFullYear(),m=calDate.getMonth();$('#month-label').textContent=calDate.toLocaleDateString('en',{month:'long',year:'numeric'});let first=new Date(y,m,1),start=(first.getDay()+6)%7,days=new Date(y,m+1,0).getDate(),prev=new Date(y,m,0).getDate(),cells=[];for(let i=0;i<42;i++){let day=i-start+1,d,other=false;if(day<1){d=new Date(y,m-1,prev+day);other=true}else if(day>days){d=new Date(y,m+1,day-days);other=true}else d=new Date(y,m,day);let iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,has=db.events.some(e=>e.date===iso)||db.tasks.some(t=>t.due===iso&&!t.done);cells.push(`<button class="day-cell ${other?'other':''} ${iso===todayISO()?'today':''} ${iso===selectedDate?'selected':''}" data-day="${iso}"><b>${d.getDate()}</b>${has?'<span class="day-dots"><i></i></span>':''}</button>`)}$('#calendar-grid').innerHTML=cells.join('');$('#selected-date-label').textContent=fmt(selectedDate);let ev=[...db.events.filter(e=>e.date===selectedDate).map(e=>({...e,kind:'Event'})),...db.tasks.filter(t=>t.due===selectedDate).map(t=>({...t,kind:t.type||'Task'}))];$('#day-events').className=ev.length?'':'empty-state';$('#day-events').innerHTML=ev.length?ev.map(e=>`<div class="event-row"><div><b>${esc(e.title)}</b><small>${esc(e.kind)}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note):''}</small></div><button class="tiny-btn" ${e.kind==='Event'?`data-edit-event="${e.id}"`:`data-edit-task="${e.id}"`}>Edit</button></div>`).join(''):'No events or deadlines for this day.'}
+function renderCalendar(){
+  let y=calDate.getFullYear(), m=calDate.getMonth();
+  $('#month-label').textContent=calDate.toLocaleDateString('en',{month:'long',year:'numeric'});
+
+  // 1. Month Highlights Stats
+  const monthPrefix=`${y}-${String(m+1).padStart(2,'0')}`;
+  const monthEvents=(db.events||[]).filter(e=>e.date&&e.date.startsWith(monthPrefix));
+  const isOverall=t=>(t.scope==='overall'||(!t.scope&&t.due&&t.due!==todayISO()));
+  const monthDeadlines=(db.tasks||[]).filter(t=>isOverall(t)&&t.due&&t.due.startsWith(monthPrefix)&&!t.done);
+  const monthDaily=(db.tasks||[]).filter(t=>!isOverall(t)&&t.due&&t.due.startsWith(monthPrefix)&&!t.done);
+
+  const elStatEv=$('#cal-stat-events');
+  if(elStatEv) elStatEv.textContent=monthEvents.length;
+  const elStatDl=$('#cal-stat-deadlines');
+  if(elStatDl) elStatDl.textContent=monthDeadlines.length;
+  const elStatDy=$('#cal-stat-daily');
+  if(elStatDy) elStatDy.textContent=monthDaily.length;
+
+  // 2. Calendar Grid Construction
+  let first=new Date(y,m,1), start=(first.getDay()+6)%7, days=new Date(y,m+1,0).getDate(), prev=new Date(y,m,0).getDate(), cells=[];
+  for(let i=0;i<42;i++){
+    let day=i-start+1, d, other=false;
+    if(day<1){
+      d=new Date(y,m-1,prev+day);
+      other=true;
+    }else if(day>days){
+      d=new Date(y,m+1,day-days);
+      other=true;
+    }else{
+      d=new Date(y,m,day);
+    }
+    let iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    
+    // Day items
+    let dayEvents=(db.events||[]).filter(e=>e.date===iso);
+    let dayDeadlines=(db.tasks||[]).filter(t=>isOverall(t)&&t.due===iso);
+    let dayDaily=(db.tasks||[]).filter(t=>!isOverall(t)&&t.due===iso);
+
+    let filteredItems=[];
+    if(calFilter==='events'){
+      filteredItems=dayEvents.map(e=>({type:'event',title:e.title,done:false}));
+    }else if(calFilter==='deadlines'){
+      filteredItems=[
+        ...dayDeadlines.map(t=>({type:'deadline',title:t.title,done:t.done})),
+        ...dayDaily.map(t=>({type:'daily',title:t.title,done:t.done}))
+      ];
+    }else{
+      filteredItems=[
+        ...dayEvents.map(e=>({type:'event',title:e.title,done:false})),
+        ...dayDeadlines.map(t=>({type:'deadline',title:t.title,done:t.done})),
+        ...dayDaily.map(t=>({type:'daily',title:t.title,done:t.done}))
+      ];
+    }
+
+    let badgesHtml='';
+    if(filteredItems.length>0){
+      const visible=filteredItems.slice(0,2);
+      const extra=filteredItems.length-2;
+      badgesHtml=`<div class="day-cell-badges">`+
+        visible.map(item=>{
+          if(item.type==='event') return `<span class="cell-mini-pill pill-event" title="${esc(item.title)}">📅 ${esc(item.title)}</span>`;
+          if(item.type==='deadline') return `<span class="cell-mini-pill pill-deadline ${item.done?'pill-done':''}" title="${esc(item.title)}">🟠 ${esc(item.title)}</span>`;
+          return `<span class="cell-mini-pill pill-daily ${item.done?'pill-done':''}" title="${esc(item.title)}">☀️ ${esc(item.title)}</span>`;
+        }).join('')+
+        (extra>0?`<span class="cell-mini-more">+${extra} more</span>`:'')+
+      `</div>`;
+    }
+
+    cells.push(`
+      <button type="button" class="day-cell ${other?'other':''} ${iso===todayISO()?'today':''} ${iso===selectedDate?'selected':''}" data-day="${iso}">
+        <div class="day-cell-top">
+          <b class="day-cell-num">${d.getDate()}</b>
+          ${iso===todayISO()?'<span class="day-today-tag">TODAY</span>':''}
+        </div>
+        ${badgesHtml}
+      </button>
+    `);
+  }
+  $('#calendar-grid').innerHTML=cells.join('');
+
+  // 3. Selected Day Agenda
+  $('#selected-date-label').textContent=fmt(selectedDate);
+  const dayEvs=(db.events||[]).filter(e=>e.date===selectedDate);
+  const dayOverall=(db.tasks||[]).filter(t=>isOverall(t)&&t.due===selectedDate);
+  const dayDailyTasks=(db.tasks||[]).filter(t=>!isOverall(t)&&t.due===selectedDate);
+
+  const container=$('#day-events');
+  if(!container) return;
+
+  if(dayEvs.length===0 && dayOverall.length===0 && dayDailyTasks.length===0){
+    container.className='day-events-container';
+    container.innerHTML=`
+      <div class="calendar-day-empty">
+        <div class="cal-empty-icon">🗓️</div>
+        <h4>No events or deadlines</h4>
+        <p>Your schedule is clear for ${fmt(selectedDate)}.</p>
+        <div class="cal-empty-actions">
+          <button class="btn btn-secondary btn-sm" id="empty-add-event">＋ Add Event</button>
+          <button class="btn btn-secondary btn-sm" id="empty-add-task">＋ Add Deadline</button>
+        </div>
+      </div>
+    `;
+    const btnE=$('#empty-add-event');
+    if(btnE) btnE.onclick=()=>eventModal(null,selectedDate);
+    const btnT=$('#empty-add-task');
+    if(btnT) btnT.onclick=()=>taskModal(null,'overall',selectedDate);
+    return;
+  }
+
+  let html='';
+
+  // Events Section
+  if(dayEvs.length>0){
+    html+=`
+      <div class="agenda-section">
+        <div class="agenda-section-title">
+          <span>📅 Events &amp; Sessions (${dayEvs.length})</span>
+        </div>
+        <div class="agenda-cards-list">
+          ${dayEvs.map(e=>`
+            <div class="day-event-card">
+              <div class="agenda-card-indicator event-ind"></div>
+              <div class="agenda-card-main">
+                <div class="agenda-card-title-row">
+                  <b>${esc(e.title)}</b>
+                  ${e.time?`<span class="agenda-time-badge">⏰ ${esc(e.time)}</span>`:''}
+                </div>
+                ${e.note?`<p class="agenda-note">${esc(e.note)}</p>`:''}
+              </div>
+              <div class="agenda-card-actions">
+                <button class="tiny-btn" data-edit-event="${e.id}" title="Edit event">Edit</button>
+                <button class="tiny-btn" data-delete-event="${e.id}" title="Delete event">×</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // Tasks & Deadlines Section
+  const combinedTasks=[...dayOverall, ...dayDailyTasks];
+  if(combinedTasks.length>0){
+    html+=`
+      <div class="agenda-section">
+        <div class="agenda-section-title">
+          <span>🎯 Tasks &amp; Deadlines Due (${combinedTasks.length})</span>
+        </div>
+        <div class="agenda-cards-list">
+          ${combinedTasks.map(t=>{
+            const isDaily = t.scope==='daily';
+            return `
+              <div class="day-task-card ${t.done?'is-done':''}">
+                <label class="agenda-check-wrap">
+                  <input type="checkbox" class="check cal-task-check" data-task-check="${t.id}" ${t.done?'checked':''}>
+                </label>
+                <div class="agenda-card-main">
+                  <div class="agenda-card-title-row">
+                    <span class="scope-pill ${isDaily?'daily':'overall'}">${isDaily?'☀️ Daily':'📋 Overall'}</span>
+                    <b class="agenda-task-title ${t.done?'line-through':''}">${esc(t.title)}</b>
+                  </div>
+                  <div class="agenda-task-meta">
+                    ${t.subject?`<span class="meta-item">📚 ${esc(t.subject)}</span>`:''}
+                    ${t.reminder?`<span class="meta-item">⏰ ${esc(t.reminder)}</span>`:''}
+                    ${t.type?`<span class="meta-item">🏷️ ${esc(t.type)}</span>`:''}
+                  </div>
+                  ${t.note?`<p class="agenda-note">${esc(t.note)}</p>`:''}
+                </div>
+                <div class="agenda-card-actions">
+                  <button class="tiny-btn" data-edit-task="${t.id}" title="Edit task">Edit</button>
+                  <button class="tiny-btn" data-delete-task="${t.id}" title="Delete task">×</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  container.className='day-events-container';
+  container.innerHTML=html;
+}
 function renderSkills(){
  const skills=db.skills||[];
  const total=skills.reduce((n,s)=>n+(s.milestones||[]).length,0),done=skills.reduce((n,s)=>n+(s.milestones||[]).filter(m=>m.done).length,0);
@@ -658,7 +864,13 @@ async function viewPaperFull(testId){
 
   titleEl.textContent=t?.name?`${t.name} — Paper Preview`:'Paper Preview';
   if(!record||!record.blob){
-    contentEl.innerHTML='<p style="color:white; padding:40px; text-align:center;">Paper file could not be loaded from storage.</p>';
+    contentEl.innerHTML=`
+      <div class="viewer-empty-state">
+        <span style="font-size:36px;">📄</span>
+        <h4 style="margin:12px 0 6px; color:var(--sf-navy);">No paper file attached</h4>
+        <p style="margin:0; font-size:12px; color:var(--sf-navy-soft);">This mock test was saved without an uploaded PDF or image file.</p>
+      </div>
+    `;
     downloadLink.hidden=true;
     dialog.showModal();
     return;
@@ -672,7 +884,15 @@ async function viewPaperFull(testId){
   if(record.type?.startsWith('image/')){
     contentEl.innerHTML=`<img src="${url}" class="viewer-img" alt="Test paper preview">`;
   }else{
-    contentEl.innerHTML=`<iframe src="${url}" class="viewer-pdf-frame" title="PDF preview"></iframe>`;
+    contentEl.innerHTML=`
+      <div class="pdf-viewer-wrap">
+        <iframe src="${url}" class="viewer-pdf-frame" title="PDF preview"></iframe>
+        <div class="pdf-fallback-bar">
+          <span>Viewing PDF paper preview.</span>
+          <a href="${url}" target="_blank" download="${esc(record.name||'paper.pdf')}" class="btn btn-secondary btn-sm">⬇ Open / Download PDF</a>
+        </div>
+      </div>
+    `;
   }
   dialog.showModal();
 }
@@ -719,14 +939,14 @@ document.addEventListener('click',e=>{
     }
   }
 });
-function taskModal(id,defaultScope=(currentTaskScope==='overall'?'overall':'daily')){
+function taskModal(id,defaultScope=(currentTaskScope==='overall'?'overall':'daily'),initialDate=null){
   let t=db.tasks.find(x=>x.id===id)||{};
   const initialScope=t.scope||defaultScope;
   openModal(
     id?'Edit task':'Add task',
     `<div class="field-grid">${selectField('Task Category','scope',[['daily','☀️ Daily Task (For today / specific day)'],['overall','📋 Overall Task (Master backlog / Milestone)']],initialScope)}${selectField('Type','type',['Study','Assignment','Project','Revision','Exam','Practice','Other'].map(x=>[x,x]),t.type||'Study')}</div>`+
     field('Task name','title','text',t.title||'','required')+
-    `<div class="field-grid">${selectField('Subject','subject',[['','No subject'],...db.subjects.map(s=>[s.name,s.name])],t.subject||'')}${field('Date / Deadline','due','date',t.due||(initialScope==='daily'?todayISO():''))}</div>`+
+    `<div class="field-grid">${selectField('Subject','subject',[['','No subject'],...db.subjects.map(s=>[s.name,s.name])],t.subject||'')}${field('Date / Deadline','due','date',t.due||initialDate||(initialScope==='daily'?todayISO():''))}</div>`+
     `<div class="field-grid">${field('Reminder time (optional)','reminder','time',t.reminder||'')}</div>`+
     (t.isCarriedForward?`<div class="field-callout-missed"><strong>⚠️ Carry-Forward Note:</strong><p>${esc(t.carryForwardRemark||`Missed on ${fmt(t.originalDate)}`)}</p></div>`:'')+
     area('Notes / checklist','note',t.note||''),
@@ -753,6 +973,8 @@ const quickAddBtn=$('#quick-add');if(quickAddBtn)quickAddBtn.onclick=()=>taskMod
 const addTaskBtn=$('#add-task');if(addTaskBtn)addTaskBtn.onclick=()=>taskModal(null,currentTaskScope==='overall'?'overall':'daily');
 $('#add-subject').onclick=()=>subjectModal();
 $('#calendar-add').onclick=$('#selected-add').onclick=()=>eventModal(null,selectedDate);
+const calAddTaskBtn=$('#calendar-add-task');if(calAddTaskBtn)calAddTaskBtn.onclick=()=>taskModal(null,'overall',selectedDate);
+const selAddTaskBtn=$('#selected-add-task');if(selAddTaskBtn)selAddTaskBtn.onclick=()=>taskModal(null,'overall',selectedDate);
 $('#add-mistake').onclick=()=>openMistakeModal(null,activeMockTestId);
 const uploadBtn=$('#upload-test-btn');
 if(uploadBtn)uploadBtn.onclick=()=>openMockTestModal();
@@ -1010,6 +1232,19 @@ document.addEventListener('click',e=>{
   if(b.dataset.deleteSkill){if(confirm('Delete this skill and its learning progress?')){db.skills=db.skills.filter(x=>x.id!==b.dataset.deleteSkill);save();toast('Skill deleted')}}
   if(b.dataset.deleteSubject){if(confirm('Delete this subject and its syllabus topics?')){db.subjects=db.subjects.filter(s=>s.id!==b.dataset.deleteSubject);save()}}
   if(b.dataset.editEvent)eventModal(b.dataset.editEvent);
+  if(b.dataset.deleteEvent){
+    if(confirm('Delete this calendar event?')){
+      db.events=(db.events||[]).filter(e=>e.id!==b.dataset.deleteEvent);
+      save();
+      toast('Event deleted.');
+    }
+  }
+  const calFilterChip=b.dataset.calFilter?b:b.closest('[data-cal-filter]');
+  if(calFilterChip){
+    calFilter=calFilterChip.dataset.calFilter;
+    $$('[data-cal-filter]').forEach(x=>x.classList.toggle('active',x===calFilterChip));
+    renderCalendar();
+  }
   if(b.dataset.editMistake)openMistakeModal(b.dataset.editMistake);
   if(b.dataset.deleteMistake){db.mistakes=db.mistakes.filter(m=>m.id!==b.dataset.deleteMistake);save();toast('Mistake deleted.')}
   if(b.dataset.toggleMistake){let m=db.mistakes.find(x=>x.id===b.dataset.toggleMistake);if(m){m.resolved=!m.resolved;save()}}
