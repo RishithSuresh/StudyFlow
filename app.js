@@ -27,6 +27,7 @@ try{
 db.mockTests = db.mockTests || [];
 db.mistakes = db.mistakes || [];
 const save=()=>{
+  workspaceDirty=true;
   try{
     localStorage.setItem(storageKey,JSON.stringify(db));
     if(storageKey!==KEY){
@@ -42,6 +43,8 @@ const save=()=>{
 let workspaceSyncTimer=null;
 let workspaceSyncInFlight=false;
 let workspaceSyncPending=false;
+let workspaceDirty=false;
+let workspaceSyncErrorShown=false;
 function queueWorkspaceSync(){
   if(!localStorage.getItem('studyflow_user'))return;
   workspaceSyncPending=true;
@@ -63,12 +66,21 @@ async function syncWorkspace(){
       const payload=await response.json().catch(()=>({}));
       throw new Error(payload.error||'Workspace sync failed.');
     }
+    workspaceDirty=false;
+    workspaceSyncErrorShown=false;
   }catch(error){
     console.error('Workspace sync error:',error);
     workspaceSyncPending=true;
+    if(!workspaceSyncErrorShown&&typeof toast==='function'){
+      workspaceSyncErrorShown=true;
+      toast('Saved on this device. Server sync failed; please check your connection.');
+    }
   }finally{
     workspaceSyncInFlight=false;
-    if(workspaceSyncPending)queueWorkspaceSync();
+    if(workspaceSyncPending){
+      clearTimeout(workspaceSyncTimer);
+      workspaceSyncTimer=setTimeout(syncWorkspace,3000);
+    }
   }
 }
 window.getStudyFlowDb = () => db;
@@ -86,6 +98,7 @@ async function loadWorkspaceForUser(userId){
   if(!userId)return;
   storageKey=`${KEY}:${userId}`;
   let localWorkspace;
+  workspaceDirty=false;
   try{
     const userRaw=localStorage.getItem(storageKey);
     const globalRaw=localStorage.getItem(KEY);
@@ -132,7 +145,10 @@ async function loadWorkspaceForUser(userId){
     const response=await fetch(`${API_BASE}/workspace`,{credentials:'include'});
     if(!response.ok)throw new Error(`Workspace request failed with status ${response.status}.`);
     const payload=await response.json();
-    if(payload.state&&typeof payload.state==='object'&&!Array.isArray(payload.state)){
+    const serverState=payload.state;
+    const serverHasWorkspaceData=serverState&&typeof serverState==='object'&&!Array.isArray(serverState)&&
+      Object.values(serverState).some(value=>Array.isArray(value)?value.length>0:value&&typeof value==='object'&&Object.keys(value).length>0);
+    if(!workspaceDirty&&serverHasWorkspaceData){
       db={...starter(),...payload.state};
       loadedFromServer=true;
     }
