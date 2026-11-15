@@ -3,6 +3,8 @@ import * as XLSX from 'xlsx';
 import { savePaperFile, getPaperFile, deletePaperFile, generateImageThumbnail, formatFileSize } from './paper-storage.js';
 
 const KEY='studyflow-v1';
+const API_BASE=window.STUDYFLOW_API_URL
+  || (window.location.hostname==='localhost'?'http://localhost:3000/api':'/api');
 const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const uid=()=>Math.random().toString(36).slice(2,10);
 const starter=()=>({subjects:[],tasks:[],events:[],mistakes:[],mockTests:[],skills:[],focus:{minutes:{},sessions:0}});
@@ -35,7 +37,40 @@ const save=()=>{
   }
   render();
   window.dispatchEvent(new CustomEvent('studyflow:data-updated',{detail:{db}}));
+  queueWorkspaceSync();
 };
+let workspaceSyncTimer=null;
+let workspaceSyncInFlight=false;
+let workspaceSyncPending=false;
+function queueWorkspaceSync(){
+  if(!localStorage.getItem('studyflow_user'))return;
+  workspaceSyncPending=true;
+  clearTimeout(workspaceSyncTimer);
+  workspaceSyncTimer=setTimeout(syncWorkspace,300);
+}
+async function syncWorkspace(){
+  if(!workspaceSyncPending||workspaceSyncInFlight)return;
+  workspaceSyncPending=false;
+  workspaceSyncInFlight=true;
+  try{
+    const response=await fetch(`${API_BASE}/workspace`,{
+      method:'PUT',
+      credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({state:db})
+    });
+    if(!response.ok){
+      const payload=await response.json().catch(()=>({}));
+      throw new Error(payload.error||'Workspace sync failed.');
+    }
+  }catch(error){
+    console.error('Workspace sync error:',error);
+    workspaceSyncPending=true;
+  }finally{
+    workspaceSyncInFlight=false;
+    if(workspaceSyncPending)queueWorkspaceSync();
+  }
+}
 window.getStudyFlowDb = () => db;
 window.getStudyFlowTasks = () => (db && db.tasks) ? db.tasks : [];
 window.addStudyFlowTask = (task) => { if(db){ db.tasks = db.tasks || []; db.tasks.push(task); save(); } };
@@ -47,9 +82,10 @@ const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',m
 const toast=m=>{let t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
 let currentView='overview',taskFilter='all',currentTaskScope='daily',taskSearchQuery='',reviewFilter='all',calDate=new Date(),selectedDate=todayISO(),calFilter='all',modalAction=null;
 let activeMockTestId=null,testTab='tests',testSearchQuery='',testMistakeFilter='all',selectedPaperFile=null;
-function loadWorkspaceForUser(userId){
+async function loadWorkspaceForUser(userId){
   if(!userId)return;
   storageKey=`${KEY}:${userId}`;
+  let localWorkspace;
   try{
     const userRaw=localStorage.getItem(storageKey);
     const globalRaw=localStorage.getItem(KEY);
@@ -75,7 +111,7 @@ function loadWorkspaceForUser(userId){
     const allTasks=candidateObjs.flatMap(o=>o.tasks||[]).filter((t,i,arr)=>t&&t.id&&arr.findIndex(x=>x.id===t.id)===i);
     const allSkills=candidateObjs.flatMap(o=>o.skills||[]).filter((s,i,arr)=>s&&s.id&&arr.findIndex(x=>x.id===s.id)===i);
 
-    db={
+    localWorkspace={
       ...starter(),
       ...(globalObj||{}),
       ...(userObj||{}),
@@ -85,11 +121,33 @@ function loadWorkspaceForUser(userId){
       mockTests:allTests,
       mistakes:allMistakes
     };
+  }catch(err){
+    console.error('Error loading user workspace:',err);
+    localWorkspace=db||starter();
+  }
+
+  db=localWorkspace;
+  let loadedFromServer=false;
+  try{
+    const response=await fetch(`${API_BASE}/workspace`,{credentials:'include'});
+    if(!response.ok)throw new Error(`Workspace request failed with status ${response.status}.`);
+    const payload=await response.json();
+    if(payload.state&&typeof payload.state==='object'&&!Array.isArray(payload.state)){
+      db={...starter(),...payload.state};
+      loadedFromServer=true;
+    }
+  }catch(err){
+    console.error('Error loading server workspace:',err);
+  }
+
+  if(!loadedFromServer&&localWorkspace){
+    queueWorkspaceSync();
+  }
+  try{
     localStorage.setItem(storageKey,JSON.stringify(db));
     localStorage.setItem(KEY,JSON.stringify(db));
   }catch(err){
-    console.error('Error loading user workspace:',err);
-    db=db||starter();
+    console.error('Error caching workspace:',err);
   }
   db.mockTests=db.mockTests||[];
   db.mistakes=db.mistakes||[];

@@ -13,7 +13,7 @@ app.use(cors({
   credentials: true
 }));
 app.all('/api/auth/*splat', toNodeHandler(auth));
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '1mb' }));
 
 async function requireSession(req, res, next) {
   try {
@@ -117,13 +117,14 @@ app.get('/api/statistics', requireSession, async (req, res, next) => {
 app.get('/api/workspace', requireSession, async (req, res, next) => {
   try {
     const userId = req.session.user.id;
-    const [tasks, subjects, skills, events, mistakes, sessions] = await Promise.all([
+    const [tasks, subjects, skills, events, mistakes, sessions, settings] = await Promise.all([
       query('SELECT * FROM tasks WHERE user_id = $1 ORDER BY due_at NULLS LAST, created_at DESC', [userId]),
       query('SELECT * FROM academic_subjects WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
       query('SELECT * FROM skills WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
       query('SELECT * FROM calendar_events WHERE user_id = $1 ORDER BY starts_at', [userId]),
       query('SELECT * FROM mock_test_mistakes WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
-      query('SELECT * FROM study_sessions WHERE user_id = $1 ORDER BY started_at DESC LIMIT 100', [userId])
+      query('SELECT * FROM study_sessions WHERE user_id = $1 ORDER BY started_at DESC LIMIT 100', [userId]),
+      query('SELECT settings FROM user_settings WHERE user_id = $1', [userId])
     ]);
     res.json({
       tasks: tasks.rows,
@@ -131,8 +132,30 @@ app.get('/api/workspace', requireSession, async (req, res, next) => {
       skills: skills.rows,
       events: events.rows,
       mistakes: mistakes.rows,
-      sessions: sessions.rows
+      sessions: sessions.rows,
+      state: settings.rows[0]?.settings || null
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/workspace', requireSession, async (req, res, next) => {
+  try {
+    const state = req.body?.state;
+    if (!state || typeof state !== 'object' || Array.isArray(state)) {
+      res.status(400).json({ error: 'Workspace state must be an object.' });
+      return;
+    }
+
+    await query(
+      `INSERT INTO user_settings (user_id, settings, updated_at)
+       VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (user_id)
+       DO UPDATE SET settings = EXCLUDED.settings, updated_at = NOW()`,
+      [req.session.user.id, JSON.stringify(state)]
+    );
+    res.json({ ok: true });
   } catch (error) {
     next(error);
   }
