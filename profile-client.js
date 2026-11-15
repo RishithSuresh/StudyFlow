@@ -77,7 +77,7 @@ function getLocalDb(userId) {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
-          if ((parsed.tasks && parsed.tasks.length) || (parsed.subjects && parsed.subjects.length) || (parsed.mockTests && parsed.mockTests.length) || (parsed.skills && parsed.skills.length)) {
+          if ((parsed.tasks && parsed.tasks.length) || (parsed.subjects && parsed.subjects.length) || (parsed.mockTests && parsed.mockTests.length) || (parsed.skills && parsed.skills.length) || (parsed.mistakes && parsed.mistakes.length)) {
             return parsed;
           }
         }

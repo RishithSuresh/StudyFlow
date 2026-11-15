@@ -714,8 +714,14 @@
     </div>
     <form id="form-log-mistake">
       <input type="hidden" name="mistakeId" id="input-mistake-id">
-      <input type="hidden" name="mockTestId" id="input-mistake-testid">
+      <input type="hidden" name="legacyMockTestId" id="input-mistake-testid">
       <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" for="mistake-target-test-select">Associated Mock Test Paper</label>
+          <select id="mistake-target-test-select" name="mockTestId" class="form-select" style="background: white; border-color: var(--sf-border); font-weight: 600;">
+            <!-- Populated by JS -->
+          </select>
+        </div>
         <div class="field-grid">
           <div class="form-group">
             <label class="form-label" for="mistake-qno">Question # / identifier</label>
@@ -753,8 +759,8 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="mistake-correction">Correct concept / solution pointer *</label>
-          <textarea id="mistake-correction" name="correction" required class="form-textarea" rows="3" placeholder="What is the correct concept, formula, or takeaway you should apply next time?"></textarea>
+          <label class="form-label" for="mistake-correction">Correct concept / solution pointer</label>
+          <textarea id="mistake-correction" name="correction" class="form-textarea" rows="3" placeholder="What is the correct concept, formula, or takeaway you should apply next time?"></textarea>
         </div>
 
         <div class="form-group">

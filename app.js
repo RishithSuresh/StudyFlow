@@ -6,11 +6,33 @@ const KEY='studyflow-v1';
 const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const uid=()=>Math.random().toString(36).slice(2,10);
 const starter=()=>({subjects:[],tasks:[],events:[],mistakes:[],mockTests:[],skills:[],focus:{minutes:{},sessions:0}});
-let storageKey=KEY,db;try{db={...starter(),...JSON.parse(localStorage.getItem(storageKey)||'{}')}}catch{db=starter()}
+let storageKey=KEY;
+try{
+  const cachedUserStr=localStorage.getItem('studyflow_user');
+  if(cachedUserStr){
+    const cu=JSON.parse(cachedUserStr);
+    if(cu&&cu.id)storageKey=`${KEY}:${cu.id}`;
+  }
+}catch{}
+
+let db;
+try{
+  const raw=localStorage.getItem(storageKey)||localStorage.getItem(KEY)||'{}';
+  db={...starter(),...JSON.parse(raw)};
+}catch{
+  db=starter();
+}
 db.mockTests = db.mockTests || [];
 db.mistakes = db.mistakes || [];
 const save=()=>{
-  localStorage.setItem(storageKey,JSON.stringify(db));
+  try{
+    localStorage.setItem(storageKey,JSON.stringify(db));
+    if(storageKey!==KEY){
+      localStorage.setItem(KEY,JSON.stringify(db));
+    }
+  }catch(e){
+    console.error('LocalStorage save error:',e);
+  }
   render();
   window.dispatchEvent(new CustomEvent('studyflow:data-updated',{detail:{db}}));
 };
@@ -25,7 +47,55 @@ const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',m
 const toast=m=>{let t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
 let currentView='overview',taskFilter='all',currentTaskScope='daily',taskSearchQuery='',reviewFilter='all',calDate=new Date(),selectedDate=todayISO(),calFilter='all',modalAction=null;
 let activeMockTestId=null,testTab='tests',testSearchQuery='',testMistakeFilter='all',selectedPaperFile=null;
-function loadWorkspaceForUser(userId){storageKey=`${KEY}:${userId}`;try{db={...starter(),...JSON.parse(localStorage.getItem(storageKey)||'{}')}}catch{db=starter()}db.mockTests=db.mockTests||[];db.mistakes=db.mistakes||[];render()}
+function loadWorkspaceForUser(userId){
+  if(!userId)return;
+  storageKey=`${KEY}:${userId}`;
+  try{
+    const userRaw=localStorage.getItem(storageKey);
+    const globalRaw=localStorage.getItem(KEY);
+    const userObj=userRaw?JSON.parse(userRaw):null;
+    const globalObj=globalRaw?JSON.parse(globalRaw):null;
+
+    const candidateObjs = [];
+    if(userObj)candidateObjs.push(userObj);
+    if(globalObj)candidateObjs.push(globalObj);
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k&&k.startsWith('studyflow-v1')&&k!==storageKey&&k!==KEY){
+        try{
+          const parsed=JSON.parse(localStorage.getItem(k));
+          if(parsed&&typeof parsed==='object')candidateObjs.push(parsed);
+        }catch{}
+      }
+    }
+
+    const allTests=candidateObjs.flatMap(o=>o.mockTests||[]).filter((t,i,arr)=>t&&t.id&&arr.findIndex(x=>x.id===t.id)===i);
+    const allMistakes=candidateObjs.flatMap(o=>o.mistakes||[]).filter((m,i,arr)=>m&&m.id&&arr.findIndex(x=>x.id===m.id)===i);
+    const allSubjects=(userObj?.subjects?.length?userObj.subjects:globalObj?.subjects)||[];
+    const allTasks=candidateObjs.flatMap(o=>o.tasks||[]).filter((t,i,arr)=>t&&t.id&&arr.findIndex(x=>x.id===t.id)===i);
+    const allSkills=candidateObjs.flatMap(o=>o.skills||[]).filter((s,i,arr)=>s&&s.id&&arr.findIndex(x=>x.id===s.id)===i);
+
+    db={
+      ...starter(),
+      ...(globalObj||{}),
+      ...(userObj||{}),
+      subjects:allSubjects,
+      tasks:allTasks,
+      skills:allSkills,
+      mockTests:allTests,
+      mistakes:allMistakes
+    };
+    localStorage.setItem(storageKey,JSON.stringify(db));
+    localStorage.setItem(KEY,JSON.stringify(db));
+  }catch(err){
+    console.error('Error loading user workspace:',err);
+    db=db||starter();
+  }
+  db.mockTests=db.mockTests||[];
+  db.mistakes=db.mistakes||[];
+  render();
+  window.dispatchEvent(new CustomEvent('studyflow:data-updated',{detail:{db}}));
+}
 window.addEventListener('studyflow:authenticated',event=>loadWorkspaceForUser(event.detail.user.id));
 function go(v){
   currentView=v;
@@ -623,7 +693,7 @@ function renderReviews(){
       if(emptyBtn)emptyBtn.onclick=()=>openMockTestModal();
     }else{
       grid.innerHTML=tests.map(t=>{
-        const testMistakes=db.mistakes.filter(m=>m.mockTestId===t.id||(m.test&&m.test===t.name));
+        const testMistakes=db.mistakes.filter(m=>m.mockTestId===t.id||(m.test&&m.test===t.name)||(db.mockTests.length===1&&(!m.mockTestId||!m.mockTestId.length)));
         const analytics=calculateTopicAnalytics(testMistakes);
         const marks=Number(t.marks)||0;
         const totalMarks=Number(t.totalMarks)||100;
@@ -848,7 +918,7 @@ async function openMockTestDetail(testId){
   }
 
   // AUTOMATIC WEAKEST TOPIC SECTION (Key Requirement)
-  const testMistakes=db.mistakes.filter(m=>m.mockTestId===t.id||(m.test&&m.test===t.name));
+  const testMistakes=db.mistakes.filter(m=>m.mockTestId===t.id||(m.test&&m.test===t.name)||(db.mockTests.length===1&&(!m.mockTestId||!m.mockTestId.length)));
   const analytics=calculateTopicAnalytics(testMistakes);
   const analyticsSection=$('#detail-analytics-section');
 
@@ -976,8 +1046,20 @@ function openMistakeModal(mistakeId=null,testId=null){
   form.reset();
   const idInput=$('#input-mistake-id');
   const testIdInput=$('#input-mistake-testid');
+  const targetSelect=$('#mistake-target-test-select');
   const titleEl=$('#mistake-modal-title');
   const eyebrowEl=$('#mistake-modal-eyebrow');
+
+  // Populate mock tests select
+  if(targetSelect){
+    if(!db.mockTests || !db.mockTests.length){
+      targetSelect.innerHTML='<option value="">General / Unassigned (No test paper created yet)</option>';
+    } else {
+      let opts = db.mockTests.map(t=>`<option value="${t.id}">${esc(t.name)} (${esc(t.subject||'Mock Test')})</option>`).join('');
+      opts += '<option value="">General / Unassigned</option>';
+      targetSelect.innerHTML=opts;
+    }
+  }
 
   // Populate topics datalist
   const topicDatalist=$('#mistake-topics-datalist');
@@ -991,8 +1073,10 @@ function openMistakeModal(mistakeId=null,testId=null){
   if(mistakeId){
     const m=db.mistakes.find(x=>x.id===mistakeId);
     if(!m)return;
-    idInput.value=m.id;
-    testIdInput.value=m.mockTestId||testId||'';
+    if(idInput)idInput.value=m.id;
+    const assignedTestId=m.mockTestId||testId||'';
+    if(testIdInput)testIdInput.value=assignedTestId;
+    if(targetSelect)targetSelect.value=assignedTestId;
     titleEl.textContent='Edit question mistake';
     eyebrowEl.textContent='EDIT MISTAKE';
     $('#mistake-qno').value=m.questionNo||'';
@@ -1004,8 +1088,10 @@ function openMistakeModal(mistakeId=null,testId=null){
     $('#mistake-pointers').value=m.pointers||'';
     $('#mistake-resolved').checked=!!m.resolved;
   }else{
-    idInput.value='';
-    testIdInput.value=testId||activeMockTestId||'';
+    if(idInput)idInput.value='';
+    const defaultTestId=testId||activeMockTestId||(db.mockTests?.length===1?db.mockTests[0].id:'');
+    if(testIdInput)testIdInput.value=defaultTestId;
+    if(targetSelect)targetSelect.value=defaultTestId;
     titleEl.textContent='Log question mistake';
     eyebrowEl.textContent='MOCK TEST MISTAKE';
     $('#mistake-type').value='Conceptual misunderstanding';
@@ -1736,23 +1822,26 @@ if(mistakeForm){
     e.preventDefault();
     const fd=new FormData(mistakeForm);
     const mId=fd.get('mistakeId');
-    const targetTestId=fd.get('mockTestId')||activeMockTestId||null;
+    let targetTestId=fd.get('mockTestId')||activeMockTestId||null;
+    if(!targetTestId&&db.mockTests&&db.mockTests.length===1){
+      targetTestId=db.mockTests[0].id;
+    }
     const testObj=targetTestId?db.mockTests.find(x=>x.id===targetTestId):null;
 
     const mistakeData={
       id:mId||uid(),
       mockTestId:targetTestId,
-      test:testObj?testObj.name:'',
+      test:testObj?testObj.name:(fd.get('test')||''),
       questionNo:String(fd.get('questionNo')||'').trim(),
       topic:String(fd.get('topic')||'General').trim(),
-      subject:testObj?.subject||'',
+      subject:testObj?.subject||(fd.get('subject')||''),
       mistakeType:String(fd.get('mistakeType')||'Conceptual misunderstanding'),
       marksLost:parseFloat(fd.get('marksLost'))||0,
       error:String(fd.get('error')||'').trim(),
       correction:String(fd.get('correction')||'').trim(),
       pointers:String(fd.get('pointers')||'').trim(),
       resolved:fd.get('resolved')==='on',
-      date:todayISO()
+      date:testObj?.date||todayISO()
     };
 
     if(mId){
@@ -1764,7 +1853,10 @@ if(mistakeForm){
     $('#modal-log-mistake').close();
     save();
     toast('Mistake saved & topic analytics recalculated!');
-    if(activeMockTestId)openMockTestDetail(activeMockTestId);
+    if(targetTestId){
+      activeMockTestId=targetTestId;
+      openMockTestDetail(targetTestId);
+    }
   };
 }
 
