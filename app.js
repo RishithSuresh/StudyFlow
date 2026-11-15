@@ -1145,7 +1145,9 @@ async function viewPaperFull(testId){
   }else{
     contentEl.innerHTML=`
       <div class="pdf-viewer-wrap">
-        <iframe src="${url}" class="viewer-pdf-frame" title="PDF preview"></iframe>
+        <object data="${url}" type="application/pdf" class="viewer-pdf-frame" aria-label="PDF paper preview">
+          <iframe src="${url}" class="viewer-pdf-frame" title="PDF preview"></iframe>
+        </object>
         <div class="pdf-fallback-bar">
           <span>📄 <b>${esc(record.name||'test-paper.pdf')}</b> (${formatFileSize(record.size||displayBlob.size)})</span>
           <div style="display:flex;gap:8px;align-items:center;">
@@ -1777,7 +1779,13 @@ if(testForm){
       fileName=selectedPaperFile.name;
       fileType=isPdf?'application/pdf':(selectedPaperFile.type||'image/jpeg');
       fileSize=selectedPaperFile.size;
-      await savePaperFile(id,selectedPaperFile);
+      try{
+        await savePaperFile(id,selectedPaperFile);
+      }catch(error){
+        console.error('Could not save mock test paper:',error);
+        toast('The paper could not be saved. Please try the upload again.');
+        return;
+      }
       if(fileType.startsWith('image/')&&!isPdf){
         thumbnail=await generateImageThumbnail(selectedPaperFile);
       }else{

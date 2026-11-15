@@ -30,48 +30,34 @@ function getDB() {
  * Save a test paper file (Blob or File) into IndexedDB
  */
 export async function savePaperFile(id, file) {
-  if (!id || !file) return null;
-  try {
-    const db = await getDB();
-    const isPdf = (file.type && file.type.toLowerCase().includes('pdf')) || 
-                  (file.name && file.name.toLowerCase().endsWith('.pdf'));
-    const mimeType = isPdf ? 'application/pdf' : (file.type || 'application/octet-stream');
-    
-    // Convert to ArrayBuffer for 100% reliable IndexedDB persistence across all browsers
-    let arrayBuffer = null;
-    try {
-      arrayBuffer = await file.arrayBuffer();
-    } catch (e) {
-      console.warn('Could not read arrayBuffer from file, fallback to blob:', e);
-    }
+  if (!id || !file) throw new Error('A paper id and file are required.');
 
-    const storedBlob = arrayBuffer 
-      ? new Blob([arrayBuffer], { type: mimeType })
-      : (file instanceof Blob ? file : new Blob([file], { type: mimeType }));
+  const db = await getDB();
+  const isPdf = (file.type && file.type.toLowerCase().includes('pdf')) ||
+                (file.name && file.name.toLowerCase().endsWith('.pdf'));
+  const mimeType = isPdf ? 'application/pdf' : (file.type || 'application/octet-stream');
+  const arrayBuffer = await file.arrayBuffer();
+  const storedBlob = new Blob([arrayBuffer], { type: mimeType });
+  const record = {
+    id,
+    name: file.name || 'test-paper',
+    type: mimeType,
+    size: file.size || arrayBuffer.byteLength,
+    buffer: arrayBuffer,
+    blob: storedBlob,
+    savedAt: Date.now()
+  };
 
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      const record = {
-        id,
-        name: file.name || 'test-paper',
-        type: mimeType,
-        size: file.size || (arrayBuffer ? arrayBuffer.byteLength : 0),
-        buffer: arrayBuffer,
-        blob: storedBlob,
-        savedAt: Date.now()
-      };
-      const req = store.put(record);
-      req.onsuccess = () => resolve(record);
-      req.onerror = () => {
-        console.error('IndexedDB put error:', req.error);
-        reject(req.error);
-      };
-    });
-  } catch (error) {
-    console.error('Error saving paper file to IndexedDB:', error);
-    return null;
-  }
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.oncomplete = () => resolve(record);
+    tx.onerror = () => {
+      console.error('IndexedDB paper save transaction error:', tx.error);
+      reject(tx.error || new Error('Could not save paper file.'));
+    };
+    tx.onabort = () => reject(tx.error || new Error('Paper file save was aborted.'));
+    tx.objectStore(STORE_NAME).put(record);
+  });
 }
 
 /**
@@ -96,8 +82,8 @@ export async function getPaperFile(id) {
         const mimeType = isPdf ? 'application/pdf' : (record.type || 'application/octet-stream');
         record.type = mimeType;
 
-        // Reconstruct blob if buffer exists, or ensure correct MIME type
-        if (record.buffer) {
+        // Reconstruct the Blob from the durable buffer when available.
+        if (record.buffer instanceof ArrayBuffer || ArrayBuffer.isView(record.buffer)) {
           record.blob = new Blob([record.buffer], { type: mimeType });
         } else if (record.blob && !(record.blob instanceof Blob)) {
           record.blob = new Blob([record.blob], { type: mimeType });
