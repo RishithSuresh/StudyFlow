@@ -33,11 +33,22 @@ export async function savePaperFile(id, file) {
   if (!id || !file) return null;
   try {
     const db = await getDB();
-    const isPdf = (file.type && file.type.includes('pdf')) || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+    const isPdf = (file.type && file.type.toLowerCase().includes('pdf')) || 
+                  (file.name && file.name.toLowerCase().endsWith('.pdf'));
     const mimeType = isPdf ? 'application/pdf' : (file.type || 'application/octet-stream');
-    const storedBlob = isPdf && file.type !== 'application/pdf'
-      ? new Blob([file], { type: 'application/pdf' })
-      : file;
+    
+    // Convert to ArrayBuffer for 100% reliable IndexedDB persistence across all browsers
+    let arrayBuffer = null;
+    try {
+      arrayBuffer = await file.arrayBuffer();
+    } catch (e) {
+      console.warn('Could not read arrayBuffer from file, fallback to blob:', e);
+    }
+
+    const storedBlob = arrayBuffer 
+      ? new Blob([arrayBuffer], { type: mimeType })
+      : (file instanceof Blob ? file : new Blob([file], { type: mimeType }));
+
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
@@ -45,13 +56,17 @@ export async function savePaperFile(id, file) {
         id,
         name: file.name || 'test-paper',
         type: mimeType,
-        size: file.size || 0,
+        size: file.size || (arrayBuffer ? arrayBuffer.byteLength : 0),
+        buffer: arrayBuffer,
         blob: storedBlob,
         savedAt: Date.now()
       };
       const req = store.put(record);
       req.onsuccess = () => resolve(record);
-      req.onerror = () => reject(req.error);
+      req.onerror = () => {
+        console.error('IndexedDB put error:', req.error);
+        reject(req.error);
+      };
     });
   } catch (error) {
     console.error('Error saving paper file to IndexedDB:', error);
@@ -70,7 +85,27 @@ export async function getPaperFile(id) {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const store = tx.objectStore(STORE_NAME);
       const req = store.get(id);
-      req.onsuccess = () => resolve(req.result || null);
+      req.onsuccess = () => {
+        const record = req.result;
+        if (!record) {
+          resolve(null);
+          return;
+        }
+        const isPdf = (record.type && record.type.toLowerCase().includes('pdf')) || 
+                      (record.name && record.name.toLowerCase().endsWith('.pdf'));
+        const mimeType = isPdf ? 'application/pdf' : (record.type || 'application/octet-stream');
+        record.type = mimeType;
+
+        // Reconstruct blob if buffer exists, or ensure correct MIME type
+        if (record.buffer) {
+          record.blob = new Blob([record.buffer], { type: mimeType });
+        } else if (record.blob && !(record.blob instanceof Blob)) {
+          record.blob = new Blob([record.blob], { type: mimeType });
+        } else if (record.blob && isPdf && record.blob.type !== 'application/pdf') {
+          record.blob = new Blob([record.blob], { type: 'application/pdf' });
+        }
+        resolve(record);
+      };
       req.onerror = () => reject(req.error);
     });
   } catch (error) {

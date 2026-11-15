@@ -779,7 +779,8 @@ function handlePaperFileSelected(file){
   filenameEl.textContent=file.name;
   filesizeEl.textContent=formatFileSize(file.size);
 
-  if(file.type.startsWith('image/')){
+  const isPdf=(file.type&&file.type.toLowerCase().includes('pdf'))||(file.name&&file.name.toLowerCase().endsWith('.pdf'));
+  if(file.type?.startsWith('image/')&&!isPdf){
     previewIcon.textContent='🖼️';
     imgWrap.hidden=false;
     thumbImg.src=URL.createObjectURL(file);
@@ -1058,12 +1059,7 @@ async function viewPaperFull(testId){
   }else{
     contentEl.innerHTML=`
       <div class="pdf-viewer-wrap">
-        <object data="${url}#toolbar=1" type="application/pdf" class="viewer-pdf-frame">
-          <embed src="${url}#toolbar=1" type="application/pdf" class="viewer-pdf-frame">
-          <iframe src="${url}" class="viewer-pdf-frame" title="PDF preview">
-            <p>Your browser does not support inline PDF previews. Please use the button below to view or download.</p>
-          </iframe>
-        </object>
+        <iframe src="${url}" class="viewer-pdf-frame" title="PDF preview"></iframe>
         <div class="pdf-fallback-bar">
           <span>📄 <b>${esc(record.name||'test-paper.pdf')}</b> (${formatFileSize(record.size||displayBlob.size)})</span>
           <div style="display:flex;gap:8px;align-items:center;">
@@ -1219,10 +1215,21 @@ function inferMistakeType(whyText,isBlank){
 
 function openExcelImportModal(testId){
   activeExcelImportTestId=testId||activeMockTestId;
-  const test=db.mockTests.find(x=>x.id===activeExcelImportTestId);
+  const selectEl=$('#excel-target-test-select');
+  if(selectEl){
+    const tests=db.mockTests||[];
+    let opts=tests.map(t=>`<option value="${t.id}" ${(t.id===activeExcelImportTestId)?'selected':''}>${esc(t.name)} ${t.subject?`(${esc(t.subject)})`:''}</option>`).join('');
+    opts+=`<option value="__new__" ${(!activeExcelImportTestId||!tests.length)?'selected':''}>＋ Create new mock test from this sheet</option>`;
+    selectEl.innerHTML=opts;
+    activeExcelImportTestId=selectEl.value;
+    selectEl.onchange=()=>{
+      activeExcelImportTestId=selectEl.value;
+    };
+  }
   const banner=$('#excel-import-test-banner');
   if(banner){
-    banner.innerHTML=test?`Target Mock Test: <b>${esc(test.name)}</b> ${test.subject?`(${esc(test.subject)})`:''}`:'General Import';
+    const test=db.mockTests.find(x=>x.id===activeExcelImportTestId);
+    banner.innerHTML=test?`Selected: <b>${esc(test.name)}</b>`:'Bulk Question Import';
   }
   parsedExcelRows=[];
   const fileInput=$('#excel-file-input');
@@ -1250,25 +1257,62 @@ async function handleExcelFileSelected(file){
     const wb=XLSX.read(arrayBuffer,{type:'array'});
     const firstSheetName=wb.SheetNames[0];
     const ws=wb.Sheets[firstSheetName];
-    const rawRows=XLSX.utils.sheet_to_json(ws,{defval:''});
 
-    if(!rawRows||!rawRows.length){
+    // Read full sheet array of rows to reliably identify header row
+    const sheetData=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    if(!sheetData||!sheetData.length){
       toast('The uploaded spreadsheet contains no data rows.');
       return;
     }
 
-    const sampleRow=rawRows[0];
-    const headers=Object.keys(sampleRow);
-    const colMap=mapExcelColumns(headers);
+    // Scan top 8 rows to find the row that has key headers
+    let headerRowIdx=-1;
+    let colMap=null;
+    for(let r=0;r<Math.min(8,sheetData.length);r++){
+      const row=sheetData[r];
+      if(Array.isArray(row)&&row.some(c=>String(c).trim().length>0)){
+        const testMap=mapExcelColumns(row.map(c=>String(c).trim()));
+        const matchedCols=Object.keys(testMap).length;
+        if(matchedCols>=2){
+          headerRowIdx=r;
+          colMap=testMap;
+          break;
+        }
+      }
+    }
+
+    let rawRows=[];
+    if(headerRowIdx!==-1&&colMap){
+      const headerNames=sheetData[headerRowIdx].map(c=>String(c).trim());
+      for(let r=headerRowIdx+1;r<sheetData.length;r++){
+        const row=sheetData[r];
+        if(!row||!row.some(c=>String(c).trim().length>0))continue;
+        const rowObj={};
+        headerNames.forEach((name,i)=>{
+          rowObj[name]=row[i]!==undefined?row[i]:'';
+        });
+        rawRows.push(rowObj);
+      }
+    }else{
+      rawRows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(rawRows.length){
+        colMap=mapExcelColumns(Object.keys(rawRows[0]));
+      }
+    }
+
+    if(!rawRows||!rawRows.length){
+      toast('No question rows detected in spreadsheet.');
+      return;
+    }
 
     parsedExcelRows=rawRows.map((r,idx)=>{
-      const qNo=String(r[colMap.qNo]??(idx+1)).trim();
-      const yourAnswer=String(r[colMap.yourAnswer]??'').trim();
-      const correctAnswer=String(r[colMap.correctAnswer]??'').trim();
-      const topic=String(r[colMap.topic]??'General').trim()||'General';
-      const why=String(r[colMap.why]??'').trim();
-      const action=String(r[colMap.action]??'').trim();
-      let marksRaw=parseFloat(r[colMap.marks]);
+      const qNo=String(r[colMap?.qNo]??(idx+1)).trim();
+      const yourAnswer=String(r[colMap?.yourAnswer]??'').trim();
+      const correctAnswer=String(r[colMap?.correctAnswer]??'').trim();
+      const topic=String(r[colMap?.topic]??'General').trim()||'General';
+      const why=String(r[colMap?.why]??'').trim();
+      const action=String(r[colMap?.action]??'').trim();
+      let marksRaw=parseFloat(r[colMap?.marks]);
       if(isNaN(marksRaw))marksRaw=0;
       const marksLost=Math.abs(marksRaw);
 
@@ -1342,23 +1386,45 @@ function renderExcelPreview(){
 }
 
 function executeExcelImport(){
-  if(!parsedExcelRows.length||!activeExcelImportTestId){
+  if(!parsedExcelRows.length){
     toast('No parsed questions to import.');
     return;
   }
 
-  const test=db.mockTests.find(x=>x.id===activeExcelImportTestId);
-  const mode=document.querySelector('input[name="excel-import-mode"]:checked')?.value||'append';
+  const selectVal=$('#excel-target-test-select')?.value;
+  let targetTestId=selectVal||activeExcelImportTestId||activeMockTestId;
+  let targetTest=db.mockTests.find(x=>x.id===targetTestId);
 
+  // If user selected __new__ or test doesn't exist, create it automatically!
+  if(!targetTest||targetTestId==='__new__'){
+    targetTestId=uid();
+    const fileName=$('#excel-selected-filename')?.textContent||'Mock Test';
+    const cleanName=fileName.replace(/\.[^/.]+$/,'')||'Mock Test Review';
+    targetTest={
+      id:targetTestId,
+      name:cleanName,
+      marks:0,
+      totalMarks:100,
+      subject:parsedExcelRows[0]?.topic||'General',
+      date:todayISO(),
+      description:'Created automatically via Excel question import',
+      pointers:'',
+      hasPaper:false,
+      createdAt:new Date().toISOString()
+    };
+    db.mockTests.push(targetTest);
+  }
+
+  const mode=document.querySelector('input[name="excel-import-mode"]:checked')?.value||'append';
   if(mode==='replace'){
-    db.mistakes=db.mistakes.filter(m=>m.mockTestId!==activeExcelImportTestId&&(!test||m.test!==test.name));
+    db.mistakes=db.mistakes.filter(m=>m.mockTestId!==targetTestId&&(!targetTest||m.test!==targetTest.name));
   }
 
   const newMistakes=parsedExcelRows.map(r=>({
     id:uid(),
-    mockTestId:activeExcelImportTestId,
-    test:test?.name||'Mock Test',
-    subject:test?.subject||'',
+    mockTestId:targetTestId,
+    test:targetTest.name||'Mock Test',
+    subject:targetTest.subject||'',
     questionNo:r.qNo,
     userAnswer:r.yourAnswer,
     correctAnswer:r.correctAnswer,
@@ -1370,7 +1436,7 @@ function executeExcelImport(){
     isBlank:r.isBlank,
     mistakeType:r.mistakeType,
     resolved:false,
-    date:test?.date||todayISO(),
+    date:targetTest.date||todayISO(),
     source:'excel_import'
   }));
 
@@ -1382,9 +1448,8 @@ function executeExcelImport(){
   const mistakeCount=parsedExcelRows.length-blankCount;
   toast(`🎉 Imported ${parsedExcelRows.length} questions (${mistakeCount} mistakes, ${blankCount} blanks)! Topic analytics updated.`);
 
-  if(activeMockTestId){
-    openMockTestDetail(activeMockTestId);
-  }
+  activeMockTestId=targetTestId;
+  openMockTestDetail(targetTestId);
 }
 function render(){renderOverview();renderSubjects();renderSkills();renderTasks();renderCalendar();renderReviews()}
 function field(label,name,type='text',value='',extra=''){return `<div class="field"><label>${label}</label><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></div>`}
@@ -1574,7 +1639,7 @@ const dropzone=$('#paper-dropzone');
 const fileInput=$('#paper-file-input');
 if(dropzone&&fileInput){
   dropzone.onclick=e=>{
-    if(e.target.closest('#btn-remove-paper'))return;
+    if(e.target===fileInput||e.target.closest('#btn-remove-paper'))return;
     fileInput.click();
   };
   dropzone.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click()}};
@@ -1620,12 +1685,14 @@ if(testForm){
     let thumbnail=existingTest?.thumbnail||null;
 
     if(selectedPaperFile){
+      const isPdf=(selectedPaperFile.type&&selectedPaperFile.type.toLowerCase().includes('pdf'))||
+                  (selectedPaperFile.name&&selectedPaperFile.name.toLowerCase().endsWith('.pdf'));
       hasPaper=true;
       fileName=selectedPaperFile.name;
-      fileType=selectedPaperFile.type||(selectedPaperFile.name.endsWith('.pdf')?'application/pdf':'image/jpeg');
+      fileType=isPdf?'application/pdf':(selectedPaperFile.type||'image/jpeg');
       fileSize=selectedPaperFile.size;
       await savePaperFile(id,selectedPaperFile);
-      if(fileType.startsWith('image/')){
+      if(fileType.startsWith('image/')&&!isPdf){
         thumbnail=await generateImageThumbnail(selectedPaperFile);
       }else{
         thumbnail=null;
@@ -1657,7 +1724,8 @@ if(testForm){
     $('#modal-upload-test').close();
     save();
     toast(existingTest?'Mock test updated!':'Mock test paper uploaded & card created!');
-    if(activeMockTestId===id)openMockTestDetail(id);
+    activeMockTestId=id;
+    openMockTestDetail(id);
   };
 }
 
@@ -1721,7 +1789,7 @@ const excelDropzone=$('#excel-dropzone');
 const excelFileInput=$('#excel-file-input');
 if(excelDropzone&&excelFileInput){
   excelDropzone.onclick=e=>{
-    if(e.target.closest('#btn-change-excel-file'))return;
+    if(e.target===excelFileInput||e.target.closest('#btn-change-excel-file'))return;
     excelFileInput.click();
   };
   excelDropzone.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();excelFileInput.click()}};

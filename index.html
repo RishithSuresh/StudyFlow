@@ -559,8 +559,8 @@
         <!-- Paper Upload Dropzone -->
         <div class="form-group">
           <label class="form-label">Test paper file (PDF or Image)</label>
+          <input type="file" id="paper-file-input" accept=".pdf,application/pdf,image/*" style="display:none">
           <div class="paper-dropzone" id="paper-dropzone" tabindex="0" role="button" aria-label="Click or drag paper here">
-            <input type="file" id="paper-file-input" accept="image/*,.pdf,application/pdf" style="display:none">
             <div class="dropzone-content" id="dropzone-prompt">
               <span class="dropzone-icon">📄</span>
               <div class="dropzone-text">
@@ -832,9 +832,17 @@
         </div>
       </div>
 
+      <!-- Target Test Selector -->
+      <div class="form-group" style="margin-bottom: 4px;">
+        <label for="excel-target-test-select" class="form-label" style="font-weight: 700; color: var(--sf-navy);">Target Mock Test</label>
+        <select id="excel-target-test-select" class="form-select" style="background: white; border-color: var(--sf-border); font-weight: 600;">
+          <!-- Populated by JS -->
+        </select>
+      </div>
+
       <!-- Dropzone -->
+      <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv" style="display: none;">
       <div class="excel-dropzone" id="excel-dropzone" tabindex="0" role="button" aria-label="Drop Excel or CSV file here">
-        <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv" style="display: none;">
         <div class="excel-dropzone-inner" id="excel-dropzone-prompt">
           <span class="excel-upload-icon">📊</span>
           <div class="excel-upload-text">
