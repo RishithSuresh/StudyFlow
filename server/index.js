@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
 import { auth } from './auth.js';
-import { query } from './db.js';
+import { pool, query } from './db.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -148,13 +148,96 @@ app.put('/api/workspace', requireSession, async (req, res, next) => {
       return;
     }
 
-    await query(
-      `INSERT INTO user_settings (user_id, settings, updated_at)
-       VALUES ($1, $2::jsonb, NOW())
-       ON CONFLICT (user_id)
-       DO UPDATE SET settings = EXCLUDED.settings, updated_at = NOW()`,
-      [req.session.user.id, JSON.stringify(state)]
-    );
+    const userId = req.session.user.id;
+    const mockTests = Array.isArray(state.mockTests) ? state.mockTests : [];
+    const mistakes = Array.isArray(state.mistakes) ? state.mistakes : [];
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const test of mockTests) {
+        await client.query(
+          `INSERT INTO mock_tests (user_id, client_id, name, tested_at, score, notes)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT (user_id, client_id) WHERE client_id IS NOT NULL
+           DO UPDATE SET name = EXCLUDED.name, tested_at = EXCLUDED.tested_at,
+             score = EXCLUDED.score, notes = EXCLUDED.notes`,
+          [
+            userId,
+            String(test.id),
+            String(test.name || 'Mock Test'),
+            test.date || null,
+            Number(test.marks) || 0,
+            test.description || test.pointers || null
+          ]
+        );
+      }
+
+      for (const mistake of mistakes) {
+        await client.query(
+          `INSERT INTO mock_test_mistakes (
+             user_id, client_id, mock_test_client_id, topic, subject, error, correction,
+             resolved, question_no, user_answer, correct_answer, marks_lost, is_blank,
+             mistake_type, pointers, source, test_name
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+           ON CONFLICT (user_id, client_id) WHERE client_id IS NOT NULL
+           DO UPDATE SET mock_test_client_id = EXCLUDED.mock_test_client_id,
+             topic = EXCLUDED.topic, subject = EXCLUDED.subject, error = EXCLUDED.error,
+             correction = EXCLUDED.correction, resolved = EXCLUDED.resolved,
+             question_no = EXCLUDED.question_no, user_answer = EXCLUDED.user_answer,
+             correct_answer = EXCLUDED.correct_answer, marks_lost = EXCLUDED.marks_lost,
+             is_blank = EXCLUDED.is_blank, mistake_type = EXCLUDED.mistake_type,
+             pointers = EXCLUDED.pointers, source = EXCLUDED.source, test_name = EXCLUDED.test_name`,
+          [
+            userId,
+            String(mistake.id),
+            mistake.mockTestId ? String(mistake.mockTestId) : null,
+            String(mistake.topic || 'General'),
+            mistake.subject || null,
+            mistake.error || null,
+            mistake.correction || null,
+            Boolean(mistake.resolved),
+            mistake.questionNo || null,
+            mistake.userAnswer || null,
+            mistake.correctAnswer || null,
+            Number(mistake.marksLost) || 0,
+            Boolean(mistake.isBlank),
+            mistake.mistakeType || null,
+            mistake.pointers || null,
+            mistake.source || null,
+            mistake.test || null
+          ]
+        );
+      }
+
+      const testIds = mockTests.map(test => String(test.id));
+      const mistakeIds = mistakes.map(mistake => String(mistake.id));
+      await client.query(
+        `DELETE FROM mock_test_mistakes
+         WHERE user_id = $1 AND client_id IS NOT NULL
+           AND NOT (client_id = ANY($2::text[]))`,
+        [userId, mistakeIds]
+      );
+      await client.query(
+        `DELETE FROM mock_tests
+         WHERE user_id = $1 AND client_id IS NOT NULL
+           AND NOT (client_id = ANY($2::text[]))`,
+        [userId, testIds]
+      );
+      await client.query(
+        `INSERT INTO user_settings (user_id, settings, updated_at)
+         VALUES ($1, $2::jsonb, NOW())
+         ON CONFLICT (user_id)
+         DO UPDATE SET settings = EXCLUDED.settings, updated_at = NOW()`,
+        [userId, JSON.stringify(state)]
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
     res.json({ ok: true });
   } catch (error) {
     next(error);
