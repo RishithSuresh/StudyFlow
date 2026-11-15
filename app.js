@@ -917,7 +917,7 @@ function openMockTestModal(id=null){
     dropPreview.hidden=true;
     imgWrap.hidden=true;
   }
-  dialog.showModal();
+  if(!dialog.open)dialog.showModal();
 }
 
 function handlePaperFileSelected(file){
@@ -1123,7 +1123,7 @@ async function openMockTestDetail(testId){
     `).join('');
   }
 
-  dialog.showModal();
+  if(!dialog.open)dialog.showModal();
 }
 
 function openMistakeModal(mistakeId=null,testId=null){
