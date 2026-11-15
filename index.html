@@ -668,7 +668,10 @@
             <h3 class="sub-title">Logged mistakes & solution pointers</h3>
             <p class="muted">Add each question or concept where you lost marks. Weakest topics are calculated automatically from these.</p>
           </div>
-          <button type="button" class="btn btn-primary" id="btn-log-mistake-for-test">＋ Log mistake</button>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" id="btn-import-excel-for-test" title="Import mistakes from Excel or CSV sheet">📊 Import from Excel / CSV</button>
+            <button type="button" class="btn btn-primary" id="btn-log-mistake-for-test">＋ Log mistake</button>
+          </div>
         </div>
 
         <div class="filter-row test-mistake-filters">
@@ -781,12 +784,120 @@
         <h2 id="viewer-paper-title" class="modal-title" style="font-size: 20px;">Paper Preview</h2>
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
+        <a id="viewer-open-tab-btn" class="btn btn-primary btn-sm" target="_blank" rel="noopener noreferrer">↗ Open in new tab</a>
         <a id="viewer-download-link" class="btn btn-secondary btn-sm" download="paper" target="_blank">⬇ Download</a>
         <button type="button" class="modal-close-btn" data-close-viewer-modal aria-label="Close dialog">&times;</button>
       </div>
     </div>
     <div class="modal-body viewer-body">
       <div id="viewer-content" class="viewer-content"></div>
+    </div>
+  </dialog>
+
+  <!-- 5. Bulk Excel / CSV Mistake Import Modal -->
+  <dialog id="modal-import-excel-mistakes" class="modal-dialog excel-import-dialog" aria-labelledby="excel-import-modal-title">
+    <div class="modal-header">
+      <div>
+        <div class="eyebrow">BULK MISTAKE & QUESTION IMPORT</div>
+        <h2 id="excel-import-modal-title" class="modal-title">Import Questions from Excel / CSV</h2>
+        <div id="excel-import-test-banner" class="excel-target-test-banner"></div>
+      </div>
+      <button type="button" class="modal-close-btn" data-close-excel-modal aria-label="Close dialog">&times;</button>
+    </div>
+    <div class="modal-body excel-import-body">
+      <!-- Format Guidance Card -->
+      <div class="excel-format-card panel">
+        <div class="excel-format-head">
+          <div>
+            <h4 style="margin: 0 0 4px; color: var(--sf-navy); font-size: 14px;">Expected Spreadsheet Columns</h4>
+            <p style="margin: 0; font-size: 11px; color: var(--sf-navy-soft);">
+              Upload an <b>.xlsx</b>, <b>.xls</b>, or <b>.csv</b> sheet containing your question analysis with these columns:
+            </p>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-download-excel-template">
+            📥 Download Sample Excel Template (.xlsx)
+          </button>
+        </div>
+        <div class="excel-columns-tags">
+          <span class="col-tag"><code>Q No.</code></span>
+          <span class="col-tag"><code>Your Answer</code></span>
+          <span class="col-tag"><code>Correct Answer / Status</code></span>
+          <span class="col-tag"><code>Topic</code></span>
+          <span class="col-tag"><code>Why your response needs correction</code></span>
+          <span class="col-tag"><code>Revision action</code></span>
+          <span class="col-tag"><code>Marks</code></span>
+        </div>
+        <div class="excel-format-note">
+          💡 Questions where <i>Your Answer</i> or <i>Status</i> is empty, "Unattempted", or "Blank" are automatically registered as <b>⚪ Left Blank / Unattempted</b>. Topics and weak areas will be calculated automatically.
+        </div>
+      </div>
+
+      <!-- Dropzone -->
+      <div class="excel-dropzone" id="excel-dropzone" tabindex="0" role="button" aria-label="Drop Excel or CSV file here">
+        <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv" style="display: none;">
+        <div class="excel-dropzone-inner" id="excel-dropzone-prompt">
+          <span class="excel-upload-icon">📊</span>
+          <div class="excel-upload-text">
+            <b>Click or drag & drop your Excel (.xlsx) or CSV file here</b>
+            <small>Supports .xlsx, .xls, and .csv files</small>
+          </div>
+        </div>
+        <div class="excel-file-selected-bar" id="excel-file-selected-bar" hidden>
+          <div class="excel-file-info">
+            <span style="font-size: 24px;">📊</span>
+            <div>
+              <b id="excel-selected-filename">mistakes.xlsx</b>
+              <small id="excel-selected-filesize">0 KB</small>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-change-excel-file">Choose another file</button>
+        </div>
+      </div>
+
+      <!-- Preview Section -->
+      <div id="excel-preview-section" class="excel-preview-section" hidden>
+        <div class="excel-preview-summary-bar">
+          <div id="excel-preview-stats" class="excel-preview-stats">
+            <!-- Rendered by JS -->
+          </div>
+          <div class="excel-mode-toggle">
+            <label class="excel-mode-label">
+              <input type="radio" name="excel-import-mode" value="append" checked>
+              <span>Append to existing</span>
+            </label>
+            <label class="excel-mode-label">
+              <input type="radio" name="excel-import-mode" value="replace">
+              <span>Replace existing</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="excel-preview-table-wrap">
+          <table class="excel-preview-table">
+            <thead>
+              <tr>
+                <th style="width: 60px;">Q No.</th>
+                <th style="width: 100px;">Your Ans</th>
+                <th style="width: 120px;">Correct / Status</th>
+                <th style="width: 140px;">Topic</th>
+                <th>Why Correction Needed</th>
+                <th>Revision Action</th>
+                <th style="width: 65px;">Marks</th>
+                <th style="width: 110px;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="excel-preview-tbody">
+              <!-- Rendered rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer modal-footer-between">
+      <button type="button" class="btn btn-secondary" data-close-excel-modal>Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-confirm-excel-import" disabled>
+        Import questions
+      </button>
     </div>
   </dialog>
 <div id="toast" class="toast"></div>

@@ -1,4 +1,5 @@
 import { createWorker } from 'tesseract.js';
+import * as XLSX from 'xlsx';
 import { savePaperFile, getPaperFile, deletePaperFile, generateImageThumbnail, formatFileSize } from './paper-storage.js';
 
 const KEY='studyflow-v1';
@@ -539,6 +540,8 @@ function calculateTopicAnalytics(mistakes){
     advice=`Questions were misread or constraints were missed in ${topTopic}. Underline key constraints (e.g. 'not', 'minimum', 'integers only') when reading questions.`;
   }else if(dominantType.includes('Time pressure')){
     advice=`You were rushed under time pressure in ${topTopic}. Practice timed problem sets (e.g. 10 questions in 20 minutes) to build speed and accuracy.`;
+  }else if(dominantType.includes('Unattempted')||dominantType.includes('blank')){
+    advice=`Questions in ${topTopic} were left blank or unattempted. Review foundational problem types and practice direct numericals in this topic to capture easy marks.`;
   }else{
     advice=`Targeted revision recommended for ${topTopic}. Focus on logging practice problems and reviewing core takeaways.`;
   }
@@ -658,6 +661,7 @@ function renderReviews(){
             <div class="test-card-footer">
               <span>${testMistakes.length} mistakes logged</span>
               <div class="test-card-actions">
+                <button class="tiny-btn" data-import-excel="${t.id}" title="Import mistakes from Excel/CSV">📊 Excel</button>
                 <button class="tiny-btn" data-edit-mock-test="${t.id}" title="Edit test info">Edit</button>
                 <button class="tiny-btn" data-delete-mock-test="${t.id}" title="Delete test">Delete</button>
               </div>
@@ -927,24 +931,30 @@ async function openMockTestDetail(testId){
           <div class="mistake-tags-row">
             ${m.questionNo?`<span class="qno-badge">${esc(m.questionNo)}</span>`:''}
             <span class="tag"><b>${esc(m.topic)}</b></span>
-            ${m.mistakeType?`<span class="tag">${esc(m.mistakeType)}</span>`:''}
+            ${m.isBlank?`<span class="tag" style="background:#f1f5f9;color:#475569;border-color:#cbd5e1;">⚪ Blank / Unattempted</span>`:(m.mistakeType?`<span class="tag">${esc(m.mistakeType)}</span>`:'')}
             ${m.marksLost?`<span class="tag urgent">-${m.marksLost} marks</span>`:''}
           </div>
           <span class="tag ${m.resolved?'':'urgent'}">${m.resolved?'Resolved':'Needs review'}</span>
         </div>
+        ${(m.userAnswer || m.correctAnswer) ? `
+          <div class="mistake-answers-row">
+            ${m.userAnswer ? `<span>Your Answer: <b style="color:${m.isBlank ? '#64748b' : '#b91c1c'};">${esc(m.userAnswer)}</b></span>` : ''}
+            ${m.correctAnswer ? `<span>Correct / Status: <b style="color:#15803d;">${esc(m.correctAnswer)}</b></span>` : ''}
+          </div>
+        ` : ''}
         <div class="mistake-body-grid">
           <div class="mistake-body-col">
-            <b>What went wrong:</b>
+            <b>${m.isBlank ? 'Reason unattempted / what went wrong:' : 'What went wrong:'}</b>
             <span>${esc(m.error)}</span>
           </div>
           <div class="mistake-body-col">
-            <b>Correct concept / Solution pointer:</b>
+            <b>${m.isBlank ? 'Revision action / Takeaway:' : 'Correct concept / Solution pointer:'}</b>
             <span>${esc(m.correction||'Not specified')}</span>
           </div>
         </div>
-        ${m.pointers?`<div style="font-size:11px; color:var(--sf-navy-soft); background:#fff; padding:6px 10px; border-radius:6px; border:1px solid var(--sf-border);"><b>Pointer:</b> ${esc(m.pointers)}</div>`:''}
+        ${m.pointers&&m.pointers!==m.correction?`<div style="font-size:11px; color:var(--sf-navy-soft); background:#fff; padding:6px 10px; border-radius:6px; border:1px solid var(--sf-border);"><b>Pointer:</b> ${esc(m.pointers)}</div>`:''}
         <div class="mistake-card-foot">
-          <span>Logged on ${fmt(m.date||t.date||todayISO())}</span>
+          <span>Logged on ${fmt(m.date||t.date||todayISO())}${m.source==='excel_import'?' · via Excel':''}</span>
           <div class="row-actions">
             <button class="tiny-btn" data-toggle-test-mistake="${m.id}">${m.resolved?'Reopen':'Mark resolved'}</button>
             <button class="tiny-btn" data-edit-test-mistake="${m.id}">Edit</button>
@@ -1010,6 +1020,7 @@ async function viewPaperFull(testId){
   const contentEl=$('#viewer-content');
   const titleEl=$('#viewer-paper-title');
   const downloadLink=$('#viewer-download-link');
+  const openTabBtn=$('#viewer-open-tab-btn');
 
   titleEl.textContent=t?.name?`${t.name} — Paper Preview`:'Paper Preview';
   if(!record||!record.blob){
@@ -1021,24 +1032,44 @@ async function viewPaperFull(testId){
       </div>
     `;
     downloadLink.hidden=true;
+    if(openTabBtn)openTabBtn.hidden=true;
     dialog.showModal();
     return;
   }
 
-  const url=URL.createObjectURL(record.blob);
+  const isPdf=(record.type&&record.type.includes('pdf'))||(record.name&&record.name.toLowerCase().endsWith('.pdf'));
+  let displayBlob=record.blob;
+  if(isPdf&&(!displayBlob.type||displayBlob.type!=='application/pdf')){
+    displayBlob=new Blob([record.blob],{type:'application/pdf'});
+  }
+
+  const url=URL.createObjectURL(displayBlob);
   downloadLink.hidden=false;
   downloadLink.href=url;
   downloadLink.download=record.name||'test-paper';
 
-  if(record.type?.startsWith('image/')){
+  if(openTabBtn){
+    openTabBtn.hidden=false;
+    openTabBtn.href=url;
+  }
+
+  if(record.type?.startsWith('image/')&&!isPdf){
     contentEl.innerHTML=`<img src="${url}" class="viewer-img" alt="Test paper preview">`;
   }else{
     contentEl.innerHTML=`
       <div class="pdf-viewer-wrap">
-        <iframe src="${url}" class="viewer-pdf-frame" title="PDF preview"></iframe>
+        <object data="${url}#toolbar=1" type="application/pdf" class="viewer-pdf-frame">
+          <embed src="${url}#toolbar=1" type="application/pdf" class="viewer-pdf-frame">
+          <iframe src="${url}" class="viewer-pdf-frame" title="PDF preview">
+            <p>Your browser does not support inline PDF previews. Please use the button below to view or download.</p>
+          </iframe>
+        </object>
         <div class="pdf-fallback-bar">
-          <span>Viewing PDF paper preview.</span>
-          <a href="${url}" target="_blank" download="${esc(record.name||'paper.pdf')}" class="btn btn-secondary btn-sm">⬇ Open / Download PDF</a>
+          <span>📄 <b>${esc(record.name||'test-paper.pdf')}</b> (${formatFileSize(record.size||displayBlob.size)})</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">↗ Open in new tab</a>
+            <a href="${url}" download="${esc(record.name||'paper.pdf')}" class="btn btn-secondary btn-sm">⬇ Download PDF</a>
+          </div>
         </div>
       </div>
     `;
@@ -1052,7 +1083,12 @@ async function downloadPaperFile(testId){
     toast('Paper file not available for download.');
     return;
   }
-  const url=URL.createObjectURL(record.blob);
+  const isPdf=(record.type&&record.type.includes('pdf'))||(record.name&&record.name.toLowerCase().endsWith('.pdf'));
+  let displayBlob=record.blob;
+  if(isPdf&&(!displayBlob.type||displayBlob.type!=='application/pdf')){
+    displayBlob=new Blob([record.blob],{type:'application/pdf'});
+  }
+  const url=URL.createObjectURL(displayBlob);
   const a=document.createElement('a');
   a.href=url;
   a.download=record.name||'test-paper';
@@ -1060,6 +1096,295 @@ async function downloadPaperFile(testId){
   a.click();
   document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+// Bulk Excel / CSV Mistake & Blank Import
+let activeExcelImportTestId=null;
+let parsedExcelRows=[];
+
+function downloadSampleExcelTemplate(){
+  const sampleHeaders=[
+    {
+      'Q No.':'1',
+      'Your Answer':'B',
+      'Correct Answer / Status':'C',
+      'Topic':'Dynamic Programming',
+      'Why your response needs correction':'Miscalculated recurrence base condition for n=0',
+      'Revision action':'Revise 0/1 knapsack base case derivations in notes',
+      'Marks':2
+    },
+    {
+      'Q No.':'2',
+      'Your Answer':'Unattempted',
+      'Correct Answer / Status':'Blank',
+      'Topic':'Graph Theory',
+      'Why your response needs correction':'Ran out of time to read Dijkstra variation with negative edges',
+      'Revision action':'Practice 5 Bellman-Ford & Dijkstra problem sets under timer',
+      'Marks':1
+    },
+    {
+      'Q No.':'3',
+      'Your Answer':'42.5',
+      'Correct Answer / Status':'Incorrect',
+      'Topic':'Computer Networks',
+      'Why your response needs correction':'Applied round-trip time instead of transmission delay in throughput formula',
+      'Revision action':'Memorize sliding window throughput vs efficiency formulas',
+      'Marks':2
+    },
+    {
+      'Q No.':'4',
+      'Your Answer':'Left Blank',
+      'Correct Answer / Status':'Blank',
+      'Topic':'Operating Systems',
+      'Why your response needs correction':'Skipped question due to confusion in Banker\'s algorithm safe sequence',
+      'Revision action':'Re-solve 3 deadlock avoidance matrix problems',
+      'Marks':2
+    }
+  ];
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(sampleHeaders);
+  ws['!cols']=[
+    {wch:8},
+    {wch:14},
+    {wch:24},
+    {wch:24},
+    {wch:45},
+    {wch:45},
+    {wch:10}
+  ];
+  XLSX.utils.book_append_sheet(wb,ws,'Mistakes_and_Blanks');
+  XLSX.writeFile(wb,'StudyFlow_Mistake_Template.xlsx');
+  toast('Downloaded StudyFlow_Mistake_Template.xlsx');
+}
+
+function normalizeExcelHeader(str){
+  return String(str||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+}
+
+function mapExcelColumns(headers){
+  const map={};
+  headers.forEach(h=>{
+    const k=normalizeExcelHeader(h);
+    if(!map.qNo&&(k.startsWith('qno')||k.startsWith('qnum')||k==='q'||k.startsWith('question')||k==='no')){
+      map.qNo=h;
+    }else if(!map.yourAnswer&&(k.includes('your')||k.includes('my')||k.includes('student')||k.includes('marked')||k.includes('user')||k==='response'||k.includes('youranswer'))){
+      map.yourAnswer=h;
+    }else if(!map.correctAnswer&&(k.includes('correct')||k.includes('key')||k.includes('official')||k.includes('status')||k.includes('actual'))){
+      map.correctAnswer=h;
+    }else if(!map.topic&&(k.includes('topic')||k.includes('concept')||k.includes('chapter')||k.includes('subject')||k.includes('module'))){
+      map.topic=h;
+    }else if(!map.why&&(k.includes('why')||k.includes('reason')||k.includes('error')||k.includes('cause')||k.includes('mistake')||k.includes('correctionneeds')||k.includes('explanation'))){
+      map.why=h;
+    }else if(!map.action&&(k.includes('action')||k.includes('revision')||k.includes('pointer')||k.includes('fix')||k.includes('remedy')||k.includes('solution')||k.includes('takeaway'))){
+      map.action=h;
+    }else if(!map.marks&&(k.includes('mark')||k.includes('score')||k.includes('point')||k.includes('loss')||k.includes('weight')||k.includes('negative'))){
+      map.marks=h;
+    }
+  });
+  return map;
+}
+
+function isRowBlankOrUnattempted(yourAns,correctStatus,whyText){
+  const y=String(yourAns||'').trim().toLowerCase();
+  const c=String(correctStatus||'').trim().toLowerCase();
+  const w=String(whyText||'').trim().toLowerCase();
+
+  const blankKeywords=['blank','unattempted','skipped','left blank','not attempted','na','n/a','-','--','none'];
+  if(!y||blankKeywords.includes(y))return true;
+  if(c.includes('blank')||c.includes('unattempted')||c.includes('skipped'))return true;
+  if(w.includes('unattempted')||w.includes('left blank')||w.includes('skipped')||w.includes('could not attempt')||w.includes('ran out of time to read'))return true;
+  return false;
+}
+
+function inferMistakeType(whyText,isBlank){
+  if(isBlank)return 'Unattempted / Left blank';
+  const w=String(whyText||'').toLowerCase();
+  if(w.includes('calc')||w.includes('arithmetic')||w.includes('numerical')||w.includes('algebra')||w.includes('sign error')||w.includes('addition')||w.includes('multiplication')){
+    return 'Calculation / Numerical error';
+  }
+  if(w.includes('formula')||w.includes('identity')||w.includes('equation')||w.includes('theorem')){
+    return 'Formula forgotten / wrongly applied';
+  }
+  if(w.includes('misread')||w.includes('condition')||w.includes('wording')||w.includes('not read')||w.includes('missed')){
+    return 'Question misread / missed condition';
+  }
+  if(w.includes('time')||w.includes('rush')||w.includes('hurry')||w.includes('panic')||w.includes('speed')){
+    return 'Time pressure / rushed attempt';
+  }
+  if(w.includes('bubbl')||w.includes('silly')||w.includes('slip')||w.includes('typo')||w.includes('marked wrong')){
+    return 'Silly slip / bubbling error';
+  }
+  return 'Conceptual misunderstanding';
+}
+
+function openExcelImportModal(testId){
+  activeExcelImportTestId=testId||activeMockTestId;
+  const test=db.mockTests.find(x=>x.id===activeExcelImportTestId);
+  const banner=$('#excel-import-test-banner');
+  if(banner){
+    banner.innerHTML=test?`Target Mock Test: <b>${esc(test.name)}</b> ${test.subject?`(${esc(test.subject)})`:''}`:'General Import';
+  }
+  parsedExcelRows=[];
+  const fileInput=$('#excel-file-input');
+  if(fileInput)fileInput.value='';
+  $('#excel-file-selected-bar').hidden=true;
+  $('#excel-dropzone-prompt').hidden=false;
+  $('#excel-preview-section').hidden=true;
+  const confirmBtn=$('#btn-confirm-excel-import');
+  if(confirmBtn){
+    confirmBtn.disabled=true;
+    confirmBtn.textContent='Import questions';
+  }
+  $('#modal-import-excel-mistakes').showModal();
+}
+
+async function handleExcelFileSelected(file){
+  if(!file)return;
+  $('#excel-selected-filename').textContent=file.name;
+  $('#excel-selected-filesize').textContent=formatFileSize(file.size);
+  $('#excel-dropzone-prompt').hidden=true;
+  $('#excel-file-selected-bar').hidden=false;
+
+  try{
+    const arrayBuffer=await file.arrayBuffer();
+    const wb=XLSX.read(arrayBuffer,{type:'array'});
+    const firstSheetName=wb.SheetNames[0];
+    const ws=wb.Sheets[firstSheetName];
+    const rawRows=XLSX.utils.sheet_to_json(ws,{defval:''});
+
+    if(!rawRows||!rawRows.length){
+      toast('The uploaded spreadsheet contains no data rows.');
+      return;
+    }
+
+    const sampleRow=rawRows[0];
+    const headers=Object.keys(sampleRow);
+    const colMap=mapExcelColumns(headers);
+
+    parsedExcelRows=rawRows.map((r,idx)=>{
+      const qNo=String(r[colMap.qNo]??(idx+1)).trim();
+      const yourAnswer=String(r[colMap.yourAnswer]??'').trim();
+      const correctAnswer=String(r[colMap.correctAnswer]??'').trim();
+      const topic=String(r[colMap.topic]??'General').trim()||'General';
+      const why=String(r[colMap.why]??'').trim();
+      const action=String(r[colMap.action]??'').trim();
+      let marksRaw=parseFloat(r[colMap.marks]);
+      if(isNaN(marksRaw))marksRaw=0;
+      const marksLost=Math.abs(marksRaw);
+
+      const isBlank=isRowBlankOrUnattempted(yourAnswer,correctAnswer,why);
+      const mistakeType=inferMistakeType(why,isBlank);
+
+      return{
+        qNo:qNo?(qNo.toLowerCase().startsWith('q')?qNo:`Q${qNo}`):`Q${idx+1}`,
+        yourAnswer:isBlank&&!yourAnswer?'Left blank':yourAnswer,
+        correctAnswer,
+        topic,
+        why:why||(isBlank?'Question left unattempted in exam':'Needs review'),
+        action:action||'Review concepts and re-attempt problem',
+        marksLost,
+        isBlank,
+        mistakeType
+      };
+    });
+
+    renderExcelPreview();
+  }catch(err){
+    console.error('Error reading Excel/CSV file:',err);
+    toast('Failed to parse spreadsheet. Please ensure it is a valid .xlsx or .csv file.');
+  }
+}
+
+function renderExcelPreview(){
+  const previewSection=$('#excel-preview-section');
+  const tbody=$('#excel-preview-tbody');
+  const statsEl=$('#excel-preview-stats');
+  const confirmBtn=$('#btn-confirm-excel-import');
+
+  if(!parsedExcelRows.length){
+    previewSection.hidden=true;
+    if(confirmBtn)confirmBtn.disabled=true;
+    return;
+  }
+
+  const totalCount=parsedExcelRows.length;
+  const blankCount=parsedExcelRows.filter(r=>r.isBlank).length;
+  const mistakeCount=totalCount-blankCount;
+
+  statsEl.innerHTML=`
+    <span class="excel-stat-badge total">Total: ${totalCount} Questions</span>
+    <span class="excel-stat-badge mistakes">🔴 ${mistakeCount} Mistake${mistakeCount!==1?'s':''}</span>
+    <span class="excel-stat-badge blanks">⚪ ${blankCount} Blank / Unattempted</span>
+  `;
+
+  tbody.innerHTML=parsedExcelRows.map(r=>`
+    <tr class="${r.isBlank?'row-blank':''}">
+      <td><b>${esc(r.qNo)}</b></td>
+      <td><span style="color:${r.isBlank?'#64748b':'#b91c1c'};font-weight:600;">${esc(r.yourAnswer||'-')}</span></td>
+      <td><span style="color:#15803d;font-weight:600;">${esc(r.correctAnswer||'-')}</span></td>
+      <td><b>${esc(r.topic)}</b></td>
+      <td style="max-width:220px;" title="${esc(r.why)}">${esc(r.why)}</td>
+      <td style="max-width:220px;" title="${esc(r.action)}">${esc(r.action)}</td>
+      <td>${r.marksLost>0?`-${r.marksLost}`:'0'}</td>
+      <td>
+        <span class="preview-status-pill ${r.isBlank?'blank':'mistake'}">
+          ${r.isBlank?'⚪ Blank':'🔴 Mistake'}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+
+  previewSection.hidden=false;
+  if(confirmBtn){
+    confirmBtn.disabled=false;
+    confirmBtn.textContent=`Import ${totalCount} Question${totalCount>1?'s':''}`;
+  }
+}
+
+function executeExcelImport(){
+  if(!parsedExcelRows.length||!activeExcelImportTestId){
+    toast('No parsed questions to import.');
+    return;
+  }
+
+  const test=db.mockTests.find(x=>x.id===activeExcelImportTestId);
+  const mode=document.querySelector('input[name="excel-import-mode"]:checked')?.value||'append';
+
+  if(mode==='replace'){
+    db.mistakes=db.mistakes.filter(m=>m.mockTestId!==activeExcelImportTestId&&(!test||m.test!==test.name));
+  }
+
+  const newMistakes=parsedExcelRows.map(r=>({
+    id:uid(),
+    mockTestId:activeExcelImportTestId,
+    test:test?.name||'Mock Test',
+    subject:test?.subject||'',
+    questionNo:r.qNo,
+    userAnswer:r.yourAnswer,
+    correctAnswer:r.correctAnswer,
+    topic:r.topic,
+    error:r.why,
+    correction:r.action,
+    pointers:r.action,
+    marksLost:r.marksLost,
+    isBlank:r.isBlank,
+    mistakeType:r.mistakeType,
+    resolved:false,
+    date:test?.date||todayISO(),
+    source:'excel_import'
+  }));
+
+  db.mistakes.push(...newMistakes);
+  save();
+
+  $('#modal-import-excel-mistakes').close();
+  const blankCount=parsedExcelRows.filter(r=>r.isBlank).length;
+  const mistakeCount=parsedExcelRows.length-blankCount;
+  toast(`🎉 Imported ${parsedExcelRows.length} questions (${mistakeCount} mistakes, ${blankCount} blanks)! Topic analytics updated.`);
+
+  if(activeMockTestId){
+    openMockTestDetail(activeMockTestId);
+  }
 }
 function render(){renderOverview();renderSubjects();renderSkills();renderTasks();renderCalendar();renderReviews()}
 function field(label,name,type='text',value='',extra=''){return `<div class="field"><label>${label}</label><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></div>`}
@@ -1385,6 +1710,42 @@ $('#btn-edit-test-details')?.addEventListener('click',()=>{
 $('#btn-log-mistake-for-test')?.addEventListener('click',()=>{
   openMistakeModal(null,activeMockTestId);
 });
+$('#btn-import-excel-for-test')?.addEventListener('click',()=>{
+  openExcelImportModal(activeMockTestId);
+});
+$('#btn-download-excel-template')?.addEventListener('click',downloadSampleExcelTemplate);
+$('#btn-confirm-excel-import')?.addEventListener('click',executeExcelImport);
+
+// Excel Dropzone setup
+const excelDropzone=$('#excel-dropzone');
+const excelFileInput=$('#excel-file-input');
+if(excelDropzone&&excelFileInput){
+  excelDropzone.onclick=e=>{
+    if(e.target.closest('#btn-change-excel-file'))return;
+    excelFileInput.click();
+  };
+  excelDropzone.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();excelFileInput.click()}};
+  excelFileInput.onchange=()=>{
+    const file=excelFileInput.files?.[0];
+    if(file)handleExcelFileSelected(file);
+  };
+  $('#btn-change-excel-file')?.addEventListener('click',e=>{
+    e.stopPropagation();
+    excelFileInput.value='';
+    excelFileInput.click();
+  });
+  ['dragenter','dragover'].forEach(evt=>{
+    excelDropzone.addEventListener(evt,e=>{e.preventDefault();e.stopPropagation();excelDropzone.classList.add('dragover')});
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    excelDropzone.addEventListener(evt,e=>{e.preventDefault();e.stopPropagation();excelDropzone.classList.remove('dragover')});
+  });
+  excelDropzone.addEventListener('drop',e=>{
+    const dt=e.dataTransfer;
+    const file=dt?.files?.[0];
+    if(file)handleExcelFileSelected(file);
+  });
+}
 $('#btn-save-detail-pointers')?.addEventListener('click',()=>{
   if(!activeMockTestId)return;
   const t=db.mockTests.find(x=>x.id===activeMockTestId);
@@ -1412,7 +1773,8 @@ $$('[data-close-test-modal]').forEach(b=>b.onclick=()=>$('#modal-upload-test').c
 $$('[data-close-detail-modal]').forEach(b=>b.onclick=()=>{$('#modal-test-detail').close();activeMockTestId=null;renderReviews();});
 $$('[data-close-mistake-modal]').forEach(b=>b.onclick=()=>$('#modal-log-mistake').close());
 $$('[data-close-viewer-modal]').forEach(b=>b.onclick=()=>$('#modal-paper-viewer').close());
-['#modal-upload-test','#modal-test-detail','#modal-log-mistake','#modal-paper-viewer','#item-dialog','#modal-feature-manual'].forEach(sel=>{
+$$('[data-close-excel-modal]').forEach(b=>b.onclick=()=>$('#modal-import-excel-mistakes').close());
+['#modal-upload-test','#modal-test-detail','#modal-log-mistake','#modal-paper-viewer','#modal-import-excel-mistakes','#item-dialog','#modal-feature-manual'].forEach(sel=>{
   const d=$(sel);
   if(d)d.addEventListener('click',e=>{if(e.target===d)d.close()});
 });
@@ -1444,6 +1806,11 @@ document.addEventListener('click',e=>{
   // Clicking a test card opens detail
   if(b.dataset.openTest&&!e.target.closest('.test-card-actions')){
     openMockTestDetail(b.dataset.openTest);
+    return;
+  }
+  if(b.dataset.importExcel){
+    e.stopPropagation();
+    openExcelImportModal(b.dataset.importExcel);
     return;
   }
   if(b.dataset.editMockTest){

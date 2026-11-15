@@ -33,15 +33,20 @@ export async function savePaperFile(id, file) {
   if (!id || !file) return null;
   try {
     const db = await getDB();
+    const isPdf = (file.type && file.type.includes('pdf')) || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+    const mimeType = isPdf ? 'application/pdf' : (file.type || 'application/octet-stream');
+    const storedBlob = isPdf && file.type !== 'application/pdf'
+      ? new Blob([file], { type: 'application/pdf' })
+      : file;
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
       const record = {
         id,
         name: file.name || 'test-paper',
-        type: file.type || (file.name?.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream'),
+        type: mimeType,
         size: file.size || 0,
-        blob: file,
+        blob: storedBlob,
         savedAt: Date.now()
       };
       const req = store.put(record);
