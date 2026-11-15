@@ -7,10 +7,359 @@ dialog{border:1px solid var(--line);border-radius:17px;padding:23px;width:min(52
 .syllabus-preview{display:block;width:min(100%,360px);max-height:180px;object-fit:contain;object-position:left center;margin-top:10px;border:1px solid var(--sf-border);border-radius:9px;background:#fff}
 .syllabus-status{display:block;margin-top:7px;color:var(--sf-navy-soft);font-size:10px;line-height:1.4}
 
-/* Extra skills workspace */
-.skill-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}.skill-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.skill-card{background:var(--paper);border:1px solid var(--line);border-radius:15px;padding:19px;box-shadow:var(--shadow)}.skill-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.skill-card h3{font-size:16px;margin:6px 0 0}.skill-category{font:9px 'Courier New';letter-spacing:1px;text-transform:uppercase;color:#8a978a}.skill-meta{font-size:10px;color:var(--muted);margin:9px 0 13px}.skill-status{background:#f4f1e8;color:#927747}.skill-card .progress-track{margin-top:13px}.skill-card .progress-foot{margin-top:7px}.milestone-list{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:14px}.skill-empty,.skill-notes{font-size:10px;color:var(--muted);line-height:1.6;margin:13px 0 0}.skill-notes{padding:10px;background:#f7f8f3;border-radius:8px;white-space:pre-wrap}.skill-actions{display:flex;justify-content:flex-end;border-top:1px solid var(--line);margin-top:14px;padding-top:8px}
-@media(max-width:950px){.skill-grid{grid-template-columns:1fr}}
-@media(max-width:650px){.skill-summary{gap:6px}.skill-grid{grid-template-columns:1fr}.milestone-list{grid-template-columns:1fr}}
+/* ==========================================================================
+   Extra Skills Workspace, Learning Resources & Milestone Accomplishment Log
+   ========================================================================== */
+.skill-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 18px 0;
+}
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.skill-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.skill-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(28, 39, 56, 0.08);
+}
+.skill-card.is-completed {
+  border-color: rgba(39, 174, 96, 0.35);
+  background: linear-gradient(180deg, var(--paper) 0%, rgba(39, 174, 96, 0.03) 100%);
+}
+.skill-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.skill-card-head h3 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 4px 0 0;
+  color: var(--sf-navy);
+}
+.skill-category {
+  font: 10px/1.2 var(--sf-mono, 'Courier New', monospace);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--sf-navy-soft);
+  font-weight: 700;
+}
+.tag.skill-status {
+  background: var(--sf-sand);
+  color: var(--sf-navy);
+  border: 1px solid var(--line);
+  font-weight: 600;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+.tag.tag-completed {
+  background: rgba(39, 174, 96, 0.12);
+  color: #1e824c;
+  border: 1px solid rgba(39, 174, 96, 0.25);
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+.skill-meta-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.skill-meta-badge {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--sf-sand);
+  color: var(--sf-navy-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.skill-meta-badge strong {
+  color: var(--sf-navy);
+}
+.skill-meta-badge.milestone-count-badge {
+  background: rgba(224, 109, 83, 0.1);
+  color: var(--sf-coral);
+  border: 1px solid rgba(224, 109, 83, 0.22);
+}
+
+/* Learning Resources Block */
+.skill-section-block {
+  background: var(--sf-surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.skill-block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.skill-block-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--sf-navy-soft);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.res-count-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--sf-sand-dark);
+  color: var(--sf-navy);
+}
+.skill-resources-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+.resource-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--sf-sand);
+  border: 1px solid var(--line);
+  color: var(--sf-navy);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  max-width: 100%;
+}
+.resource-chip.resource-link {
+  cursor: pointer;
+}
+.resource-chip.resource-link:hover {
+  background: #FFFFFF;
+  border-color: var(--sf-coral);
+  color: var(--sf-coral);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(224, 109, 83, 0.15);
+}
+.resource-chip .res-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.resource-chip .res-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+.resource-chip .res-arrow {
+  font-size: 10px;
+  font-weight: bold;
+  opacity: 0.6;
+}
+.resource-chip.resource-link:hover .res-arrow {
+  opacity: 1;
+}
+.skill-empty-text {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 6px 0 2px;
+  font-style: italic;
+}
+
+/* Milestone Accomplishment Log */
+.btn-sm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-log-milestone {
+  background: var(--sf-coral);
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(224, 109, 83, 0.25);
+}
+.btn-log-milestone:hover {
+  background: #d45e45;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(224, 109, 83, 0.35);
+}
+.milestone-log-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  max-height: 230px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.milestone-feed-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 11px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.milestone-feed-item:hover {
+  border-color: rgba(224, 109, 83, 0.35);
+  background: #FFFFFF;
+}
+.milestone-item-left {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.milestone-dot {
+  color: var(--sf-coral);
+  font-size: 11px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.milestone-content {
+  flex: 1;
+  min-width: 0;
+}
+.milestone-item-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.milestone-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sf-navy);
+  word-break: break-word;
+}
+.milestone-date {
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--sf-sand);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.milestone-takeaway {
+  font-size: 11px;
+  color: var(--sf-navy);
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(224, 109, 83, 0.08);
+  border-left: 2px solid var(--sf-coral);
+  border-radius: 0 6px 6px 0;
+  font-style: italic;
+  line-height: 1.4;
+}
+.milestone-note-text {
+  font-size: 11px;
+  color: var(--sf-navy-soft);
+  margin-top: 4px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+.milestone-delete-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  opacity: 0.55;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.milestone-delete-btn:hover {
+  color: #d9383a;
+  background: rgba(217, 56, 58, 0.1);
+  opacity: 1;
+}
+.milestone-empty-box {
+  text-align: center;
+  padding: 15px 12px;
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  margin-top: 6px;
+}
+.milestone-empty-box p {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 10px 0;
+  line-height: 1.4;
+}
+.skill-notes {
+  font-size: 11px;
+  color: var(--sf-navy-soft);
+  background: var(--sf-sand);
+  border-radius: 8px;
+  padding: 9px 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.notes-tag {
+  font-weight: 700;
+  color: var(--sf-navy);
+}
+.skill-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  margin-top: auto;
+  padding-top: 10px;
+}
+.skill-actions .text-btn {
+  font-size: 11px;
+}
+.skill-actions .danger-hover:hover {
+  color: #d9383a !important;
+}
+
+@media(max-width:950px){
+  .skill-grid{grid-template-columns:1fr}
+}
+@media(max-width:650px){
+  .skill-summary{grid-template-columns:1fr;gap:8px}
+  .skill-grid{grid-template-columns:1fr}
+}
 
 /* ==========================================================================
    Design Tokens & Extended Theme Palette

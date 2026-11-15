@@ -350,10 +350,140 @@ function renderCalendar(){
   container.innerHTML=html;
 }
 function renderSkills(){
- const skills=db.skills||[];
- const total=skills.reduce((n,s)=>n+(s.milestones||[]).length,0),done=skills.reduce((n,s)=>n+(s.milestones||[]).filter(m=>m.done).length,0);
- $('#skill-summary').innerHTML=`<div class="review-stat"><strong>${skills.length}</strong><small>Skills being learned</small></div><div class="review-stat"><strong>${done}/${total}</strong><small>Milestones completed</small></div><div class="review-stat"><strong>${skills.filter(s=>s.status==='Completed').length}</strong><small>Skills completed</small></div>`;
- $('#skills-list').innerHTML=skills.length?skills.map(s=>{let ms=s.milestones||[],finished=ms.filter(m=>m.done).length,p=ms.length?Math.round(finished/ms.length*100):(s.status==='Completed'?100:0);return `<article class="skill-card"><div class="skill-card-head"><div><span class="skill-category">${esc(s.category||'General')}</span><h3>${esc(s.name)}</h3></div><span class="tag ${s.status==='Completed'?'':'skill-status'}">${esc(s.status||'Not started')}</span></div><p class="skill-meta">${esc(s.level||'Beginner')}${s.target?' · Target: '+fmt(s.target):''}</p><div class="progress-track"><span style="width:${p}%"></span></div><div class="progress-foot"><span>${finished}/${ms.length} milestones</span><b>${p}%</b></div>${ms.length?`<div class="milestone-list">${ms.map((m,i)=>`<label class="topic"><input type="checkbox" data-skill-milestone="${s.id}:${i}" ${m.done?'checked':''}>${esc(m.name)}</label>`).join('')}</div>`:'<p class="skill-empty">Add milestones to break this skill into manageable steps.</p>'}${s.notes?`<p class="skill-notes">${esc(s.notes)}</p>`:''}<div class="skill-actions"><button class="text-btn" data-edit-skill="${s.id}">Edit learning plan</button><button class="text-btn" data-delete-skill="${s.id}">Delete</button></div></article>`}).join(''):'<div class="panel empty-state">No extra skills added yet. Add something you want to learn — for example Python, SQL, machine learning, cloud, cybersecurity or communication.</div>';
+  const skills=db.skills||[];
+  const totalMilestones=skills.reduce((n,s)=>n+(s.milestones||[]).length,0);
+  const completedSkills=skills.filter(s=>s.status==='Completed').length;
+  
+  const summaryEl=$('#skill-summary');
+  if(summaryEl){
+    summaryEl.innerHTML=`
+      <div class="review-stat">
+        <strong>${skills.length}</strong>
+        <small>Skills being learned</small>
+      </div>
+      <div class="review-stat">
+        <strong>${totalMilestones}</strong>
+        <small>Milestones logged</small>
+      </div>
+      <div class="review-stat">
+        <strong>${completedSkills}</strong>
+        <small>Skills completed</small>
+      </div>
+    `;
+  }
+  
+  const listEl=$('#skills-list');
+  if(!listEl)return;
+  
+  if(!skills.length){
+    listEl.innerHTML=`<div class="panel empty-state">No extra skills added yet. Add a skill you want to learn — like Python, Machine Learning, System Design, Cloud, SQL, or Cybersecurity — attach your courses/resources, and log milestones as you learn!</div>`;
+    return;
+  }
+  
+  listEl.innerHTML=skills.map(s=>{
+    const ms=s.milestones||[];
+    const resources=s.resources||[];
+    const isCompleted=s.status==='Completed';
+    
+    return `
+      <article class="skill-card ${isCompleted?'is-completed':''}">
+        <div class="skill-card-head">
+          <div>
+            <span class="skill-category">${esc(s.category||'General')}</span>
+            <h3>${esc(s.name)}</h3>
+          </div>
+          <span class="tag ${isCompleted?'tag-completed':'skill-status'}">${esc(s.status||'Not started')}</span>
+        </div>
+
+        <div class="skill-meta-bar">
+          <span class="skill-meta-badge"><strong>Level:</strong> ${esc(s.level||'Beginner')}</span>
+          ${s.target?`<span class="skill-meta-badge"><strong>Target:</strong> ${fmt(s.target)}</span>`:''}
+          <span class="skill-meta-badge milestone-count-badge">🎯 <strong>${ms.length}</strong> milestone${ms.length===1?'':'s'} logged</span>
+        </div>
+
+        <!-- Resources Section -->
+        <div class="skill-section-block">
+          <div class="skill-block-title">
+            <span>📚 Learning Resources</span>
+            <span class="res-count-badge">${resources.length}</span>
+          </div>
+          ${resources.length?`
+            <div class="skill-resources-grid">
+              ${resources.map(r=>{
+                const title=r.title||r.url||'Resource';
+                if(r.url){
+                  const isYT=/youtube\.com|youtu\.be/i.test(r.url);
+                  const isDoc=/docs|documentation|github\.com|dev\./i.test(r.url);
+                  const icon=isYT?'▶':(isDoc?'📖':'🔗');
+                  return `<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" class="resource-chip resource-link" title="${esc(r.url)}">
+                    <span class="res-icon">${icon}</span>
+                    <span class="res-title">${esc(title)}</span>
+                    <span class="res-arrow">↗</span>
+                  </a>`;
+                }
+                return `<span class="resource-chip resource-text" title="${esc(title)}">
+                  <span class="res-icon">📖</span>
+                  <span class="res-title">${esc(title)}</span>
+                </span>`;
+              }).join('')}
+            </div>
+          `:`<p class="skill-empty-text">No learning resources linked yet. Click "Edit learning plan" to add courses, documentation, or books.</p>`}
+        </div>
+
+        <!-- Milestones Log Section -->
+        <div class="skill-section-block milestone-log-block">
+          <div class="skill-block-head">
+            <div class="skill-block-title">
+              <span>✨ Learning Milestone Log</span>
+              <span class="res-count-badge">${ms.length}</span>
+            </div>
+            <button type="button" class="btn-sm-pill btn-log-milestone" data-log-milestone="${s.id}" title="Log what you learned">
+              ＋ Log milestone
+            </button>
+          </div>
+
+          ${ms.length?`
+            <div class="milestone-log-feed">
+              ${ms.map((m,idx)=>{
+                const milestoneName=m.name||m.title||'Logged Milestone';
+                const dateStr=m.date?fmt(m.date):'';
+                return `
+                  <div class="milestone-feed-item">
+                    <div class="milestone-item-left">
+                      <span class="milestone-dot">✦</span>
+                      <div class="milestone-content">
+                        <div class="milestone-item-header">
+                          <strong class="milestone-name">${esc(milestoneName)}</strong>
+                          ${dateStr?`<span class="milestone-date">${esc(dateStr)}</span>`:''}
+                        </div>
+                        ${m.takeaway?`<div class="milestone-takeaway">💡 ${esc(m.takeaway)}</div>`:''}
+                        ${m.note?`<div class="milestone-note-text">${esc(m.note)}</div>`:''}
+                      </div>
+                    </div>
+                    <button type="button" class="milestone-delete-btn" data-delete-milestone="${s.id}:${m.id||idx}" title="Delete milestone">✕</button>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `:`
+            <div class="milestone-empty-box">
+              <p>No milestones logged yet. When you understand a core concept, build a project, or complete a tutorial chapter, log it here!</p>
+              <button type="button" class="btn-sm-pill btn-log-milestone" data-log-milestone="${s.id}">
+                ✨ Log your first milestone
+              </button>
+            </div>
+          `}
+        </div>
+
+        ${s.notes?`<div class="skill-notes"><span class="notes-tag">📝 Notes:</span> ${esc(s.notes)}</div>`:''}
+
+        <div class="skill-actions">
+          <button class="text-btn" data-edit-skill="${s.id}">Edit learning plan</button>
+          <button class="text-btn danger-hover" data-delete-skill="${s.id}">Delete</button>
+        </div>
+      </article>
+    `;
+  }).join('');
 }
 function calculateTopicAnalytics(mistakes){
   if(!mistakes||!mistakes.length)return null;
@@ -974,7 +1104,112 @@ function taskModal(id,defaultScope=(currentTaskScope==='overall'?'overall':'dail
 function cleanExtractedTopics(text){return text.split(/\r?\n/).map(line=>line.replace(/^[\s•●▪*-]*(?:\d+[\s.)-]*)?/,'').replace(/\s+/g,' ').trim()).filter(line=>line.length>2)}
 async function extractSyllabusTopics(file,preview,status,topicsField){preview.src=URL.createObjectURL(file);preview.hidden=false;status.textContent='Reading syllabus image…';try{const worker=await createWorker('eng');const result=await worker.recognize(file);await worker.terminate();const topics=cleanExtractedTopics(result.data.text);topicsField.value=topics.join('\n');status.textContent=topics.length?`Found ${topics.length} lines. Edit them before saving.`:'No readable topic lines found. Enter them manually.'}catch(error){console.error('Syllabus OCR failed.',error);status.textContent='Could not read the image. Enter the topics manually.'}}
 function subjectModal(id){let s=db.subjects.find(x=>x.id===id)||{};openModal(id?'Edit subject':'Add subject',field('Subject name','name','text',s.name||'','required')+`<div class="field-grid">${field('Subject code','code','text',s.code||'')}${field('Semester / term','term','text',s.term||'')}</div><div class="field"><label for="syllabus-image">Import syllabus image</label><input id="syllabus-image" type="file" accept="image/*"><img id="syllabus-preview" class="syllabus-preview" alt="Syllabus preview" hidden><small id="syllabus-status" class="syllabus-status">Upload a clear syllabus image to extract topic lines.</small></div>${area('Syllabus topics (one per line)','topics',(s.topics||[]).map(t=>t.name).join('\n'))}`,d=>{let topics=d.topics.split('\n').map(x=>x.trim()).filter(Boolean).map(name=>({name,done:(s.topics||[]).some(t=>t.name===name&&t.done)}));if(id)Object.assign(s,{...d,topics});else db.subjects.push({id:uid(),...d,topics});toast(id?'Subject updated':'Subject added')});let imageInput=$('#syllabus-image'),preview=$('#syllabus-preview'),status=$('#syllabus-status'),topicsField=document.querySelector('[name="topics"]');imageInput?.addEventListener('change',()=>{let file=imageInput.files?.[0];if(file)extractSyllabusTopics(file,preview,status,topicsField)})}
-function skillModal(id){let s=(db.skills||[]).find(x=>x.id===id)||{};openModal(id?'Edit skill':'Add a skill',field('Skill name','name','text',s.name||'','required')+`<div class="field-grid">${selectField('Category','category',['Technical','AI / Data Science','Programming','Cybersecurity','Development','Professional','Other'].map(x=>[x,x]),s.category||'Technical')}${selectField('Current level','level',['Beginner','Basic','Intermediate','Advanced'].map(x=>[x,x]),s.level||'Beginner')}</div><div class="field-grid">${selectField('Status','status',['Not started','Learning','Practising','Completed'].map(x=>[x,x]),s.status||'Not started')}${field('Target completion date','target','date',s.target||'')}</div>${area('Learning milestones (one per line)','milestones',(s.milestones||[]).map(m=>m.name).join('\n'))}${area('Notes / what you want to practise','notes',s.notes||'')}`,d=>{let milestones=d.milestones.split('\n').map(x=>x.trim()).filter(Boolean).map(name=>({name,done:(s.milestones||[]).some(m=>m.name===name&&m.done)}));if(id)Object.assign(s,{...d,milestones});else (db.skills||(db.skills=[])).push({id:uid(),...d,milestones});toast(id?'Skill updated':'Skill added')})}
+function skillModal(id){
+  let s=(db.skills||[]).find(x=>x.id===id)||{};
+  let resourcesStr='';
+  if(Array.isArray(s.resources)){
+    resourcesStr=s.resources.map(r=>r.url?`${r.title} | ${r.url}`:r.title).join('\n');
+  } else if(typeof s.resources==='string'){
+    resourcesStr=s.resources;
+  }
+  
+  openModal(
+    id?'Edit skill':'Add a skill',
+    field('Skill name','name','text',s.name||'','required placeholder="e.g. Python for Data Science, System Design, SQL"')+
+    `<div class="field-grid">
+      ${selectField('Category','category',['Technical','AI / Data Science','Programming','Cybersecurity','Development','Professional','Other'].map(x=>[x,x]),s.category||'Technical')}
+      ${selectField('Current level','level',['Beginner','Basic','Intermediate','Advanced'].map(x=>[x,x]),s.level||'Beginner')}
+    </div>
+    <div class="field-grid">
+      ${selectField('Status','status',['Not started','Learning','Practising','Completed'].map(x=>[x,x]),s.status||'Not started')}
+      ${field('Target completion date','target','date',s.target||'')}
+    </div>
+    <div class="field">
+      <label>📚 Learning Resources (where you will learn this skill from)</label>
+      <textarea name="resources" rows="4" placeholder="Enter one resource per line&#10;e.g. Official Documentation | https://docs.python.org&#10;freeCodeCamp Tutorial | https://youtube.com/watch?v=...&#10;Designing Data-Intensive Applications (Book)&#10;Coursera Deep Learning Specialization | https://coursera.org">${esc(resourcesStr)}</textarea>
+      <small style="display:block;margin-top:5px;font-size:11px;color:var(--muted);line-height:1.4;">
+        Add courses, video playlists, documentation, articles or books. Format: <code>Title | Link</code> (or just paste the URL/Title).
+      </small>
+    </div>
+    ${area('Notes / what you want to achieve / practise','notes',s.notes||'')}`,
+    d=>{
+      let resources=(d.resources||'').split('\n').map(x=>x.trim()).filter(Boolean).map(line=>{
+        if(line.includes('|')){
+          let [title,...rest]=line.split('|');
+          return {title:title.trim(),url:rest.join('|').trim()};
+        }
+        if(/^https?:\/\//i.test(line)){
+          try{
+            let host=new URL(line).hostname.replace(/^www\./,'');
+            return {title:host,url:line};
+          }catch{
+            return {title:line,url:line};
+          }
+        }
+        return {title:line,url:''};
+      });
+
+      if(id){
+        Object.assign(s,{
+          name:d.name,
+          category:d.category,
+          level:d.level,
+          status:d.status,
+          target:d.target,
+          resources,
+          notes:d.notes
+        });
+      }else{
+        (db.skills||(db.skills=[])).push({
+          id:uid(),
+          name:d.name,
+          category:d.category,
+          level:d.level,
+          status:d.status,
+          target:d.target,
+          resources,
+          milestones:[],
+          notes:d.notes
+        });
+      }
+      toast(id?'Skill updated':'Skill added');
+    }
+  );
+}
+
+function logMilestoneModal(skillId){
+  const s=(db.skills||[]).find(x=>x.id===skillId);
+  if(!s)return;
+  
+  openModal(
+    `Log learning milestone`,
+    `<div class="field-callout" style="margin-bottom:14px;padding:12px;background:var(--sf-sand);border-radius:10px;font-size:12px;color:var(--sf-navy);line-height:1.5;">
+      <strong>✨ Skill: ${esc(s.name)}</strong><br>
+      Record what you learned as an achieved milestone! Every breakthrough or key takeaway tracks your learning journey.
+    </div>`+
+    field('What did you learn or accomplish? *','name','text','','required placeholder="e.g. Mastered PyTorch Autograd & backpropagation from scratch"')+
+    `<div class="field-grid">
+      ${field('Date learned','date','date',todayISO(),'required')}
+      ${field('Key takeaway / summary (optional)','takeaway','text','','placeholder="e.g. Gradient accumulation saves memory on big batches"')}
+    </div>`+
+    area('Detailed reflection / notes / code takeaway (optional)','note',''),
+    d=>{
+      if(!d.name||!d.name.trim())return;
+      s.milestones=s.milestones||[];
+      s.milestones.unshift({
+        id:uid(),
+        name:d.name.trim(),
+        date:d.date||todayISO(),
+        takeaway:(d.takeaway||'').trim(),
+        note:(d.note||'').trim()
+      });
+      if(s.status==='Not started'){
+        s.status='Learning';
+      }
+      toast(`Milestone logged for ${s.name}!`);
+    }
+  );
+}
 function eventModal(id,date=selectedDate){let ev=db.events.find(x=>x.id===id)||{};openModal(id?'Edit event':'Add calendar event',field('Event title','title','text',ev.title||'','required')+`<div class="field-grid">${field('Date','date','date',ev.date||date,'required')}${field('Time','time','time',ev.time||'')}</div>${area('Notes','note',ev.note||'')}`,d=>{if(id)Object.assign(ev,d);else db.events.push({id:uid(),...d});toast(id?'Event updated':'Event added')})}
 function mistakeModal(id){openMistakeModal(id,null)}
 $('#add-skill').onclick=()=>skillModal();
@@ -1267,6 +1502,24 @@ document.addEventListener('click',e=>{
   if(b.dataset.editSubject)subjectModal(b.dataset.editSubject);
   if(b.dataset.editSkill)skillModal(b.dataset.editSkill);
   if(b.dataset.deleteSkill){if(confirm('Delete this skill and its learning progress?')){db.skills=db.skills.filter(x=>x.id!==b.dataset.deleteSkill);save();toast('Skill deleted')}}
+  const logMilestoneBtn=b.dataset.logMilestone?b:b.closest('[data-log-milestone]');
+  if(logMilestoneBtn){
+    logMilestoneModal(logMilestoneBtn.dataset.logMilestone);
+    return;
+  }
+  const deleteMilestoneBtn=b.dataset.deleteMilestone?b:b.closest('[data-delete-milestone]');
+  if(deleteMilestoneBtn){
+    let [sid,mid]=deleteMilestoneBtn.dataset.deleteMilestone.split(':');
+    let skill=(db.skills||[]).find(x=>x.id===sid);
+    if(skill&&skill.milestones){
+      if(confirm('Remove this logged milestone?')){
+        skill.milestones=skill.milestones.filter((m,idx)=>(m.id?m.id!==mid:String(idx)!==mid));
+        save();
+        toast('Milestone removed.');
+      }
+    }
+    return;
+  }
   if(b.dataset.deleteSubject){if(confirm('Delete this subject and its syllabus topics?')){db.subjects=db.subjects.filter(s=>s.id!==b.dataset.deleteSubject);save()}}
   if(b.dataset.editEvent)eventModal(b.dataset.editEvent);
   if(b.dataset.deleteEvent){
