@@ -141,6 +141,7 @@ async function loadWorkspaceForUser(userId){
 
   db=localWorkspace;
   let loadedFromServer=false;
+  let needsServerSync=false;
   try{
     const response=await fetch(`${API_BASE}/workspace`,{credentials:'include'});
     if(!response.ok)throw new Error(`Workspace request failed with status ${response.status}.`);
@@ -149,14 +150,26 @@ async function loadWorkspaceForUser(userId){
     const serverHasWorkspaceData=serverState&&typeof serverState==='object'&&!Array.isArray(serverState)&&
       Object.values(serverState).some(value=>Array.isArray(value)?value.length>0:value&&typeof value==='object'&&Object.keys(value).length>0);
     if(!workspaceDirty&&serverHasWorkspaceData){
-      db={...starter(),...payload.state};
+      const mergedState={...starter(),...serverState};
+      ['subjects','tasks','events','mistakes','mockTests','skills'].forEach(collection=>{
+        const serverItems=Array.isArray(serverState[collection])?serverState[collection]:[];
+        const localItems=Array.isArray(localWorkspace[collection])?localWorkspace[collection]:[];
+        const serverIds=new Set(serverItems.map(item=>item&&item.id).filter(Boolean));
+        if(localItems.some(item=>item&&item.id&&!serverIds.has(item.id)))needsServerSync=true;
+        mergedState[collection]=[
+          ...serverItems,
+          ...localItems.filter(item=>item&&item.id&&!serverIds.has(item.id))
+        ];
+      });
+      mergedState.focus={...(localWorkspace.focus||{}),...(serverState.focus||{})};
+      db=mergedState;
       loadedFromServer=true;
     }
   }catch(err){
     console.error('Error loading server workspace:',err);
   }
 
-  if(!loadedFromServer&&localWorkspace){
+  if((!loadedFromServer||needsServerSync)&&localWorkspace){
     queueWorkspaceSync();
   }
   try{
