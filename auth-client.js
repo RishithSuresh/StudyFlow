@@ -43,7 +43,24 @@ function showApp() {
   gate.hidden = true;
 }
 
+function updateSidebarUserInfo(user) {
+  if (!user) return;
+  const sidebarName = document.querySelector('#sidebar-user-name');
+  const sidebarEmail = document.querySelector('#sidebar-user-email');
+  const sidebarAvatar = document.querySelector('#sidebar-profile .avatar');
+  if (sidebarName && user.name) sidebarName.textContent = user.name;
+  if (sidebarEmail && user.email) sidebarEmail.textContent = user.email;
+  if (sidebarAvatar && user.name) {
+    const initials = user.name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || 'SF';
+    sidebarAvatar.textContent = initials;
+  }
+}
+
 function announceAuthentication(user) {
+  try {
+    if (user) localStorage.setItem('studyflow_user', JSON.stringify(user));
+  } catch {}
+  updateSidebarUserInfo(user);
   showApp();
   window.dispatchEvent(new CustomEvent('studyflow:authenticated', { detail: { user } }));
 }
@@ -92,6 +109,13 @@ async function bootstrap() {
     status.textContent = requestError.message;
   }
 }
+
+try {
+  const cachedUser = localStorage.getItem('studyflow_user');
+  if (cachedUser) {
+    updateSidebarUserInfo(JSON.parse(cachedUser));
+  }
+} catch {}
 
 setMode(mode);
 bootstrap();

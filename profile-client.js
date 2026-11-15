@@ -55,7 +55,37 @@ function toIsoDate(d) {
 }
 
 function getLocalDb(userId) {
-  const candidateKeys = userId ? [`studyflow-v1:${userId}`, 'studyflow-v1'] : ['studyflow-v1'];
+  if (typeof window.getStudyFlowDb === 'function') {
+    try {
+      const live = window.getStudyFlowDb();
+      if (live && typeof live === 'object') return live;
+    } catch {}
+  }
+
+  const candidateKeys = userId ? [`studyflow-v1:${userId}`, 'studyflow-v1'] : [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && (k === 'studyflow-v1' || k.startsWith('studyflow-v1:'))) {
+      if (!candidateKeys.includes(k)) candidateKeys.push(k);
+    }
+  }
+  if (!candidateKeys.includes('studyflow-v1')) candidateKeys.push('studyflow-v1');
+
+  for (const key of candidateKeys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          if ((parsed.tasks && parsed.tasks.length) || (parsed.subjects && parsed.subjects.length) || (parsed.mockTests && parsed.mockTests.length) || (parsed.skills && parsed.skills.length)) {
+            return parsed;
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // Fallback to first non-empty parse
   for (const key of candidateKeys) {
     try {
       const raw = localStorage.getItem(key);
@@ -65,6 +95,7 @@ function getLocalDb(userId) {
       }
     } catch {}
   }
+
   return {
     subjects: [],
     tasks: [],
@@ -96,9 +127,17 @@ function computeWeeklyFocus(db, pomodoroSessions) {
     const iso = toIsoDate(d);
 
     const dbMins = (db.focus && db.focus.minutes && db.focus.minutes[iso]) || 0;
-    const sessionMins = pomodoroSessions
-      .filter(s => s && s.completedAt && s.completedAt.slice(0, 10) === iso)
-      .reduce((sum, s) => sum + Math.round((s.durationSeconds || 0) / 60), 0);
+    const sessionMins = (pomodoroSessions || [])
+      .filter(s => {
+        if (!s) return false;
+        const dt = (s.endedAt || s.startedAt || s.completedAt || '')?.slice(0, 10);
+        const isPomo = s.mode === 'pomodoro' || s.type === 'pomodoro' || (!s.mode && !s.type);
+        return isPomo && dt === iso;
+      })
+      .reduce((sum, s) => {
+        const secs = s.durationSeconds || s.actualDurationSeconds || (s.duration ? s.duration * 60 : 0) || 0;
+        return sum + Math.round(secs / 60);
+      }, 0);
 
     const totalDayMins = Math.max(dbMins, sessionMins);
 
@@ -166,9 +205,9 @@ function computeMockTestAndMistakeAnalytics(mockTests, mistakes) {
   let bestScore = 0;
 
   tests.forEach(t => {
-    const got = Number(t.marksGot ?? t.score ?? 0);
-    const total = Number(t.marksTotal ?? t.totalMarks ?? 0);
-    if (total > 0) {
+    const got = Number(t.marks ?? t.marksGot ?? t.score ?? 0);
+    const total = Number(t.totalMarks ?? t.marksTotal ?? 100);
+    if (total > 0 && (t.marks !== undefined || t.marksGot !== undefined || t.score !== undefined)) {
       const pct = Math.round((got / total) * 100);
       totalScorePct += pct;
       scoredCount++;
@@ -179,7 +218,7 @@ function computeMockTestAndMistakeAnalytics(mockTests, mistakes) {
   const avgScore = scoredCount > 0 ? Math.round(totalScorePct / scoredCount) : null;
 
   const totalMistakes = errs.length;
-  const resolvedMistakes = errs.filter(m => m.resolved).length;
+  const resolvedMistakes = errs.filter(m => m.resolved === true || m.resolved === 'true' || m.resolved === 1).length;
   const resolutionRate = totalMistakes > 0 ? Math.round((resolvedMistakes / totalMistakes) * 100) : 0;
 
   const categoryColors = {
@@ -203,12 +242,17 @@ function computeMockTestAndMistakeAnalytics(mockTests, mistakes) {
   const topicCounts = {};
 
   errs.forEach(m => {
-    const type = m.type || 'Other';
-    if (categoryCounts[type] !== undefined) {
-      categoryCounts[type]++;
-    } else {
-      categoryCounts.Other++;
-    }
+    const rawType = String(m.mistakeType || m.type || 'Other');
+    let category = 'Other';
+    if (/concept/i.test(rawType)) category = 'Conceptual';
+    else if (/calc|numeric/i.test(rawType)) category = 'Calculation';
+    else if (/formula/i.test(rawType)) category = 'Formula';
+    else if (/misread|missed/i.test(rawType)) category = 'Misread';
+    else if (/time|rush/i.test(rawType)) category = 'Time Pressure';
+    else if (/silly|slip|bubble/i.test(rawType)) category = 'Other';
+    else if (categoryCounts[rawType] !== undefined) category = rawType;
+
+    categoryCounts[category]++;
 
     if (m.topic) {
       const topName = String(m.topic).trim();
@@ -688,7 +732,10 @@ async function loadProfile() {
 
   try {
     const account = await getJson('/me');
-    if (account && account.user) user = account.user;
+    if (account && account.user) {
+      user = account.user;
+      try { localStorage.setItem('studyflow_user', JSON.stringify(user)); } catch {}
+    }
   } catch {
     try {
       const stored = localStorage.getItem('studyflow_user');
@@ -707,6 +754,8 @@ async function loadProfile() {
   if (profileAvatar) profileAvatar.textContent = initials(user.name);
   if (sidebarName) sidebarName.textContent = user.name || 'Student Scholar';
   if (sidebarEmail) sidebarEmail.textContent = user.email || 'Active Workspace';
+  const sidebarAvatar = document.querySelector('#sidebar-profile .avatar');
+  if (sidebarAvatar) sidebarAvatar.textContent = initials(user.name);
 
   const localDb = getLocalDb(user.id);
   const pomodoroSessions = getPomodoroSessions();
@@ -720,7 +769,7 @@ async function loadProfile() {
   if (!streak) {
     try {
       const streakData = JSON.parse(localStorage.getItem('deeptick_streak_v1') || '{}');
-      streak = streakData.currentStreak || 0;
+      streak = streakData.currentStreak || streakData.streak || 0;
     } catch {}
   }
 
@@ -770,6 +819,8 @@ async function loadProfile() {
   });
 }
 
+window.loadStudyFlowProfile = loadProfile;
+
 if (refreshBtn) {
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
@@ -803,6 +854,14 @@ if (signOutBtn) {
 }
 
 window.addEventListener('studyflow:authenticated', loadProfile);
+window.addEventListener('studyflow:data-updated', () => {
+  if (document.getElementById('view-profile')?.classList.contains('active')) {
+    loadProfile();
+  }
+});
+window.addEventListener('studyflow:focus-recorded', () => {
+  loadProfile();
+});
 
 document.addEventListener('click', event => {
   if (event.target.closest('[data-view="profile"]') || event.target.closest('[data-go="profile"]')) {

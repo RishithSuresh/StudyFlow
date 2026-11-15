@@ -8,7 +8,12 @@ const starter=()=>({subjects:[],tasks:[],events:[],mistakes:[],mockTests:[],skil
 let storageKey=KEY,db;try{db={...starter(),...JSON.parse(localStorage.getItem(storageKey)||'{}')}}catch{db=starter()}
 db.mockTests = db.mockTests || [];
 db.mistakes = db.mistakes || [];
-const save=()=>{localStorage.setItem(storageKey,JSON.stringify(db));render()};
+const save=()=>{
+  localStorage.setItem(storageKey,JSON.stringify(db));
+  render();
+  window.dispatchEvent(new CustomEvent('studyflow:data-updated',{detail:{db}}));
+};
+window.getStudyFlowDb = () => db;
 window.getStudyFlowTasks = () => (db && db.tasks) ? db.tasks : [];
 window.addStudyFlowTask = (task) => { if(db){ db.tasks = db.tasks || []; db.tasks.push(task); save(); } };
 window.updateStudyFlowTask = (id, updates) => { if(db && db.tasks){ const t = db.tasks.find(x => x.id === id); if(t){ Object.assign(t, updates); save(); } } };
@@ -21,7 +26,20 @@ let currentView='overview',taskFilter='all',currentTaskScope='daily',taskSearchQ
 let activeMockTestId=null,testTab='tests',testSearchQuery='',testMistakeFilter='all',selectedPaperFile=null;
 function loadWorkspaceForUser(userId){storageKey=`${KEY}:${userId}`;try{db={...starter(),...JSON.parse(localStorage.getItem(storageKey)||'{}')}}catch{db=starter()}db.mockTests=db.mockTests||[];db.mistakes=db.mistakes||[];render()}
 window.addEventListener('studyflow:authenticated',event=>loadWorkspaceForUser(event.detail.user.id));
-function go(v){currentView=v;document.body.classList.toggle('focus-mode',v==='focus');document.body.classList.toggle('overview-view',v==='overview');$$('.view').forEach(x=>x.classList.toggle('active',x.id===`view-${v}`));$$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));let titles={overview:"Good morning. Let's make progress.",subjects:'Your subjects, your progress.',calendar:'Make time for what matters.',tasks:'Everything you need to get done.',reviews:'Turn mistakes into marks with test analysis.',focus:'A little focus goes a long way.',skills:'Build skills beyond the syllabus.',profile:'Performance analytics & scholar profile.'};$('#page-title').textContent=titles[v]||'StudyFlow — Study command centre';if(v!=='focus')document.title='StudyFlow — Study command centre';render()}
+function go(v){
+  currentView=v;
+  document.body.classList.toggle('focus-mode',v==='focus');
+  document.body.classList.toggle('overview-view',v==='overview');
+  $$('.view').forEach(x=>x.classList.toggle('active',x.id===`view-${v}`));
+  $$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
+  let titles={overview:"Good morning. Let's make progress.",subjects:'Your subjects, your progress.',calendar:'Make time for what matters.',tasks:'Everything you need to get done.',reviews:'Turn mistakes into marks with test analysis.',focus:'A little focus goes a long way.',skills:'Build skills beyond the syllabus.',profile:'Performance analytics & scholar profile.'};
+  $('#page-title').textContent=titles[v]||'StudyFlow — Study command centre';
+  if(v!=='focus')document.title='StudyFlow — Study command centre';
+  render();
+  if(v==='profile'&&typeof window.loadStudyFlowProfile==='function'){
+    window.loadStudyFlowProfile();
+  }
+}
 document.addEventListener('click',e=>{let b=e.target.closest('[data-view]');if(b)go(b.dataset.view)});
 document.addEventListener('click',e=>{let b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
 function progress(){let all=db.subjects.flatMap(s=>s.topics||[]),done=all.filter(t=>t.done).length;return {all:all.length,done,pct:all.length?Math.round(done/all.length*100):0}}
@@ -198,6 +216,7 @@ function renderCalendar(){
       d=new Date(y,m,day);
     }
     let iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const isSunday = d.getDay() === 0;
     
     // Day items
     let dayEvents=(db.events||[]).filter(e=>e.date===iso);
@@ -235,10 +254,10 @@ function renderCalendar(){
     }
 
     cells.push(`
-      <button type="button" class="day-cell ${other?'other':''} ${iso===todayISO()?'today':''} ${iso===selectedDate?'selected':''}" data-day="${iso}">
+      <button type="button" class="day-cell ${isSunday?'sunday':''} ${other?'other':''} ${iso===todayISO()?'today':''} ${iso===selectedDate?'selected':''}" data-day="${iso}">
         <div class="day-cell-top">
           <b class="day-cell-num">${d.getDate()}</b>
-          ${iso===todayISO()?'<span class="day-today-tag">TODAY</span>':''}
+          ${iso===todayISO()?'<span class="day-today-tag">TODAY</span>':(isSunday?'<span class="day-sun-tag">SUN</span>':'')}
         </div>
         ${badgesHtml}
       </button>
