@@ -184,11 +184,12 @@ app.get(['/api/workspace', '/workspace'], requireSession, async (req, res, next)
 
     // Ensure mock_tests from Neon DB table are merged into stateObj.mockTests
     const existingTestIds = new Set((stateObj.mockTests || []).map(t => t && String(t.id)).filter(Boolean));
+    const validTestClientIds = new Set(mockTests.rows.map(r => String(r.client_id || r.id)));
     for (const row of mockTests.rows) {
-      const testId = row.client_id || row.id;
-      if (!existingTestIds.has(String(testId))) {
+      const testId = String(row.client_id || row.id);
+      if (!existingTestIds.has(testId)) {
         stateObj.mockTests.push({
-          id: String(testId),
+          id: testId,
           name: row.name || 'Mock Test',
           marks: Number(row.score) || 0,
           totalMarks: 100,
@@ -198,18 +199,23 @@ app.get(['/api/workspace', '/workspace'], requireSession, async (req, res, next)
           hasPaper: false,
           createdAt: row.created_at ? row.created_at.toISOString() : new Date().toISOString()
         });
-        existingTestIds.add(String(testId));
+        existingTestIds.add(testId);
       }
     }
 
-    // Ensure mock_test_mistakes from Neon DB table are merged into stateObj.mistakes
+    // Ensure mock_test_mistakes from Neon DB table are merged into stateObj.mistakes only if their test exists
     const existingMistakeIds = new Set((stateObj.mistakes || []).map(m => m && String(m.id)).filter(Boolean));
     for (const row of mistakes.rows) {
-      const mistakeId = row.client_id || row.id;
-      if (!existingMistakeIds.has(String(mistakeId))) {
+      const mistakeId = String(row.client_id || row.id);
+      const testClientId = row.mock_test_client_id || (row.mock_test_id ? String(row.mock_test_id) : null);
+      // Skip orphaned mistakes from tests that were deleted
+      if (testClientId && !validTestClientIds.has(String(testClientId))) {
+        continue;
+      }
+      if (!existingMistakeIds.has(mistakeId)) {
         stateObj.mistakes.push({
-          id: String(mistakeId),
-          mockTestId: row.mock_test_client_id || (row.mock_test_id ? String(row.mock_test_id) : null),
+          id: mistakeId,
+          mockTestId: testClientId,
           test: row.test_name || '',
           subject: row.subject || '',
           questionNo: row.question_no || '',
@@ -230,7 +236,7 @@ app.get(['/api/workspace', '/workspace'], requireSession, async (req, res, next)
           source: row.source || 'excel_import',
           date: safeIsoDate(row.created_at)
         });
-        existingMistakeIds.add(String(mistakeId));
+        existingMistakeIds.add(mistakeId);
       }
     }
 
@@ -336,9 +342,11 @@ app.put(['/api/workspace', '/workspace'], requireSession, async (req, res, next)
       const mistakeIds = mistakes.map(mistake => mistake && String(mistake.id)).filter(Boolean);
       await client.query(
         `DELETE FROM mock_test_mistakes
-         WHERE user_id = $1 AND client_id IS NOT NULL
-           AND NOT (client_id = ANY($2::text[]))`,
-        [userId, mistakeIds]
+         WHERE user_id = $1 AND (
+           (client_id IS NOT NULL AND NOT (client_id = ANY($2::text[])))
+           OR (mock_test_client_id IS NOT NULL AND NOT (mock_test_client_id = ANY($3::text[])))
+         )`,
+        [userId, mistakeIds, testIds]
       );
       await client.query(
         `DELETE FROM mock_tests
@@ -544,6 +552,139 @@ app.post(['/api/mistakes/upload', '/mistakes/upload', '/api/mistakes', '/mistake
       test: savedTest,
       mistakes: savedMistakes
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete Entire Mock Test and its Mistakes
+app.delete(['/api/mistakes/test/:testId', '/mistakes/test/:testId'], requireSession, async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const { testId } = req.params;
+    if (!testId) {
+      res.status(400).json({ error: 'testId is required' });
+      return;
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        'DELETE FROM mock_test_mistakes WHERE user_id = $1 AND (mock_test_client_id = $2 OR mock_test_id::text = $2)',
+        [userId, String(testId)]
+      );
+      await client.query(
+        'DELETE FROM mock_tests WHERE user_id = $1 AND (client_id = $2 OR id::text = $2)',
+        [userId, String(testId)]
+      );
+
+      const settingsRes = await client.query('SELECT settings FROM user_settings WHERE user_id = $1', [userId]);
+      const currentSettings = settingsRes.rows[0]?.settings || {};
+      if (Array.isArray(currentSettings.mockTests)) {
+        currentSettings.mockTests = currentSettings.mockTests.filter(t => t && String(t.id) !== String(testId));
+      }
+      if (Array.isArray(currentSettings.mistakes)) {
+        currentSettings.mistakes = currentSettings.mistakes.filter(m => m && String(m.mockTestId) !== String(testId));
+      }
+
+      await client.query(
+        `INSERT INTO user_settings (user_id, settings, updated_at)
+         VALUES ($1, $2::jsonb, NOW())
+         ON CONFLICT (user_id)
+         DO UPDATE SET settings = EXCLUDED.settings, updated_at = NOW()`,
+        [userId, JSON.stringify(currentSettings)]
+      );
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    res.json({ ok: true, deletedTestId: testId });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete All Mistakes and Mock Tests for current user
+app.delete(['/api/mistakes/all', '/mistakes/all'], requireSession, async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM mock_test_mistakes WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM mock_tests WHERE user_id = $1', [userId]);
+
+      const settingsRes = await client.query('SELECT settings FROM user_settings WHERE user_id = $1', [userId]);
+      const currentSettings = settingsRes.rows[0]?.settings || {};
+      currentSettings.mockTests = [];
+      currentSettings.mistakes = [];
+
+      await client.query(
+        `INSERT INTO user_settings (user_id, settings, updated_at)
+         VALUES ($1, $2::jsonb, NOW())
+         ON CONFLICT (user_id)
+         DO UPDATE SET settings = EXCLUDED.settings, updated_at = NOW()`,
+        [userId, JSON.stringify(currentSettings)]
+      );
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete Single Mistake
+app.delete(['/api/mistakes/:id', '/mistakes/:id'], requireSession, async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ error: 'id is required' });
+      return;
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        'DELETE FROM mock_test_mistakes WHERE user_id = $1 AND (client_id = $2 OR id::text = $2)',
+        [userId, String(id)]
+      );
+
+      const settingsRes = await client.query('SELECT settings FROM user_settings WHERE user_id = $1', [userId]);
+      const currentSettings = settingsRes.rows[0]?.settings || {};
+      if (Array.isArray(currentSettings.mistakes)) {
+        currentSettings.mistakes = currentSettings.mistakes.filter(m => m && String(m.id) !== String(id));
+      }
+
+      await client.query(
+        `INSERT INTO user_settings (user_id, settings, updated_at)
+         VALUES ($1, $2::jsonb, NOW())
+         ON CONFLICT (user_id)
+         DO UPDATE SET settings = EXCLUDED.settings, updated_at = NOW()`,
+        [userId, JSON.stringify(currentSettings)]
+      );
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    res.json({ ok: true, deletedId: id });
   } catch (error) {
     next(error);
   }

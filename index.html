@@ -371,10 +371,13 @@
       </div>
 
       <div id="all-mistakes-container" style="display: none;">
-        <div class="filter-row">
-          <button class="filter active" data-review-filter="all">All mistakes</button>
-          <button class="filter" data-review-filter="unresolved">Needs review</button>
-          <button class="filter" data-review-filter="resolved">Resolved</button>
+        <div class="filter-row" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; gap: 8px;">
+            <button class="filter active" data-review-filter="all">All mistakes</button>
+            <button class="filter" data-review-filter="unresolved">Needs review</button>
+            <button class="filter" data-review-filter="resolved">Resolved</button>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-all-mistakes" style="color: #b91c1c; border-color: #fca5a5; background: #fff5f5;" title="Delete all mistakes from your account">🗑️ Clear all mistakes</button>
         </div>
         <div id="mistakes-list" class="mistake-list empty-state">No mistakes logged yet. Add your first mock-test
           review.</div>

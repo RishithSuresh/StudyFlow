@@ -46,7 +46,6 @@ let workspaceSyncPending=false;
 let workspaceDirty=false;
 let workspaceSyncErrorShown=false;
 function queueWorkspaceSync(){
-  if(!localStorage.getItem('studyflow_user'))return;
   workspaceSyncPending=true;
   clearTimeout(workspaceSyncTimer);
   workspaceSyncTimer=setTimeout(syncWorkspace,300);
@@ -120,35 +119,13 @@ async function loadWorkspaceForUser(userId){
     const userObj=userRaw?JSON.parse(userRaw):null;
     const globalObj=globalRaw?JSON.parse(globalRaw):null;
 
-    const candidateObjs = [];
-    if(userObj)candidateObjs.push(userObj);
-    if(globalObj)candidateObjs.push(globalObj);
-    for(let i=0;i<localStorage.length;i++){
-      const k=localStorage.key(i);
-      if(k&&k.startsWith('studyflow-v1')&&k!==storageKey&&k!==KEY){
-        try{
-          const parsed=JSON.parse(localStorage.getItem(k));
-          if(parsed&&typeof parsed==='object')candidateObjs.push(parsed);
-        }catch{}
-      }
-    }
-
-    const allTests=candidateObjs.flatMap(o=>o.mockTests||[]).filter((t,i,arr)=>t&&t.id&&arr.findIndex(x=>x.id===t.id)===i);
-    const allMistakes=candidateObjs.flatMap(o=>o.mistakes||[]).filter((m,i,arr)=>m&&m.id&&arr.findIndex(x=>x.id===m.id)===i);
-    const allSubjects=(userObj?.subjects?.length?userObj.subjects:globalObj?.subjects)||[];
-    const allTasks=candidateObjs.flatMap(o=>o.tasks||[]).filter((t,i,arr)=>t&&t.id&&arr.findIndex(x=>x.id===t.id)===i);
-    const allSkills=candidateObjs.flatMap(o=>o.skills||[]).filter((s,i,arr)=>s&&s.id&&arr.findIndex(x=>x.id===s.id)===i);
-
     localWorkspace={
       ...starter(),
       ...(globalObj||{}),
-      ...(userObj||{}),
-      subjects:allSubjects,
-      tasks:allTasks,
-      skills:allSkills,
-      mockTests:allTests,
-      mistakes:allMistakes
+      ...(userObj||{})
     };
+    localWorkspace.mockTests=userObj?.mockTests||globalObj?.mockTests||[];
+    localWorkspace.mistakes=userObj?.mistakes||globalObj?.mistakes||[];
   }catch(err){
     console.error('Error loading user workspace:',err);
     localWorkspace=db||starter();
@@ -201,11 +178,13 @@ async function loadWorkspaceForUser(userId){
       }));
     }
 
-    const serverHasWorkspaceData=serverState&&
-      Object.values(serverState).some(value=>Array.isArray(value)?value.length>0:value&&typeof value==='object'&&Object.keys(value).length>0);
-    if(!workspaceDirty&&serverHasWorkspaceData){
+    if(!workspaceDirty&&serverState&&typeof serverState==='object'){
       const mergedState={...starter(),...serverState};
-      ['subjects','tasks','events','mistakes','mockTests','skills'].forEach(collection=>{
+      // For mockTests and mistakes, serverState is authoritative (prevents resurrecting deleted tests/mistakes)
+      mergedState.mockTests=Array.isArray(serverState.mockTests)?serverState.mockTests:[];
+      mergedState.mistakes=Array.isArray(serverState.mistakes)?serverState.mistakes:[];
+
+      ['subjects','tasks','events','skills'].forEach(collection=>{
         const serverItems=Array.isArray(serverState[collection])?serverState[collection]:[];
         const localItems=Array.isArray(localWorkspace[collection])?localWorkspace[collection]:[];
         const serverIds=new Set(serverItems.map(item=>item&&item.id).filter(Boolean));
@@ -2132,18 +2111,41 @@ $('#btn-save-detail-pointers')?.addEventListener('click',()=>{
 });
 $('#btn-delete-current-test')?.addEventListener('click',async()=>{
   if(!activeMockTestId)return;
-  if(confirm('Are you sure you want to delete this mock test paper and its reviews?')){
+  if(confirm('Are you sure you want to delete this mock test paper and all its logged mistakes?')){
     const tid=activeMockTestId;
+    const testObj=db.mockTests.find(x=>x.id===tid);
+    const testName=testObj?.name;
     db.mockTests=db.mockTests.filter(x=>x.id!==tid);
+    db.mistakes=db.mistakes.filter(m=>m.mockTestId!==tid&&(!testName||m.test!==testName));
     await deletePaperFile(tid);
     $('#modal-test-detail').close();
     activeMockTestId=null;
     save();
-    toast('Mock test deleted.');
+    renderReviews();
+    fetch(`${API_BASE}/mistakes/test/${tid}`,{
+      method:'DELETE',
+      credentials:'include'
+    }).catch(e=>console.warn(e));
+    toast('Mock test paper and all its questions deleted.');
   }
 });
 
-// Modal close button listeners
+$('#btn-clear-all-mistakes')?.addEventListener('click',async()=>{
+  if(!db.mistakes||!db.mistakes.length){
+    toast('No logged mistakes to delete.');
+    return;
+  }
+  if(confirm(`Are you sure you want to delete all ${db.mistakes.length} logged mistakes from your account? This action cannot be undone.`)){
+    db.mistakes=[];
+    save();
+    renderReviews();
+    fetch(`${API_BASE}/mistakes/all`,{
+      method:'DELETE',
+      credentials:'include'
+    }).catch(e=>console.warn(e));
+    toast('All logged mistakes deleted.');
+  }
+});
 $$('[data-close-test-modal]').forEach(b=>b.onclick=()=>$('#modal-upload-test').close());
 $$('[data-close-detail-modal]').forEach(b=>b.onclick=()=>{$('#modal-test-detail').close();activeMockTestId=null;renderReviews();});
 $$('[data-close-mistake-modal]').forEach(b=>b.onclick=()=>$('#modal-log-mistake').close());
@@ -2194,12 +2196,20 @@ document.addEventListener('click',e=>{
   }
   if(b.dataset.deleteMockTest){
     e.stopPropagation();
-    if(confirm('Delete this mock test paper?')){
+    if(confirm('Delete this mock test paper and all its logged mistakes?')){
       const id=b.dataset.deleteMockTest;
+      const testObj=db.mockTests.find(x=>x.id===id);
+      const testName=testObj?.name;
       db.mockTests=db.mockTests.filter(t=>t.id!==id);
+      db.mistakes=db.mistakes.filter(m=>m.mockTestId!==id&&(!testName||m.test!==testName));
       deletePaperFile(id);
       save();
-      toast('Test deleted.');
+      renderReviews();
+      fetch(`${API_BASE}/mistakes/test/${id}`,{
+        method:'DELETE',
+        credentials:'include'
+      }).catch(e=>console.warn(e));
+      toast('Mock test paper and all its questions deleted.');
     }
   }
   if(b.dataset.viewPaper){
@@ -2215,8 +2225,14 @@ document.addEventListener('click',e=>{
   }
   if(b.dataset.deleteTestMistake){
     if(confirm('Delete this mistake record?')){
-      db.mistakes=db.mistakes.filter(m=>m.id!==b.dataset.deleteTestMistake);
+      const id=b.dataset.deleteTestMistake;
+      db.mistakes=db.mistakes.filter(m=>m.id!==id);
       save();
+      renderReviews();
+      fetch(`${API_BASE}/mistakes/${id}`,{
+        method:'DELETE',
+        credentials:'include'
+      }).catch(e=>console.warn(e));
       if(activeMockTestId)openMockTestDetail(activeMockTestId);
       toast('Mistake deleted & topic analytics updated.');
     }
@@ -2297,7 +2313,17 @@ document.addEventListener('click',e=>{
     renderCalendar();
   }
   if(b.dataset.editMistake)openMistakeModal(b.dataset.editMistake);
-  if(b.dataset.deleteMistake){db.mistakes=db.mistakes.filter(m=>m.id!==b.dataset.deleteMistake);save();toast('Mistake deleted.')}
+  if(b.dataset.deleteMistake){
+    const id=b.dataset.deleteMistake;
+    db.mistakes=db.mistakes.filter(m=>m.id!==id);
+    save();
+    renderReviews();
+    fetch(`${API_BASE}/mistakes/${id}`,{
+      method:'DELETE',
+      credentials:'include'
+    }).catch(e=>console.warn(e));
+    toast('Mistake deleted.');
+  }
   if(b.dataset.toggleMistake){let m=db.mistakes.find(x=>x.id===b.dataset.toggleMistake);if(m){m.resolved=!m.resolved;save()}}
   if(b.dataset.day){selectedDate=b.dataset.day;renderCalendar()}
   const scopeTab=b.dataset.taskScope?b:b.closest('[data-task-scope]');
