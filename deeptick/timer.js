@@ -9,21 +9,27 @@ import { notifier } from './notifications.js';
 
 function syncCompletedSessionToStudyFlow(durationSeconds) {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const mins = Math.max(1, Math.round(durationSeconds / 60));
 
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k === 'studyflow-v1' || k?.startsWith('studyflow-v1:')) {
-        try {
-          const raw = localStorage.getItem(k);
-          const sfDb = raw ? JSON.parse(raw) : { focus: { minutes: {}, sessions: 0 }, tasks: [] };
-          sfDb.focus = sfDb.focus || { minutes: {}, sessions: 0 };
-          sfDb.focus.minutes = sfDb.focus.minutes || {};
-          sfDb.focus.minutes[today] = (sfDb.focus.minutes[today] || 0) + mins;
-          sfDb.focus.sessions = (sfDb.focus.sessions || 0) + 1;
-          localStorage.setItem(k, JSON.stringify(sfDb));
-        } catch {}
+    // 1. If StudyFlow core helper exists, record focus directly to in-memory db & trigger save/sync
+    if (typeof window.recordStudyFlowFocus === 'function') {
+      window.recordStudyFlowFocus(mins, today);
+    } else {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k === 'studyflow-v1' || k?.startsWith('studyflow-v1:')) {
+          try {
+            const raw = localStorage.getItem(k);
+            const sfDb = raw ? JSON.parse(raw) : { focus: { minutes: {}, sessions: 0 }, tasks: [] };
+            sfDb.focus = sfDb.focus || { minutes: {}, sessions: 0 };
+            sfDb.focus.minutes = sfDb.focus.minutes || {};
+            sfDb.focus.minutes[today] = (sfDb.focus.minutes[today] || 0) + mins;
+            sfDb.focus.sessions = (sfDb.focus.sessions || 0) + 1;
+            localStorage.setItem(k, JSON.stringify(sfDb));
+          } catch {}
+        }
       }
     }
 
@@ -44,7 +50,10 @@ function syncCompletedSessionToStudyFlow(durationSeconds) {
 async function postSessionToServer(mode, durationSeconds, taskId) {
   try {
     const apiBase = window.STUDYFLOW_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api');
-    await fetch(`${apiBase}/study-sessions`, {
+    const activeTask = taskManager.getActiveTask();
+    const taskTitle = activeTask ? activeTask.title : null;
+
+    const res = await fetch(`${apiBase}/study-sessions`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -52,12 +61,18 @@ async function postSessionToServer(mode, durationSeconds, taskId) {
         mode,
         durationSeconds,
         taskId: taskId || null,
+        taskTitle,
         startedAt: new Date(Date.now() - durationSeconds * 1000).toISOString(),
         endedAt: new Date().toISOString(),
         completed: true
       })
     });
-  } catch {}
+    if (!res.ok) {
+      console.warn('Failed to record study session on server:', res.status, await res.text());
+    }
+  } catch (err) {
+    console.warn('postSessionToServer network error:', err);
+  }
 }
 
 class TimerEngine {

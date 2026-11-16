@@ -79,10 +79,23 @@ app.get(['/api/me', '/me'], requireSession, (req, res) => {
   res.json({ user: req.session.user, session: req.session.session });
 });
 
+function safeIsoDate(val) {
+  if (!val) return null;
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+    return val.slice(0, 10);
+  }
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return null;
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 app.get(['/api/statistics', '/statistics'], requireSession, async (req, res, next) => {
   try {
     const userId = req.session.user.id;
-    const [summary, focus, activeDates] = await Promise.all([
+    const [summary, focus, sessionDates, userSettingsRow, testDates] = await Promise.all([
       query(`
         SELECT
           (SELECT COUNT(*) FROM tasks WHERE user_id = $1) AS total_tasks,
@@ -110,50 +123,129 @@ app.get(['/api/statistics', '/statistics'], requireSession, async (req, res, nex
           AND completed = TRUE
           AND started_at >= NOW() - INTERVAL '365 days'
         ORDER BY study_date DESC
+      `, [userId]),
+      query(`SELECT settings FROM user_settings WHERE user_id = $1`, [userId]),
+      query(`
+        SELECT DISTINCT COALESCE(tested_at, created_at::date) AS test_date
+        FROM mock_tests
+        WHERE user_id = $1
       `, [userId])
     ]);
 
     const totals = summary.rows[0];
     const focusTotals = focus.rows[0];
-    const totalTasks = Number(totals.total_tasks);
-    const completedTasks = Number(totals.completed_tasks);
-    const activeDateSet = new Set(activeDates.rows.map(row => String(row.study_date).slice(0, 10)));
+    const userSettingsObj = (userSettingsRow.rows[0]?.settings && typeof userSettingsRow.rows[0].settings === 'object' && !Array.isArray(userSettingsRow.rows[0].settings))
+      ? userSettingsRow.rows[0].settings
+      : {};
+
+    const activeDateSet = new Set();
+
+    // 1. Study sessions from database
+    for (const row of sessionDates.rows) {
+      const d = safeIsoDate(row.study_date);
+      if (d) activeDateSet.add(d);
+    }
+
+    // 2. Mock tests from database
+    for (const row of testDates.rows) {
+      const d = safeIsoDate(row.test_date);
+      if (d) activeDateSet.add(d);
+    }
+
+    // 3. User settings: focus minutes
+    const focusMinutes = userSettingsObj.focus?.minutes || {};
+    for (const [dateStr, mins] of Object.entries(focusMinutes)) {
+      if (Number(mins) > 0) {
+        const d = safeIsoDate(dateStr);
+        if (d) activeDateSet.add(d);
+      }
+    }
+
+    // 4. User settings: completed tasks
+    const tasksInSettings = Array.isArray(userSettingsObj.tasks) ? userSettingsObj.tasks : [];
+    for (const t of tasksInSettings) {
+      if (t && (t.done || t.completed)) {
+        const d = safeIsoDate(t.completedAt) || safeIsoDate(t.due) || safeIsoDate(t.date);
+        if (d) activeDateSet.add(d);
+      }
+    }
+
+    // 5. User settings: mock tests
+    const testsInSettings = Array.isArray(userSettingsObj.mockTests) ? userSettingsObj.mockTests : [];
+    for (const t of testsInSettings) {
+      if (t) {
+        const d = safeIsoDate(t.date) || safeIsoDate(t.testedAt) || safeIsoDate(t.createdAt);
+        if (d) activeDateSet.add(d);
+      }
+    }
+
+    // Calculate daily consecutive streak
+    const formatDate = (date) => {
+      const y = date.getUTCFullYear();
+      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(date.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    const now = new Date();
+    const todayStr = formatDate(now);
+    const yesterday = new Date(now.getTime() - 86400000);
+    const yesterdayStr = formatDate(yesterday);
+
     let streak = 0;
-    const cursor = new Date();
-    if (!activeDateSet.has(cursor.toISOString().slice(0, 10))) {
-      cursor.setUTCDate(cursor.getUTCDate() - 1);
+    let cursor = null;
+
+    if (activeDateSet.has(todayStr)) {
+      cursor = new Date(now.getTime());
+    } else if (activeDateSet.has(yesterdayStr)) {
+      cursor = new Date(yesterday.getTime());
     }
-    while (activeDateSet.has(cursor.toISOString().slice(0, 10))) {
-      streak += 1;
-      cursor.setUTCDate(cursor.getUTCDate() - 1);
+
+    if (cursor) {
+      while (activeDateSet.has(formatDate(cursor))) {
+        streak += 1;
+        cursor.setUTCDate(cursor.getUTCDate() - 1);
+      }
     }
+
+    // Task counts: merge DB totals with userSettings totals if DB is empty
+    let totalTasks = Number(totals.total_tasks) || 0;
+    let completedTasks = Number(totals.completed_tasks) || 0;
+    let overdueTasks = Number(totals.overdue_tasks) || 0;
+
+    if (totalTasks === 0 && tasksInSettings.length > 0) {
+      totalTasks = tasksInSettings.length;
+      completedTasks = tasksInSettings.filter(t => t.done || t.completed).length;
+      overdueTasks = tasksInSettings.filter(t => !t.done && !t.completed && t.due && t.due < todayStr).length;
+    }
+
+    // Focus totals: merge DB totals with settings focus
+    const settingsFocusMinutes = Object.values(focusMinutes).reduce((acc, m) => acc + (Number(m) || 0), 0);
+    const dbFocusMinutes = Math.round((Number(focusTotals.focus_seconds) || 0) / 60);
+    const totalMinutes = Math.max(dbFocusMinutes, settingsFocusMinutes);
 
     res.json({
       tasks: {
         total: totalTasks,
         completed: completedTasks,
-        overdue: Number(totals.overdue_tasks),
+        overdue: overdueTasks,
         completionRate: totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0
       },
       focus: {
-        completedSessions: Number(focusTotals.completed_sessions),
-        totalMinutes: Math.round(Number(focusTotals.focus_seconds) / 60),
-        weeklyMinutes: Math.round(Number(focusTotals.weekly_focus_seconds) / 60)
+        completedSessions: Math.max(Number(focusTotals.completed_sessions) || 0, Number(userSettingsObj.focus?.sessions) || 0),
+        totalMinutes,
+        weeklyMinutes: Math.max(Math.round((Number(focusTotals.weekly_focus_seconds) || 0) / 60), totalMinutes)
       },
       streak,
-      subjects: Number(totals.total_subjects),
-      skills: Number(totals.total_skills)
+      activeDays: activeDateSet.size,
+      activeDates: Array.from(activeDateSet).sort().reverse(),
+      subjects: Number(totals.total_subjects) || (userSettingsObj.subjects?.length || 0),
+      skills: Number(totals.total_skills) || (userSettingsObj.skills?.length || 0)
     });
   } catch (error) {
     next(error);
   }
 });
-
-function safeIsoDate(val) {
-  if (!val) return null;
-  const d = new Date(val);
-  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
-}
 
 app.get(['/api/workspace', '/workspace'], requireSession, async (req, res, next) => {
   try {
@@ -937,21 +1029,68 @@ app.delete(['/api/papers/:testId', '/papers/:testId'], requireSession, async (re
 app.post('/api/study-sessions', requireSession, async (req, res, next) => {
   try {
     const userId = req.session.user.id;
-    const { mode, durationSeconds, taskId, startedAt, endedAt, completed } = req.body;
+    const { mode, durationSeconds, taskId, taskTitle, startedAt, endedAt, completed } = req.body;
+    
+    // Check if taskId is a valid UUID and exists in tasks table
+    let validTaskId = null;
+    let clientTaskId = null;
+    if (taskId) {
+      clientTaskId = String(taskId);
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(clientTaskId)) {
+        const taskCheck = await query('SELECT id FROM tasks WHERE id = $1 AND user_id = $2', [clientTaskId, userId]);
+        if (taskCheck.rows.length > 0) {
+          validTaskId = clientTaskId;
+        }
+      }
+    }
+
+    const sessionDuration = Number(durationSeconds) || 0;
+    const isCompleted = completed !== undefined ? Boolean(completed) : true;
+    const sessionStartedAt = startedAt || new Date().toISOString();
+    const sessionEndedAt = endedAt || new Date().toISOString();
+
     const result = await query(
-      `INSERT INTO study_sessions (user_id, task_id, mode, started_at, ended_at, duration_seconds, completed)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO study_sessions (
+         user_id, task_id, task_client_id, task_title, mode, started_at, ended_at, duration_seconds, completed
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         userId,
-        taskId || null,
+        validTaskId,
+        clientTaskId,
+        taskTitle ? String(taskTitle).slice(0, 255) : null,
         mode || 'pomodoro',
-        startedAt || new Date().toISOString(),
-        endedAt || new Date().toISOString(),
-        Number(durationSeconds) || 0,
-        completed !== undefined ? Boolean(completed) : true
+        sessionStartedAt,
+        sessionEndedAt,
+        sessionDuration,
+        isCompleted
       ]
     );
+
+    // Sync focus minutes directly into user_settings table
+    if (isCompleted && sessionDuration > 0) {
+      try {
+        const sessionDate = safeIsoDate(sessionStartedAt) || new Date().toISOString().slice(0, 10);
+        const mins = Math.max(1, Math.round(sessionDuration / 60));
+        const settingsRow = await query('SELECT settings FROM user_settings WHERE user_id = $1', [userId]);
+        if (settingsRow.rows.length > 0) {
+          const currentSettings = settingsRow.rows[0].settings || {};
+          currentSettings.focus = currentSettings.focus || { minutes: {}, sessions: 0 };
+          currentSettings.focus.minutes = currentSettings.focus.minutes || {};
+          currentSettings.focus.minutes[sessionDate] = (currentSettings.focus.minutes[sessionDate] || 0) + mins;
+          currentSettings.focus.sessions = (currentSettings.focus.sessions || 0) + 1;
+          await query(
+            'UPDATE user_settings SET settings = $1::jsonb, updated_at = NOW() WHERE user_id = $2',
+            [JSON.stringify(currentSettings), userId]
+          );
+        }
+      } catch (syncErr) {
+        console.warn('Failed to update user_settings focus from study-session:', syncErr);
+      }
+    }
+
     res.status(201).json({ session: result.rows[0] });
   } catch (error) {
     next(error);

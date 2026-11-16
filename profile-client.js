@@ -765,12 +765,14 @@ async function loadProfile() {
   const subjectStats = computeSubjectProgress(localDb.subjects);
   const mistakeStats = computeMockTestAndMistakeAnalytics(localDb.mockTests, localDb.mistakes);
 
-  let streak = serverStats?.streak ?? 0;
-  if (!streak) {
+  let streak = (typeof serverStats?.streak === 'number') ? serverStats.streak : null;
+  if (streak === null || streak === undefined) {
     try {
       const streakData = JSON.parse(localStorage.getItem('deeptick_streak_v1') || '{}');
-      streak = streakData.currentStreak || streakData.streak || 0;
-    } catch {}
+      streak = (typeof streakData.currentStreak === 'number') ? streakData.currentStreak : (streakData.streak || 0);
+    } catch {
+      streak = 0;
+    }
   }
 
   const { healthScore, scholarTier } = computeHealthAndTier(taskStats, focusData.totalWeeklyMinutes, streak, mistakeStats);
@@ -861,6 +863,11 @@ window.addEventListener('studyflow:data-updated', () => {
 });
 window.addEventListener('studyflow:focus-recorded', () => {
   loadProfile();
+});
+window.addEventListener('studyflow:streak-updated', () => {
+  if (document.getElementById('view-profile')?.classList.contains('active')) {
+    loadProfile();
+  }
 });
 
 document.addEventListener('click', event => {

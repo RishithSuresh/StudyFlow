@@ -97,6 +97,128 @@ window.getStudyFlowTasks = () => (db && db.tasks) ? db.tasks : [];
 window.addStudyFlowTask = (task) => { if(db){ db.tasks = db.tasks || []; db.tasks.push(task); save(); } };
 window.updateStudyFlowTask = (id, updates) => { if(db && db.tasks){ const t = db.tasks.find(x => x.id === id); if(t){ Object.assign(t, updates); save(); } } };
 window.deleteStudyFlowTask = (id) => { if(db && db.tasks){ db.tasks = db.tasks.filter(x => x.id !== id); save(); } };
+
+function computeLocalStreak(targetDb) {
+  const currentDb = targetDb || db;
+  const activeDates = new Set();
+
+  if (currentDb?.focus?.minutes) {
+    for (const [d, mins] of Object.entries(currentDb.focus.minutes)) {
+      if (Number(mins) > 0) activeDates.add(String(d).slice(0, 10));
+    }
+  }
+  if (Array.isArray(currentDb?.tasks)) {
+    for (const t of currentDb.tasks) {
+      if (t && (t.done || t.completed)) {
+        const d = t.completedAt || t.due || t.date;
+        if (d) activeDates.add(String(d).slice(0, 10));
+      }
+    }
+  }
+  if (Array.isArray(currentDb?.mockTests)) {
+    for (const t of currentDb.mockTests) {
+      if (t) {
+        const d = t.date || t.testedAt || t.createdAt;
+        if (d) activeDates.add(String(d).slice(0, 10));
+      }
+    }
+  }
+  try {
+    const rawSessions = localStorage.getItem('deeptick_sessions_v1');
+    if (rawSessions) {
+      const sessList = JSON.parse(rawSessions);
+      if (Array.isArray(sessList)) {
+        for (const s of sessList) {
+          if (s.completed && s.startedAt) activeDates.add(String(s.startedAt).slice(0, 10));
+        }
+      }
+    }
+  } catch {}
+
+  const toIso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const now = new Date();
+  const todayStr = toIso(now);
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = toIso(yesterday);
+
+  let streak = 0;
+  let cursor = null;
+  if (activeDates.has(todayStr)) {
+    cursor = new Date(now);
+  } else if (activeDates.has(yesterdayStr)) {
+    cursor = new Date(yesterday);
+  }
+
+  if (cursor) {
+    while (activeDates.has(toIso(cursor))) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+  }
+  return { streak, activeDates: Array.from(activeDates) };
+}
+
+let cachedStreakVal = null;
+
+function updateStreakUI(explicitStreak) {
+  let streak = explicitStreak;
+  if (typeof streak !== 'number') {
+    const computed = computeLocalStreak(db);
+    streak = computed.streak;
+  }
+  cachedStreakVal = streak;
+
+  const headerStreak = document.getElementById('header-streak-count');
+  if (headerStreak) {
+    headerStreak.textContent = `${streak}d Streak`;
+  }
+  const analyticsStreak = document.getElementById('analytics-streak-val');
+  if (analyticsStreak) {
+    analyticsStreak.textContent = `${streak}d`;
+  }
+
+  try {
+    const streakRecord = JSON.parse(localStorage.getItem('deeptick_streak_v1') || '{}');
+    streakRecord.currentStreak = streak;
+    streakRecord.lastActiveDate = todayISO();
+    localStorage.setItem('deeptick_streak_v1', JSON.stringify(streakRecord));
+  } catch {}
+
+  window.dispatchEvent(new CustomEvent('studyflow:streak-updated', { detail: { streak } }));
+}
+
+async function refreshStreakFromServer() {
+  try {
+    const res = await fetch(`${API_BASE}/statistics`, { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      if (typeof data.streak === 'number') {
+        updateStreakUI(data.streak);
+        return;
+      }
+    }
+  } catch {}
+  updateStreakUI();
+}
+
+window.recordStudyFlowFocus = (minutes, date) => {
+  if (!db) return;
+  db.focus = db.focus || { minutes: {}, sessions: 0 };
+  db.focus.minutes = db.focus.minutes || {};
+  const d = date || todayISO();
+  db.focus.minutes[d] = (db.focus.minutes[d] || 0) + Number(minutes);
+  db.focus.sessions = (db.focus.sessions || 0) + 1;
+  save();
+  updateStreakUI();
+  window.dispatchEvent(new CustomEvent('studyflow:activity-logged', { detail: { date: d } }));
+};
+
+window.logStudyFlowActivity = (dateStr) => {
+  const d = dateStr || todayISO();
+  updateStreakUI();
+  window.dispatchEvent(new CustomEvent('studyflow:activity-logged', { detail: { date: d } }));
+};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=d=>{
@@ -245,6 +367,7 @@ async function loadWorkspaceForUser(userId){
   db.mockTests=db.mockTests||[];
   db.mistakes=db.mistakes||[];
   render();
+  refreshStreakFromServer();
   window.dispatchEvent(new CustomEvent('studyflow:data-updated',{detail:{db}}));
 }
 window.addEventListener('studyflow:authenticated',event=>loadWorkspaceForUser(event.detail.user.id));
@@ -1760,7 +1883,7 @@ async function handleAutoExcelUpload(file,customTargetTestId=null){
     toast('Failed to read spreadsheet. Please ensure it is a valid .xlsx or .csv file with question columns.');
   }
 }
-function render(){renderOverview();renderSubjects();renderSkills();renderTasks();renderCalendar();renderReviews()}
+function render(){renderOverview();renderSubjects();renderSkills();renderTasks();renderCalendar();renderReviews();updateStreakUI()}
 function field(label,name,type='text',value='',extra=''){return `<div class="field"><label>${label}</label><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></div>`}
 function selectField(label,name,options,value=''){return `<div class="field"><label>${label}</label><select name="${name}">${options.map(o=>`<option ${o[0]===value?'selected':''} value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></div>`}
 function area(label,name,value=''){return `<div class="field"><label>${label}</label><textarea name="${name}">${esc(value)}</textarea></div>`}
@@ -2118,56 +2241,6 @@ $('#btn-import-excel-for-test')?.addEventListener('click',()=>{
   openExcelImportModal(activeMockTestId);
 });
 $('#btn-download-excel-template')?.addEventListener('click',downloadSampleExcelTemplate);
-$('#btn-download-sample-template')?.addEventListener('click',downloadSampleExcelTemplate);
-
-// Direct Header Upload Button & Hidden Input
-const directExcelBtn=$('#btn-upload-excel-direct');
-const directExcelInput=$('#excel-direct-file-input');
-if(directExcelBtn&&directExcelInput){
-  directExcelBtn.onclick=()=>directExcelInput.click();
-  directExcelInput.onchange=()=>{
-    const file=directExcelInput.files?.[0];
-    if(file){
-      handleAutoExcelUpload(file);
-      directExcelInput.value='';
-    }
-  };
-}
-
-// Quick Drag & Drop Banner in Reviews View
-const quickDropzone=$('#excel-quick-dropzone');
-if(quickDropzone&&directExcelInput){
-  quickDropzone.onclick=e=>{
-    if(e.target.closest('#btn-download-sample-template'))return;
-    directExcelInput.click();
-  };
-  quickDropzone.onkeydown=e=>{
-    if(e.key==='Enter'||e.key===' '){
-      e.preventDefault();
-      directExcelInput.click();
-    }
-  };
-  ['dragenter','dragover'].forEach(evt=>{
-    quickDropzone.addEventListener(evt,e=>{
-      e.preventDefault();
-      e.stopPropagation();
-      quickDropzone.style.background='#ccfbf1';
-      quickDropzone.style.borderColor='#0d9488';
-    });
-  });
-  ['dragleave','drop'].forEach(evt=>{
-    quickDropzone.addEventListener(evt,e=>{
-      e.preventDefault();
-      e.stopPropagation();
-      quickDropzone.style.background='#f0fdfa';
-      quickDropzone.style.borderColor='#0f766e';
-    });
-  });
-  quickDropzone.addEventListener('drop',e=>{
-    const file=e.dataTransfer?.files?.[0];
-    if(file)handleAutoExcelUpload(file);
-  });
-}
 
 // Modal Excel Dropzone setup
 const excelDropzone=$('#excel-dropzone');
@@ -2521,7 +2594,40 @@ document.addEventListener('click',e=>{
     renderTasks();
   }
 });
-document.addEventListener('change',e=>{let el=e.target;if(el.dataset.taskCheck){let t=db.tasks.find(x=>x.id===el.dataset.taskCheck);t.done=el.checked;save()}if(el.dataset.topic){let [sid,i]=el.dataset.topic.split(':');db.subjects.find(s=>s.id===sid).topics[+i].done=el.checked;save()}if(el.dataset.skillMilestone){let [sid,i]=el.dataset.skillMilestone.split(':');let skill=db.skills.find(s=>s.id===sid);skill.milestones[+i].done=el.checked;if(skill.milestones.length&&skill.milestones.every(m=>m.done))skill.status='Completed';else if(el.checked&&skill.status==='Not started')skill.status='Learning';save()}});
+document.addEventListener('change',e=>{
+  let el=e.target;
+  if(el.dataset.taskCheck){
+    let t=db.tasks.find(x=>x.id===el.dataset.taskCheck);
+    if(t){
+      t.done=el.checked;
+      if(el.checked){
+        t.completedAt=new Date().toISOString();
+        window.logStudyFlowActivity(todayISO());
+      }
+      save();
+    }
+  }
+  if(el.dataset.topic){
+    let [sid,i]=el.dataset.topic.split(':');
+    let sub=db.subjects.find(s=>s.id===sid);
+    if(sub&&sub.topics&&sub.topics[+i]){
+      sub.topics[+i].done=el.checked;
+      if(el.checked) window.logStudyFlowActivity(todayISO());
+      save();
+    }
+  }
+  if(el.dataset.skillMilestone){
+    let [sid,i]=el.dataset.skillMilestone.split(':');
+    let skill=db.skills.find(s=>s.id===sid);
+    if(skill&&skill.milestones&&skill.milestones[+i]){
+      skill.milestones[+i].done=el.checked;
+      if(skill.milestones.length&&skill.milestones.every(m=>m.done))skill.status='Completed';
+      else if(el.checked&&skill.status==='Not started')skill.status='Learning';
+      if(el.checked) window.logStudyFlowActivity(todayISO());
+      save();
+    }
+  }
+});
 $$('[data-filter]').forEach(b=>b.onclick=()=>{taskFilter=b.dataset.filter;$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));renderTasks()});
 $$('[data-review-filter]').forEach(b=>b.onclick=()=>{reviewFilter=b.dataset.reviewFilter;$$('[data-review-filter]').forEach(x=>x.classList.toggle('active',x===b));renderReviews()});
 $('#prev-month').onclick=()=>{calDate.setMonth(calDate.getMonth()-1);renderCalendar()};$('#next-month').onclick=()=>{calDate.setMonth(calDate.getMonth()+1);renderCalendar()};$('#today-btn').onclick=()=>{calDate=new Date();selectedDate=todayISO();renderCalendar()};
@@ -2530,3 +2636,4 @@ function checkReminders(){if(!('Notification'in window)||Notification.permission
 setInterval(checkReminders,30000);
 $('#today-date').textContent=new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});$('#today-label').textContent=new Date().getHours()<12?'GOOD MORNING':'YOUR STUDY SPACE';
 render();
+refreshStreakFromServer();
