@@ -56,11 +56,21 @@ async function syncWorkspace(){
   workspaceSyncPending=false;
   workspaceSyncInFlight=true;
   try{
+    const cleanDb = {
+      ...db,
+      mockTests: (db.mockTests || []).map(t => {
+        if (t && t.thumbnail && t.thumbnail.length > 2000) {
+          const { thumbnail, ...rest } = t;
+          return { ...rest, thumbnail: null };
+        }
+        return t;
+      })
+    };
     const response=await fetch(`${API_BASE}/workspace`,{
       method:'PUT',
       credentials:'include',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({state:db})
+      body:JSON.stringify({state:cleanDb})
     });
     if(!response.ok){
       const payload=await response.json().catch(()=>({}));
@@ -73,7 +83,7 @@ async function syncWorkspace(){
     workspaceSyncPending=true;
     if(!workspaceSyncErrorShown&&typeof toast==='function'){
       workspaceSyncErrorShown=true;
-      toast('Saved on this device. Server sync failed; please check your connection.');
+      toast('Saved locally. Database sync failed; please check your connection.');
     }
   }finally{
     workspaceSyncInFlight=false;
@@ -90,7 +100,12 @@ window.updateStudyFlowTask = (id, updates) => { if(db && db.tasks){ const t = db
 window.deleteStudyFlowTask = (id) => { if(db && db.tasks){ db.tasks = db.tasks.filter(x => x.id !== id); save(); } };
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+const fmt=d=>{
+  if(!d)return '';
+  const str=String(d).trim();
+  const dateObj=str.includes('T')?new Date(str):new Date(str+'T12:00:00');
+  return isNaN(dateObj.getTime())?str:dateObj.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+};
 const toast=m=>{let t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
 let currentView='overview',taskFilter='all',currentTaskScope='daily',taskSearchQuery='',reviewFilter='all',calDate=new Date(),selectedDate=todayISO(),calFilter='all',modalAction=null;
 let activeMockTestId=null,testTab='tests',testSearchQuery='',testMistakeFilter='all',selectedPaperFile=null;
@@ -146,8 +161,43 @@ async function loadWorkspaceForUser(userId){
     const response=await fetch(`${API_BASE}/workspace`,{credentials:'include'});
     if(!response.ok)throw new Error(`Workspace request failed with status ${response.status}.`);
     const payload=await response.json();
-    const serverState=payload.state;
-    const serverHasWorkspaceData=serverState&&typeof serverState==='object'&&!Array.isArray(serverState)&&
+    const serverState=(payload.state&&typeof payload.state==='object'&&!Array.isArray(payload.state))?payload.state:{};
+    if (Array.isArray(payload.mockTests)&&payload.mockTests.length&&(!serverState.mockTests||!serverState.mockTests.length)){
+      serverState.mockTests=payload.mockTests.map(r=>({
+        id:String(r.client_id||r.id),
+        name:r.name||'Mock Test',
+        marks:Number(r.score)||0,
+        totalMarks:100,
+        date:r.tested_at?String(r.tested_at).slice(0,10):null,
+        description:r.notes||'',
+        pointers:r.notes||'',
+        hasPaper:false,
+        createdAt:r.created_at?String(r.created_at):todayISO()
+      }));
+    }
+    if (Array.isArray(payload.mistakes)&&payload.mistakes.length&&(!serverState.mistakes||!serverState.mistakes.length)){
+      serverState.mistakes=payload.mistakes.map(r=>({
+        id:String(r.client_id||r.id),
+        mockTestId:r.mock_test_client_id||(r.mock_test_id?String(r.mock_test_id):null),
+        test:r.test_name||'',
+        subject:r.subject||'',
+        questionNo:r.question_no||'',
+        userAnswer:r.user_answer||'',
+        correctAnswer:r.correct_answer||'',
+        topic:r.topic||'General',
+        error:r.error||'',
+        correction:r.correction||'',
+        pointers:r.pointers||'',
+        marksLost:Number(r.marks_lost)||0,
+        isBlank:Boolean(r.is_blank),
+        mistakeType:r.mistake_type||'Conceptual misunderstanding',
+        resolved:Boolean(r.resolved),
+        source:r.source||'excel_import',
+        date:r.created_at?String(r.created_at).slice(0,10):todayISO()
+      }));
+    }
+
+    const serverHasWorkspaceData=serverState&&
       Object.values(serverState).some(value=>Array.isArray(value)?value.length>0:value&&typeof value==='object'&&Object.keys(value).length>0);
     if(!workspaceDirty&&serverHasWorkspaceData){
       const mergedState={...starter(),...serverState};
@@ -840,8 +890,15 @@ function renderReviews(){
           <b>${m.questionNo?`[${esc(m.questionNo)}] `:''}${esc(m.topic)} <span class="tag">${esc(m.subject||'General')}</span></b>
           <span class="tag ${m.resolved?'':'urgent'}">${m.resolved?'Resolved':'Needs review'}</span>
         </div>
-        <p><b>What went wrong:</b> ${esc(m.error)}<br><b>Correct concept / pointer:</b> ${esc(m.correction||'Not added yet')}</p>
-        <div class="mistake-meta">${esc(m.test||(db.mockTests.find(x=>x.id===m.mockTestId)?.name)||'Mock test')} · ${m.date?fmt(m.date):''} ${m.marksLost?` · <b style="color:#9b3323">-${m.marksLost} marks</b>`:''}</div>
+        ${m.isBlank ? `<span class="tag" style="background:#f1f5f9;color:#475569;margin:2px 0 6px;display:inline-block;">⚪ Blank / Unattempted</span>` : (m.mistakeType ? `<span class="tag" style="margin:2px 0 6px;display:inline-block;">${esc(m.mistakeType)}</span>` : '')}
+        ${(m.userAnswer || m.correctAnswer) ? `
+          <div style="font-size:12px; margin: 4px 0;">
+            ${m.userAnswer ? `<span>Your Ans: <b style="color:${m.isBlank ? '#64748b' : '#b91c1c'};">${esc(m.userAnswer)}</b></span>` : ''}
+            ${m.correctAnswer ? `<span> · Correct: <b style="color:#15803d;">${esc(m.correctAnswer)}</b></span>` : ''}
+          </div>
+        ` : ''}
+        <p style="margin:4px 0;"><b>What went wrong:</b> ${esc(m.error)}<br><b>Correct concept / pointer:</b> ${esc(m.correction||'Not added yet')}</p>
+        <div class="mistake-meta">${esc(m.test||(db.mockTests.find(x=>x.id===m.mockTestId)?.name)||'Mock test')} · ${m.date?fmt(m.date):''}${m.marksLost?` · <b style="color:#9b3323">-${m.marksLost} marks</b>`:''}${m.source==='excel_import'?' · via Excel':''}</div>
         <div class="row-actions" style="margin-top:8px">
           <button class="text-btn" data-toggle-mistake="${m.id}">${m.resolved?'Reopen':'Mark resolved'}</button>
           <button class="text-btn" data-edit-mistake="${m.id}">Edit</button>
@@ -1336,19 +1393,19 @@ function mapExcelColumns(headers){
   const map={};
   headers.forEach(h=>{
     const k=normalizeExcelHeader(h);
-    if(!map.qNo&&(k.startsWith('qno')||k.startsWith('qnum')||k==='q'||k.startsWith('question')||k==='no')){
+    if(!map.qNo&&(k.startsWith('qno')||k.startsWith('qnum')||k==='q'||k.startsWith('question')||k==='no'||k.startsWith('sno')||k.startsWith('srno')||k.startsWith('slno')||k==='item')){
       map.qNo=h;
-    }else if(!map.yourAnswer&&(k.includes('your')||k.includes('my')||k.includes('student')||k.includes('marked')||k.includes('user')||k==='response'||k.includes('youranswer'))){
+    }else if(!map.yourAnswer&&(k.includes('your')||k.includes('my')||k.includes('student')||k.includes('marked')||k.includes('user')||k==='response'||k.includes('youranswer')||k.includes('given')||k.includes('selected')||k.includes('attempted'))){
       map.yourAnswer=h;
-    }else if(!map.correctAnswer&&(k.includes('correct')||k.includes('key')||k.includes('official')||k.includes('status')||k.includes('actual'))){
+    }else if(!map.correctAnswer&&(k.includes('correct')||k.includes('key')||k.includes('official')||k.includes('status')||k.includes('actual')||k.includes('right')||k.includes('expected')||k.includes('answerkey'))){
       map.correctAnswer=h;
-    }else if(!map.topic&&(k.includes('topic')||k.includes('concept')||k.includes('chapter')||k.includes('subject')||k.includes('module'))){
+    }else if(!map.topic&&(k.includes('topic')||k.includes('concept')||k.includes('chapter')||k.includes('subject')||k.includes('module')||k.includes('unit')||k.includes('subtopic')||k.includes('category')||k.includes('tag'))){
       map.topic=h;
-    }else if(!map.why&&(k.includes('why')||k.includes('reason')||k.includes('error')||k.includes('cause')||k.includes('mistake')||k.includes('correctionneeds')||k.includes('explanation'))){
+    }else if(!map.why&&(k.includes('why')||k.includes('reason')||k.includes('error')||k.includes('cause')||k.includes('mistake')||k.includes('correctionneeds')||k.includes('explanation')||k.includes('remark')||k.includes('analysis')||k.includes('whatwentwrong'))){
       map.why=h;
-    }else if(!map.action&&(k.includes('action')||k.includes('revision')||k.includes('pointer')||k.includes('fix')||k.includes('remedy')||k.includes('solution')||k.includes('takeaway'))){
+    }else if(!map.action&&(k.includes('action')||k.includes('revision')||k.includes('pointer')||k.includes('fix')||k.includes('remedy')||k.includes('solution')||k.includes('takeaway')||k.includes('solutionpointer')||k.includes('howtosolve'))){
       map.action=h;
-    }else if(!map.marks&&(k.includes('mark')||k.includes('score')||k.includes('point')||k.includes('loss')||k.includes('weight')||k.includes('negative'))){
+    }else if(!map.marks&&(k.includes('mark')||k.includes('score')||k.includes('point')||k.includes('loss')||k.includes('weight')||k.includes('negative')||k.includes('markslost')||k.includes('penalty'))){
       map.marks=h;
     }
   });
@@ -1575,14 +1632,15 @@ function executeExcelImport(){
     targetTestId=uid();
     const fileName=$('#excel-selected-filename')?.textContent||'Mock Test';
     const cleanName=fileName.replace(/\.[^/.]+$/,'')||'Mock Test Review';
+    const totalMarksLost=parsedExcelRows.reduce((sum,r)=>sum+(Number(r.marksLost)||0),0);
     targetTest={
       id:targetTestId,
       name:cleanName,
-      marks:0,
+      marks:Math.max(0,Math.round((100-totalMarksLost)*100)/100),
       totalMarks:100,
       subject:parsedExcelRows[0]?.topic||'General',
       date:todayISO(),
-      description:'Created automatically via Excel question import',
+      description:`Imported from spreadsheet (${parsedExcelRows.length} questions analysed)`,
       pointers:'',
       hasPaper:false,
       createdAt:new Date().toISOString()
@@ -1624,6 +1682,7 @@ function executeExcelImport(){
   toast(`🎉 Imported ${parsedExcelRows.length} questions (${mistakeCount} mistakes, ${blankCount} blanks)! Topic analytics updated.`);
 
   activeMockTestId=targetTestId;
+  go('reviews');
   openMockTestDetail(targetTestId);
 }
 function render(){renderOverview();renderSubjects();renderSkills();renderTasks();renderCalendar();renderReviews()}

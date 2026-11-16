@@ -9,11 +9,23 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 
 app.use(cors({
-  origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (
+      !origin ||
+      origin.includes('localhost') ||
+      origin.endsWith('.vercel.app') ||
+      (process.env.FRONTEND_ORIGIN && origin === process.env.FRONTEND_ORIGIN) ||
+      (process.env.BETTER_AUTH_URL && origin === process.env.BETTER_AUTH_URL)
+    ) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
   credentials: true
 }));
 app.all('/api/auth/*splat', toNodeHandler(auth));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 async function requireSession(req, res, next) {
   try {
@@ -31,7 +43,7 @@ async function requireSession(req, res, next) {
   }
 }
 
-app.get('/api/health', async (_req, res, next) => {
+app.get(['/api/health', '/health'], async (_req, res, next) => {
   try {
     await query('SELECT 1');
     res.json({ ok: true });
@@ -40,11 +52,11 @@ app.get('/api/health', async (_req, res, next) => {
   }
 });
 
-app.get('/api/me', requireSession, (req, res) => {
+app.get(['/api/me', '/me'], requireSession, (req, res) => {
   res.json({ user: req.session.user, session: req.session.session });
 });
 
-app.get('/api/statistics', requireSession, async (req, res, next) => {
+app.get(['/api/statistics', '/statistics'], requireSession, async (req, res, next) => {
   try {
     const userId = req.session.user.id;
     const [summary, focus, activeDates] = await Promise.all([
@@ -114,33 +126,104 @@ app.get('/api/statistics', requireSession, async (req, res, next) => {
   }
 });
 
-app.get('/api/workspace', requireSession, async (req, res, next) => {
+function safeIsoDate(val) {
+  if (!val) return null;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+app.get(['/api/workspace', '/workspace'], requireSession, async (req, res, next) => {
   try {
     const userId = req.session.user.id;
-    const [tasks, subjects, skills, events, mistakes, sessions, settings] = await Promise.all([
+    const [tasks, subjects, skills, events, mockTests, mistakes, sessions, settings] = await Promise.all([
       query('SELECT * FROM tasks WHERE user_id = $1 ORDER BY due_at NULLS LAST, created_at DESC', [userId]),
       query('SELECT * FROM academic_subjects WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
       query('SELECT * FROM skills WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
       query('SELECT * FROM calendar_events WHERE user_id = $1 ORDER BY starts_at', [userId]),
+      query('SELECT * FROM mock_tests WHERE user_id = $1 ORDER BY tested_at DESC NULLS LAST, created_at DESC', [userId]),
       query('SELECT * FROM mock_test_mistakes WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
       query('SELECT * FROM study_sessions WHERE user_id = $1 ORDER BY started_at DESC LIMIT 100', [userId]),
       query('SELECT settings FROM user_settings WHERE user_id = $1', [userId])
     ]);
+
+    const userSettingsObj = (settings.rows[0]?.settings && typeof settings.rows[0].settings === 'object' && !Array.isArray(settings.rows[0].settings))
+      ? settings.rows[0].settings
+      : {};
+
+    const stateObj = {
+      subjects: userSettingsObj.subjects || [],
+      tasks: userSettingsObj.tasks || [],
+      skills: userSettingsObj.skills || [],
+      events: userSettingsObj.events || [],
+      focus: userSettingsObj.focus || { minutes: {}, sessions: 0 },
+      mockTests: userSettingsObj.mockTests || [],
+      mistakes: userSettingsObj.mistakes || []
+    };
+
+    // Ensure mock_tests from Neon DB table are merged into stateObj.mockTests
+    const existingTestIds = new Set((stateObj.mockTests || []).map(t => t && String(t.id)).filter(Boolean));
+    for (const row of mockTests.rows) {
+      const testId = row.client_id || row.id;
+      if (!existingTestIds.has(String(testId))) {
+        stateObj.mockTests.push({
+          id: String(testId),
+          name: row.name || 'Mock Test',
+          marks: Number(row.score) || 0,
+          totalMarks: 100,
+          date: safeIsoDate(row.tested_at) || safeIsoDate(row.created_at),
+          description: row.notes || '',
+          pointers: row.notes || '',
+          hasPaper: false,
+          createdAt: row.created_at ? row.created_at.toISOString() : new Date().toISOString()
+        });
+        existingTestIds.add(String(testId));
+      }
+    }
+
+    // Ensure mock_test_mistakes from Neon DB table are merged into stateObj.mistakes
+    const existingMistakeIds = new Set((stateObj.mistakes || []).map(m => m && String(m.id)).filter(Boolean));
+    for (const row of mistakes.rows) {
+      const mistakeId = row.client_id || row.id;
+      if (!existingMistakeIds.has(String(mistakeId))) {
+        stateObj.mistakes.push({
+          id: String(mistakeId),
+          mockTestId: row.mock_test_client_id || (row.mock_test_id ? String(row.mock_test_id) : null),
+          test: row.test_name || '',
+          subject: row.subject || '',
+          questionNo: row.question_no || '',
+          userAnswer: row.user_answer || '',
+          correctAnswer: row.correct_answer || '',
+          topic: row.topic || 'General',
+          error: row.error || '',
+          correction: row.correction || '',
+          pointers: row.pointers || '',
+          marksLost: Number(row.marks_lost) || 0,
+          isBlank: Boolean(row.is_blank),
+          mistakeType: row.mistake_type || 'Conceptual misunderstanding',
+          resolved: Boolean(row.resolved),
+          source: row.source || 'excel_import',
+          date: safeIsoDate(row.created_at)
+        });
+        existingMistakeIds.add(String(mistakeId));
+      }
+    }
+
     res.json({
       tasks: tasks.rows,
       subjects: subjects.rows,
       skills: skills.rows,
       events: events.rows,
+      mockTests: mockTests.rows,
       mistakes: mistakes.rows,
       sessions: sessions.rows,
-      state: settings.rows[0]?.settings || null
+      state: stateObj
     });
   } catch (error) {
     next(error);
   }
 });
 
-app.put('/api/workspace', requireSession, async (req, res, next) => {
+app.put(['/api/workspace', '/workspace'], requireSession, async (req, res, next) => {
   try {
     const state = req.body?.state;
     if (!state || typeof state !== 'object' || Array.isArray(state)) {
@@ -155,6 +238,8 @@ app.put('/api/workspace', requireSession, async (req, res, next) => {
     try {
       await client.query('BEGIN');
       for (const test of mockTests) {
+        if (!test || !test.id) continue;
+        const testDate = safeIsoDate(test.date) || safeIsoDate(test.createdAt);
         await client.query(
           `INSERT INTO mock_tests (user_id, client_id, name, tested_at, score, notes)
            VALUES ($1, $2, $3, $4, $5, $6)
@@ -165,14 +250,15 @@ app.put('/api/workspace', requireSession, async (req, res, next) => {
             userId,
             String(test.id),
             String(test.name || 'Mock Test'),
-            test.date || null,
-            Number(test.marks) || 0,
+            testDate,
+            parseFloat(test.marks) || 0,
             test.description || test.pointers || null
           ]
         );
       }
 
       for (const mistake of mistakes) {
+        if (!mistake || !mistake.id) continue;
         await client.query(
           `INSERT INTO mock_test_mistakes (
              user_id, client_id, mock_test_client_id, topic, subject, error, correction,
@@ -200,7 +286,7 @@ app.put('/api/workspace', requireSession, async (req, res, next) => {
             mistake.questionNo || null,
             mistake.userAnswer || null,
             mistake.correctAnswer || null,
-            Number(mistake.marksLost) || 0,
+            parseFloat(mistake.marksLost) || 0,
             Boolean(mistake.isBlank),
             mistake.mistakeType || null,
             mistake.pointers || null,
@@ -210,8 +296,8 @@ app.put('/api/workspace', requireSession, async (req, res, next) => {
         );
       }
 
-      const testIds = mockTests.map(test => String(test.id));
-      const mistakeIds = mistakes.map(mistake => String(mistake.id));
+      const testIds = mockTests.map(test => test && String(test.id)).filter(Boolean);
+      const mistakeIds = mistakes.map(mistake => mistake && String(mistake.id)).filter(Boolean);
       await client.query(
         `DELETE FROM mock_test_mistakes
          WHERE user_id = $1 AND client_id IS NOT NULL
@@ -238,7 +324,7 @@ app.put('/api/workspace', requireSession, async (req, res, next) => {
     } finally {
       client.release();
     }
-    res.json({ ok: true });
+    res.json({ ok: true, count: mistakes.length });
   } catch (error) {
     next(error);
   }

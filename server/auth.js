@@ -16,6 +16,15 @@ const database = new Pool({
     : { rejectUnauthorized: false }
 });
 
+const configuredOrigins = [
+  process.env.FRONTEND_ORIGIN,
+  process.env.BETTER_AUTH_URL,
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null,
+  'http://localhost:5173',
+  'http://localhost:3000'
+].filter(Boolean);
+
 export const auth = betterAuth({
   database,
   baseURL: process.env.BETTER_AUTH_URL,
@@ -24,5 +33,8 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: false
   },
-  trustedOrigins: [process.env.FRONTEND_ORIGIN || 'http://localhost:5173']
+  trustedOrigins: [
+    ...configuredOrigins,
+    (origin) => !origin || origin.endsWith('.vercel.app') || origin.includes('localhost')
+  ]
 });
