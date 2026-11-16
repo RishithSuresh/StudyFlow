@@ -1,547 +1,704 @@
 <!doctype html>
-<html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#24324A"><title>StudyFlow — Study command centre</title><link rel="stylesheet" href="styles.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-</head><body class="overview-view auth-pending">
-<section id="auth-gate" class="auth-gate" aria-labelledby="auth-title">
-  <div class="auth-card">
-    <div class="auth-brand"><span class="brand-mark">s.</span><span>studyflow<small>YOUR PRIVATE STUDY SPACE</small></span></div>
-    <div class="auth-eyebrow">WELCOME TO STUDYFLOW</div>
-    <h1 id="auth-title">Make space for your progress.</h1>
-    <p class="auth-intro">Create a private workspace for your subjects, tasks and focus sessions.</p>
-    <div class="auth-tabs" role="tablist">
-      <button type="button" class="auth-tab active" data-auth-mode="signin" role="tab">Sign in</button>
-      <button type="button" class="auth-tab" data-auth-mode="signup" role="tab">Create account</button>
-    </div>
-    <form id="auth-form" class="auth-form">
-      <label id="auth-name-field" hidden>Name<input id="auth-name" name="name" autocomplete="name"></label>
-      <label>Email<input id="auth-email" name="email" type="email" autocomplete="email" required></label>
-      <label>Password<input id="auth-password" name="password" type="password" minlength="8" autocomplete="current-password" required></label>
-      <p id="auth-error" class="auth-error" role="alert" hidden></p>
-      <button class="primary-btn auth-submit" type="submit">Sign in</button>
-    </form>
-    <p class="auth-status" id="auth-status">Your data is private to your account.</p>
-  </div>
-</section>
-<aside class="sidebar">
-  <a class="brand" href="#"><span class="brand-mark">s.</span><span>studyflow<small>YOUR STUDY SPACE</small></span></a>
-  <div class="side-label">WORKSPACE</div>
-  <nav id="nav">
-    <button class="nav-item active" data-view="overview">◫ <span>Overview</span></button>
-    <button class="nav-item" data-view="subjects">▤ <span>GATE & academic syllabus</span></button>
-    <button class="nav-item" data-view="skills">✳ <span>Extra skills</span></button>
-    <button class="nav-item" data-view="calendar">▦ <span>Calendar</span></button>
-    <button class="nav-item" data-view="tasks">☑ <span>Tasks & deadlines</span></button>
-    <button class="nav-item" data-view="reviews">↗ <span>Mock tests & review</span></button>
-    <button class="nav-item" data-view="focus">◷ <span>Focus timer</span></button>
-  </nav>
-  <div class="sidebar-bottom"><div class="mini-note"><span>✳</span><b>Small steps add up.</b><p>Plan less. Finish more. Keep showing up.</p></div><button id="sidebar-profile" class="profile" type="button" data-view="profile"><div class="avatar">SF</div><div><b id="sidebar-user-name">My workspace</b><small id="sidebar-user-email">Private workspace</small></div></button></div>
-</aside>
-<main class="main">
-<header class="topbar"><div><div class="eyebrow" id="today-label">YOUR STUDY SPACE</div><h1 id="page-title">Good morning. Let's make progress.</h1></div><div class="top-actions"><span class="date-pill" id="today-date"></span><button class="icon-btn" id="notify-btn" title="Enable browser reminders">♧</button><button class="primary-btn" id="quick-add">＋ Add task</button></div></header>
-<section id="view-overview" class="view active">
+<html lang="en">
 
-  <div class="hero-row"><div class="hero-card"><div class="eyebrow light">YOUR PROGRESS, AT A GLANCE</div><h2>Make today<br>count.</h2><p>One clear next step is better than a perfect plan.</p><button class="light-btn" data-go="focus">Start a focus session ↗</button><div class="orb o1"></div><div class="orb o2"></div></div>
-  <div class="progress-card"><div class="card-head"><div><div class="eyebrow">OVERALL SYLLABUS</div><h3 id="overall-percent">0% complete</h3></div><span class="ring-icon">◌</span></div><div class="progress-track large"><span id="overall-bar"></span></div><div class="progress-foot"><span id="topic-count">0 of 0 topics completed</span><span class="muted">Across all subjects</span></div><div class="divider"></div><div class="stat-grid"><div><strong id="task-open">0</strong><small>Open tasks</small></div><div><strong id="task-due">0</strong><small>Due this week</small></div><div><strong id="focus-today">0</strong><small>Focus minutes today</small></div></div></div></div>
-  <div class="section-heading"><div><div class="eyebrow">STAY ON TRACK</div><h2>Today's priorities</h2></div><div class="heading-actions-cluster"><button type="button" class="btn-page-guide" data-open-guide="overview" title="How Overview Works">ℹ️ How it works</button><button class="text-btn" data-go="tasks">View all tasks ↗</button></div></div>
-  <div class="two-col"><div class="panel"><div class="panel-title"><h3>Next up</h3><span class="subtle">Your upcoming work</span></div><div id="today-tasks" class="task-list empty-state">No tasks yet. Add one to get started.</div></div><div class="panel"><div class="panel-title"><h3>Upcoming deadlines</h3><button class="text-btn" data-go="calendar">Calendar ↗</button></div><div id="upcoming-list" class="upcoming-list empty-state">Nothing scheduled yet.</div></div></div>
-  <div class="section-heading"><div><div class="eyebrow">GATE & ACADEMICS</div><h2>Subject progress</h2></div><button class="text-btn" data-go="subjects">Manage syllabus ↗</button></div><div id="subject-overview" class="subject-grid"></div>
-</section>
-<section id="view-subjects" class="view">
-  <div class="section-heading">
-    <div>
-      <div class="eyebrow">LEARN WITH CLARITY</div>
-      <h2>GATE & academic syllabus</h2>
-      <p class="muted">Keep GATE subjects and college subjects organised, with topic-by-topic progress.</p>
-    </div>
-    <div class="heading-actions-cluster">
-      <button type="button" class="btn-page-guide" data-open-guide="subjects">ℹ️ How it works</button>
-      <button class="primary-btn" id="add-subject">＋ Add subject</button>
-    </div>
-  </div>
-  <div id="subjects-list" class="subject-list"></div>
-</section>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#24324A">
+  <title>StudyFlow — Study command centre</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+</head>
 
-<section id="view-skills" class="view">
-  <div class="section-heading">
-    <div>
-      <div class="eyebrow">GROW BEYOND THE SYLLABUS</div>
-      <h2>Extra skills</h2>
-      <p class="muted">Track the skills you want to build alongside college. Link learning resources and log milestones as you master key concepts.</p>
+<body class="overview-view auth-pending">
+  <section id="auth-gate" class="auth-gate" aria-labelledby="auth-title">
+    <div class="auth-card">
+      <div class="auth-brand"><span class="brand-mark">s.</span><span>studyflow<small>YOUR PRIVATE STUDY
+            SPACE</small></span></div>
+      <div class="auth-eyebrow">WELCOME TO STUDYFLOW</div>
+      <h1 id="auth-title">Make space for your progress.</h1>
+      <p class="auth-intro">Create a private workspace for your subjects, tasks and focus sessions.</p>
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab active" data-auth-mode="signin" role="tab">Sign in</button>
+        <button type="button" class="auth-tab" data-auth-mode="signup" role="tab">Create account</button>
+      </div>
+      <form id="auth-form" class="auth-form">
+        <label id="auth-name-field" hidden>Name<input id="auth-name" name="name" autocomplete="name"></label>
+        <label>Email<input id="auth-email" name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input id="auth-password" name="password" type="password" minlength="8"
+            autocomplete="current-password" required></label>
+        <p id="auth-error" class="auth-error" role="alert" hidden></p>
+        <button class="primary-btn auth-submit" type="submit">Sign in</button>
+      </form>
+      <p class="auth-status" id="auth-status">Your data is private to your account.</p>
     </div>
-    <div class="heading-actions-cluster">
-      <button type="button" class="btn-page-guide" data-open-guide="skills">ℹ️ How it works</button>
-      <button class="primary-btn" id="add-skill">＋ Add skill</button>
+  </section>
+  <aside class="sidebar">
+    <a class="brand" href="#"><span class="brand-mark">s.</span><span>studyflow<small>YOUR STUDY
+          SPACE</small></span></a>
+    <div class="side-label">WORKSPACE</div>
+    <nav id="nav">
+      <button class="nav-item active" data-view="overview">◫ <span>Overview</span></button>
+      <button class="nav-item" data-view="subjects">▤ <span>GATE & academic syllabus</span></button>
+      <button class="nav-item" data-view="skills">✳ <span>Extra skills</span></button>
+      <button class="nav-item" data-view="calendar">▦ <span>Calendar</span></button>
+      <button class="nav-item" data-view="tasks">☑ <span>Tasks & deadlines</span></button>
+      <button class="nav-item" data-view="reviews">↗ <span>Mock tests & review</span></button>
+      <button class="nav-item" data-view="focus">◷ <span>Focus timer</span></button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="mini-note"><span>✳</span><b>Small steps add up.</b>
+        <p>Plan less. Finish more. Keep showing up.</p>
+      </div><button id="sidebar-profile" class="profile" type="button" data-view="profile">
+        <div class="avatar">SF</div>
+        <div><b id="sidebar-user-name">My workspace</b><small id="sidebar-user-email">Private workspace</small></div>
+      </button>
     </div>
-  </div>
-  <div class="skill-summary" id="skill-summary"></div>
-  <div class="skill-grid" id="skills-list"></div>
-</section>
-
-<section id="view-tasks" class="view">
-  <div class="section-heading">
-    <div>
-      <div class="eyebrow">TASK EXECUTION & TIME MANAGEMENT</div>
-      <h2>Tasks & Daily Flow</h2>
-      <p class="muted">Organize daily study commitments alongside long-term project milestones and deadlines.</p>
-    </div>
-    <div class="heading-actions-cluster">
-      <button type="button" class="btn-page-guide" data-open-guide="tasks">ℹ️ How it works</button>
-      <button class="primary-btn" id="add-daily-task" type="button">＋ Add daily task</button>
-      <button class="secondary-btn" id="add-overall-task" type="button">＋ Add overall task</button>
-    </div>
-  </div>
-
-  <!-- Scope Segmented Tabs -->
-  <div class="tasks-scope-nav">
-    <button class="scope-tab active" data-task-scope="daily" type="button">
-      <span class="scope-tab-icon">☀️</span>
-      <span class="scope-tab-label">Daily Tasks</span>
-      <span class="scope-tab-badge" id="badge-count-daily">0</span>
-    </button>
-    <button class="scope-tab" data-task-scope="overall" type="button">
-      <span class="scope-tab-icon">📋</span>
-      <span class="scope-tab-label">Overall Tasks</span>
-      <span class="scope-tab-badge" id="badge-count-overall">0</span>
-    </button>
-    <button class="scope-tab" data-task-scope="all" type="button">
-      <span class="scope-tab-icon">📑</span>
-      <span class="scope-tab-label">All Tasks</span>
-      <span class="scope-tab-badge" id="badge-count-all">0</span>
-    </button>
-  </div>
-
-  <!-- Status Filters & Progress Bar -->
-  <div class="tasks-control-strip">
-    <div class="filter-row" style="margin:0;">
-      <button class="filter active" data-filter="all" type="button">All Status</button>
-      <button class="filter" data-filter="open" type="button">Open</button>
-      <button class="filter" data-filter="done" type="button">Completed</button>
-      <button class="filter" data-filter="missed" id="filter-missed-btn" type="button">⚠️ Carried Over</button>
-    </div>
-    <div class="tasks-quick-progress" id="tasks-quick-progress"></div>
-  </div>
-
-  <!-- Missed / Carried-Forward Alert Callout -->
-  <div id="tasks-rollover-banner" class="rollover-alert-banner" hidden>
-    <div class="rollover-alert-content">
-      <span class="rollover-alert-icon">⚠️</span>
+  </aside>
+  <main class="main">
+    <header class="topbar">
       <div>
-        <strong id="rollover-alert-title">Missed Daily Tasks Carried Forward</strong>
-        <p id="rollover-alert-desc">Uncompleted daily tasks from past days have been automatically moved to today's schedule with a missed remark.</p>
+        <div class="eyebrow" id="today-label">YOUR STUDY SPACE</div>
+        <h1 id="page-title">Good morning. Let's make progress.</h1>
       </div>
-    </div>
-    <button class="tiny-btn" id="btn-filter-carried-over" type="button">View carried over</button>
-  </div>
+      <div class="top-actions"><span class="date-pill" id="today-date"></span><button class="icon-btn" id="notify-btn"
+          title="Enable browser reminders">♧</button><button class="primary-btn" id="quick-add">＋ Add task</button>
+      </div>
+    </header>
+    <section id="view-overview" class="view active">
 
-  <!-- Main Tasks Panel -->
-  <div class="panel tasks-panel">
-    <div id="tasks-list" class="task-list empty-state">No tasks in this view.</div>
-  </div>
-</section>
-<section id="view-calendar" class="view">
-  <div class="section-heading">
-    <div>
-      <div class="eyebrow">PLAN YOUR SCHEDULE</div>
-      <h2>Study Calendar &amp; Deadlines</h2>
-      <p class="muted">Track your exams, classes, milestones, and task deadlines all in one interactive view.</p>
-    </div>
-    <div class="heading-actions-cluster">
-      <button type="button" class="btn-page-guide" data-open-guide="calendar">ℹ️ How it works</button>
-      <button class="primary-btn" id="calendar-add">＋ Add Event</button>
-      <button class="secondary-btn" id="calendar-add-task">＋ Add Deadline</button>
-    </div>
-  </div>
-
-  <!-- Calendar Month Highlights Bar -->
-  <div class="calendar-highlights-bar" id="calendar-highlights">
-    <div class="cal-stat-card">
-      <div class="cal-stat-icon">📅</div>
-      <div class="cal-stat-info">
-        <span class="cal-stat-val" id="cal-stat-events">0</span>
-        <span class="cal-stat-lbl">Events This Month</span>
-      </div>
-    </div>
-    <div class="cal-stat-card">
-      <div class="cal-stat-icon">🟠</div>
-      <div class="cal-stat-info">
-        <span class="cal-stat-val" id="cal-stat-deadlines">0</span>
-        <span class="cal-stat-lbl">Overall Deadlines</span>
-      </div>
-    </div>
-    <div class="cal-stat-card">
-      <div class="cal-stat-icon">☀️</div>
-      <div class="cal-stat-info">
-        <span class="cal-stat-val" id="cal-stat-daily">0</span>
-        <span class="cal-stat-lbl">Daily Tasks Due</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="calendar-layout">
-    <div class="panel calendar-panel">
-      <div class="calendar-head">
-        <div class="cal-nav-group">
-          <button class="icon-btn" id="prev-month" title="Previous Month">←</button>
-          <h3 id="month-label"></h3>
-          <button class="icon-btn" id="next-month" title="Next Month">→</button>
-          <button class="text-btn" id="today-btn">Today</button>
+      <div class="hero-row">
+        <div class="hero-card">
+          <div class="eyebrow light">YOUR PROGRESS, AT A GLANCE</div>
+          <h2>Make today<br>count.</h2>
+          <p>One clear next step is better than a perfect plan.</p><button class="light-btn" data-go="focus">Start a
+            focus session ↗</button>
+          <div class="orb o1"></div>
+          <div class="orb o2"></div>
         </div>
-        <div class="cal-filter-group" role="tablist">
-          <button type="button" class="cal-filter-chip active" data-cal-filter="all">All</button>
-          <button type="button" class="cal-filter-chip" data-cal-filter="events">📅 Events</button>
-          <button type="button" class="cal-filter-chip" data-cal-filter="deadlines">🟠 Deadlines</button>
-        </div>
-      </div>
-      <div class="weekdays">
-        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span class="sun-header">Sun</span>
-      </div>
-      <div id="calendar-grid" class="calendar-grid"></div>
-    </div>
-
-    <div class="panel day-panel">
-      <div class="day-panel-head">
-        <div>
-          <div class="eyebrow">SELECTED DAY AGENDA</div>
-          <h3 id="selected-date-label"></h3>
-        </div>
-        <div class="day-panel-actions">
-          <button class="btn btn-secondary btn-sm" id="selected-add" title="Add event on this date">＋ Event</button>
-          <button class="btn btn-secondary btn-sm" id="selected-add-task" title="Add deadline on this date">＋ Task</button>
-        </div>
-      </div>
-      <div id="day-events" class="day-events-container">
-        <!-- Events & deadlines rendered dynamically -->
-      </div>
-    </div>
-  </div>
-</section>
-<section id="view-reviews" class="view">
-  <div class="section-heading">
-    <div>
-      <div class="eyebrow">LEARN FROM EVERY ATTEMPT</div>
-      <h2>Mock tests & paper reviews</h2>
-      <p class="muted">Upload your test papers (PDF or image), track marks, log question mistakes, and automatically uncover your weakest topics.</p>
-    </div>
-    <div class="heading-actions-cluster">
-      <button type="button" class="btn-page-guide" data-open-guide="reviews">ℹ️ How it works</button>
-      <button class="primary-btn" id="upload-test-btn">＋ Upload test paper</button>
-      <button class="secondary-btn" id="add-mistake">＋ Quick mistake</button>
-    </div>
-  </div>
-
-  <div class="review-stats" id="mock-test-stats">
-    <div class="review-stat"><strong id="stat-total-tests">0</strong><small>Tests attempted</small></div>
-    <div class="review-stat"><strong id="stat-avg-score">0%</strong><small>Average marks</small></div>
-    <div class="review-stat"><strong id="stat-weakest-topic">—</strong><small>Overall weakest topic</small></div>
-    <div class="review-stat"><strong id="stat-total-mistakes">0</strong><small>Mistakes logged</small></div>
-  </div>
-
-  <div class="test-view-header">
-    <div class="filter-row">
-      <button class="filter active" data-test-tab="tests">Test papers (<span id="test-tab-count">0</span>)</button>
-      <button class="filter" data-test-tab="all-mistakes">All logged mistakes (<span id="mistake-tab-count">0</span>)</button>
-    </div>
-    <div class="test-search-wrap">
-      <input type="text" id="test-search-input" placeholder="Search tests or topics…" class="test-search-box">
-    </div>
-  </div>
-
-  <div id="mock-tests-container">
-    <div id="mock-tests-grid" class="mock-tests-grid"></div>
-  </div>
-
-  <div id="all-mistakes-container" style="display: none;">
-    <div class="filter-row">
-      <button class="filter active" data-review-filter="all">All mistakes</button>
-      <button class="filter" data-review-filter="unresolved">Needs review</button>
-      <button class="filter" data-review-filter="resolved">Resolved</button>
-    </div>
-    <div id="mistakes-list" class="mistake-list empty-state">No mistakes logged yet. Add your first mock-test review.</div>
-  </div>
-</section>
-<section id="view-profile" class="view">
-  <div class="section-heading">
-    <div>
-      <div class="eyebrow">COMPREHENSIVE PERFORMANCE DASHBOARD</div>
-      <h2>Study Analytics & Profile</h2>
-      <p class="muted">Track your study velocity, examine weekly graphs, uncover weak spots, and get data-driven recommendations.</p>
-    </div>
-    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-      <button type="button" class="btn-page-guide" data-open-guide="profile">ℹ️ How it works</button>
-      <button id="profile-refresh-btn" class="secondary-btn" type="button">↻ Refresh data</button>
-      <button id="profile-sign-out" class="secondary-btn" type="button">Sign out</button>
-    </div>
-  </div>
-
-  <!-- User Identity Card with Health Score & Badges -->
-  <div class="profile-identity panel">
-    <div class="profile-identity-main">
-      <div class="profile-avatar avatar" id="profile-avatar">SF</div>
-      <div>
-        <h3 id="profile-name">Loading profile…</h3>
-        <p id="profile-email" class="muted">Loading account details…</p>
-      </div>
-    </div>
-    <div class="profile-badges-cluster" id="profile-badges-cluster">
-      <!-- Dynamic badges: Streak, Scholar Level, Study Health Score -->
-    </div>
-  </div>
-
-  <!-- High-Impact Statistical KPI Grid -->
-  <div class="profile-section-title">
-    <div>
-      <div class="eyebrow">REAL-TIME PERFORMANCE METRICS</div>
-      <h3>Study Velocity & KPI Summary</h3>
-    </div>
-  </div>
-  <div id="profile-stats" class="profile-stats-grid">
-    <div class="panel empty-state">Loading your statistics…</div>
-  </div>
-
-  <!-- Visual Graphs Row 1: Weekly Focus Chart & Syllabus Mastery -->
-  <div class="profile-graphs-container">
-    <!-- Chart 1: 7-Day Focus Time Bar Chart -->
-    <div class="panel profile-graph-panel">
-      <div class="graph-panel-head">
-        <div>
-          <div class="eyebrow">LAST 7 DAYS FOCUS</div>
-          <h3>Weekly Focus Activity</h3>
-        </div>
-        <span class="graph-legend-badge">Daily Target: 60m</span>
-      </div>
-      <div id="profile-weekly-barchart" class="profile-barchart-wrap">
-        <!-- Injected dynamically -->
-      </div>
-      <div id="profile-weekly-summary" class="graph-summary-strip"></div>
-    </div>
-
-    <!-- Chart 2: Subject Syllabus Coverage -->
-    <div class="panel profile-graph-panel">
-      <div class="graph-panel-head">
-        <div>
-          <div class="eyebrow">SYLLABUS PROGRESS</div>
-          <h3>Subject Mastery Breakdown</h3>
-        </div>
-        <span id="profile-syllabus-total-badge" class="graph-legend-badge">0% Complete</span>
-      </div>
-      <div id="profile-subject-breakdown" class="profile-subject-bars-list">
-        <!-- Injected dynamically -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Visual Graphs Row 2: Mock Test Mistake Distribution & Task Pipeline -->
-  <div class="profile-graphs-container">
-    <!-- Chart 3: Mock Test Mistake Category Distribution -->
-    <div class="panel profile-graph-panel">
-      <div class="graph-panel-head">
-        <div>
-          <div class="eyebrow">MOCK TEST DIAGNOSTICS</div>
-          <h3>Where You Drop Marks (Mistake Types)</h3>
-        </div>
-        <span id="profile-mistake-total-badge" class="graph-legend-badge">0 Mistakes</span>
-      </div>
-      <div id="profile-mistake-breakdown" class="profile-mistake-bars-list">
-        <!-- Injected dynamically -->
-      </div>
-    </div>
-
-    <!-- Chart 4: Task Execution Pipeline -->
-    <div class="panel profile-graph-panel">
-      <div class="graph-panel-head">
-        <div>
-          <div class="eyebrow">TASK PIPELINE HEALTH</div>
-          <h3>Task Status & Due Breakdown</h3>
-        </div>
-        <span id="profile-task-rate-badge" class="graph-legend-badge">0% Complete</span>
-      </div>
-      <div id="profile-task-pipeline" class="profile-pipeline-wrap">
-        <!-- Injected dynamically -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Smart Actionable Recommendations Section -->
-  <div class="profile-section-title">
-    <div>
-      <div class="eyebrow">INTELLIGENT STUDY ADVISOR</div>
-      <h3>Actionable Recommendations</h3>
-    </div>
-    <span class="muted" style="font-size: 11px;">Data-driven guidance calculated from your current progress and mistake trends</span>
-  </div>
-
-  <div id="profile-recommendations-grid" class="profile-recommendations-grid">
-    <!-- 4 Categorized recommendation cards injected dynamically -->
-  </div>
-</section>
-<section id="view-focus" class="view">
-  <div id="top-progress-bar"></div>
-  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
-  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
-  <div class="dt-inner">
-    <div class="dt-focus-header">
-      <div class="dt-brand-row">
-        <span class="dt-brand-icon">⏱️</span>
-        <div>
-          <span class="dt-brand-title">Focus Command Center</span>
-          <span class="dt-brand-subtitle">Pomodoro &amp; Deep Work Timer</span>
-        </div>
-      </div>
-      <div class="header-actions">
-        <div class="header-streak-badge" title="Focus streak based on completed sessions">
-          <span class="btn-icon">🔥</span>
-          <span class="btn-text" id="header-streak-count">1d Streak</span>
-        </div>
-        <button id="btn-open-analytics" class="dt-header-pill" title="View Focus Report" aria-label="View Focus Report">
-          <span class="btn-icon">📊</span>
-          <span class="btn-text">Analytics</span>
-        </button>
-        <button id="btn-open-settings" class="dt-header-pill" title="Timer Settings &amp; Audio Alerts" aria-label="Open Settings">
-          <span class="btn-icon">⚙️</span>
-          <span class="btn-text">Settings</span>
-        </button>
-        <button id="btn-shortcuts-help" class="dt-header-pill" title="Keyboard Shortcuts" aria-label="Keyboard Shortcuts">
-          <span class="btn-icon">⌨️</span>
-          <span class="btn-text">Shortcuts</span>
-        </button>
-        <button type="button" class="dt-header-pill" data-open-guide="focus" title="How Focus Timer Works">
-          <span class="btn-icon">ℹ️</span>
-          <span class="btn-text">How it works</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="dt-main">
-      <section class="timer-box" aria-label="Pomodoro Timer">
-        <div class="timer-mode-pills" role="tablist" aria-label="Timer Mode Switcher">
-          <button class="mode-pill active" data-mode="pomodoro" role="tab" aria-selected="true">Pomodoro</button>
-          <button class="mode-pill" data-mode="short_break" role="tab" aria-selected="false">Short Break</button>
-          <button class="mode-pill" data-mode="long_break" role="tab" aria-selected="false">Long Break</button>
-        </div>
-
-        <!-- Session Differentiation Section -->
-        <div class="session-diff-section" aria-label="Session Duration Differentiation">
-          <div class="session-diff-header">
-            <span class="session-diff-label">SESSION TARGET &amp; DIFFERENTIATION</span>
-            <span class="session-diff-hint">Select a duration to set the timer for this session</span>
+        <div class="progress-card">
+          <div class="card-head">
+            <div>
+              <div class="eyebrow">OVERALL SYLLABUS</div>
+              <h3 id="overall-percent">0% complete</h3>
+            </div><span class="ring-icon">◌</span>
           </div>
-          <div class="session-diff-presets" role="group" aria-label="Session Duration Presets">
-            <button type="button" class="session-diff-chip" data-diff-mins="15" title="15 minute quick focus sprint">
-              <span class="diff-icon">⚡</span>
-              <span class="diff-time">15m</span>
-              <span class="diff-name">Sprint</span>
-            </button>
-            <button type="button" class="session-diff-chip" data-diff-mins="25" title="25 minute classic pomodoro">
-              <span class="diff-icon">🍅</span>
-              <span class="diff-time">25m</span>
-              <span class="diff-name">Classic</span>
-            </button>
-            <button type="button" class="session-diff-chip active" data-diff-mins="30" title="30 minute deep focus block">
-              <span class="diff-icon">🎯</span>
-              <span class="diff-time">30m</span>
-              <span class="diff-name">Deep Focus</span>
-            </button>
-            <button type="button" class="session-diff-chip" data-diff-mins="45" title="45 minute power study session">
-              <span class="diff-icon">🧠</span>
-              <span class="diff-time">45m</span>
-              <span class="diff-name">Power Study</span>
-            </button>
-            <button type="button" class="session-diff-chip" data-diff-mins="60" title="60 minute intense focus block">
-              <span class="diff-icon">📚</span>
-              <span class="diff-time">60m</span>
-              <span class="diff-name">Intense</span>
-            </button>
-            <button type="button" class="session-diff-chip" data-diff-mins="90" title="90 minute extended marathon session">
-              <span class="diff-icon">🚀</span>
-              <span class="diff-time">90m</span>
-              <span class="diff-name">Marathon</span>
-            </button>
-          </div>
-          <div class="session-diff-custom-row">
-            <span class="diff-custom-label">Custom duration:</span>
-            <div class="diff-custom-input-box">
-              <input type="number" id="custom-session-mins" class="diff-custom-input" min="1" max="240" placeholder="Mins" aria-label="Custom duration in minutes">
-              <span class="diff-unit">min</span>
-            </div>
-            <button type="button" id="btn-apply-custom-session" class="btn-diff-set">Set Duration</button>
+          <div class="progress-track large"><span id="overall-bar"></span></div>
+          <div class="progress-foot"><span id="topic-count">0 of 0 topics completed</span><span class="muted">Across all
+              subjects</span></div>
+          <div class="divider"></div>
+          <div class="stat-grid">
+            <div><strong id="task-open">0</strong><small>Open tasks</small></div>
+            <div><strong id="task-due">0</strong><small>Due this week</small></div>
+            <div><strong id="focus-today">0</strong><small>Focus minutes today</small></div>
           </div>
         </div>
+      </div>
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">STAY ON TRACK</div>
+          <h2>Today's priorities</h2>
+        </div>
+        <div class="heading-actions-cluster"><button type="button" class="btn-page-guide" data-open-guide="overview"
+            title="How Overview Works">ℹ️ How it works</button><button class="text-btn" data-go="tasks">View all tasks
+            ↗</button></div>
+      </div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-title">
+            <h3>Next up</h3><span class="subtle">Your upcoming work</span>
+          </div>
+          <div id="today-tasks" class="task-list empty-state">No tasks yet. Add one to get started.</div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">
+            <h3>Upcoming deadlines</h3><button class="text-btn" data-go="calendar">Calendar ↗</button>
+          </div>
+          <div id="upcoming-list" class="upcoming-list empty-state">Nothing scheduled yet.</div>
+        </div>
+      </div>
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">GATE & ACADEMICS</div>
+          <h2>Subject progress</h2>
+        </div><button class="text-btn" data-go="subjects">Manage syllabus ↗</button>
+      </div>
+      <div id="subject-overview" class="subject-grid"></div>
+    </section>
+    <section id="view-subjects" class="view">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">LEARN WITH CLARITY</div>
+          <h2>GATE & academic syllabus</h2>
+          <p class="muted">Keep GATE subjects and college subjects organised, with topic-by-topic progress.</p>
+        </div>
+        <div class="heading-actions-cluster">
+          <button type="button" class="btn-page-guide" data-open-guide="subjects">ℹ️ How it works</button>
+          <button class="primary-btn" id="add-subject">＋ Add subject</button>
+        </div>
+      </div>
+      <div id="subjects-list" class="subject-list"></div>
+    </section>
 
-        <div class="timer-display-area">
-          <button class="adjust-side-btn left" data-adjust="-300" title="Decrease by 5 minutes" aria-label="Decrease 5 minutes">−</button>
-          <div id="timer-digits" class="timer-digits">30:00</div>
-          <button class="adjust-side-btn right" data-adjust="300" title="Increase by 5 minutes" aria-label="Increase 5 minutes">+</button>
+    <section id="view-skills" class="view">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">GROW BEYOND THE SYLLABUS</div>
+          <h2>Extra skills</h2>
+          <p class="muted">Track the skills you want to build alongside college. Link learning resources and log
+            milestones as you master key concepts.</p>
         </div>
-        <div class="timer-controls-wrap">
-          <button id="btn-timer-reset" class="btn-icon-control" title="Reset Timer (R)" aria-label="Reset Timer">
-            <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-          </button>
-          <button id="btn-timer-toggle" class="btn-start-large" title="Start/Pause Timer (Space)">START</button>
-          <button id="btn-timer-skip" class="btn-icon-control" title="Skip Session (S)" aria-label="Skip Session">
-            <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-          </button>
+        <div class="heading-actions-cluster">
+          <button type="button" class="btn-page-guide" data-open-guide="skills">ℹ️ How it works</button>
+          <button class="primary-btn" id="add-skill">＋ Add skill</button>
         </div>
-        <div id="timer-active-task-pill" class="active-task-label-wrap">
-          <span id="header-cycle-count" class="active-task-cycle-num">🍅 Round 1 of 4 · (Long break after round 4)</span>
-          <span id="active-task-name-text" class="active-task-name-text">Free Focus Session (No task attached)</span>
+      </div>
+      <div class="skill-summary" id="skill-summary"></div>
+      <div class="skill-grid" id="skills-list"></div>
+    </section>
+
+    <section id="view-tasks" class="view">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">TASK EXECUTION & TIME MANAGEMENT</div>
+          <h2>Tasks & Daily Flow</h2>
+          <p class="muted">Organize daily study commitments alongside long-term project milestones and deadlines.</p>
         </div>
-      </section>
-      <section class="tasks-section" aria-label="Task Management">
-        <div class="tasks-header-row">
+        <div class="heading-actions-cluster">
+          <button type="button" class="btn-page-guide" data-open-guide="tasks">ℹ️ How it works</button>
+          <button class="primary-btn" id="add-daily-task" type="button">＋ Add daily task</button>
+          <button class="secondary-btn" id="add-overall-task" type="button">＋ Add overall task</button>
+        </div>
+      </div>
+
+      <!-- Scope Segmented Tabs -->
+      <div class="tasks-scope-nav">
+        <button class="scope-tab active" data-task-scope="daily" type="button">
+          <span class="scope-tab-icon">☀️</span>
+          <span class="scope-tab-label">Daily Tasks</span>
+          <span class="scope-tab-badge" id="badge-count-daily">0</span>
+        </button>
+        <button class="scope-tab" data-task-scope="overall" type="button">
+          <span class="scope-tab-icon">📋</span>
+          <span class="scope-tab-label">Overall Tasks</span>
+          <span class="scope-tab-badge" id="badge-count-overall">0</span>
+        </button>
+        <button class="scope-tab" data-task-scope="all" type="button">
+          <span class="scope-tab-icon">📑</span>
+          <span class="scope-tab-label">All Tasks</span>
+          <span class="scope-tab-badge" id="badge-count-all">0</span>
+        </button>
+      </div>
+
+      <!-- Status Filters & Progress Bar -->
+      <div class="tasks-control-strip">
+        <div class="filter-row" style="margin:0;">
+          <button class="filter active" data-filter="all" type="button">All Status</button>
+          <button class="filter" data-filter="open" type="button">Open</button>
+          <button class="filter" data-filter="done" type="button">Completed</button>
+          <button class="filter" data-filter="missed" id="filter-missed-btn" type="button">⚠️ Carried Over</button>
+        </div>
+        <div class="tasks-quick-progress" id="tasks-quick-progress"></div>
+      </div>
+
+      <!-- Missed / Carried-Forward Alert Callout -->
+      <div id="tasks-rollover-banner" class="rollover-alert-banner" hidden>
+        <div class="rollover-alert-content">
+          <span class="rollover-alert-icon">⚠️</span>
           <div>
-            <span class="tasks-title-text">Focus Tasks</span>
-            <span class="tasks-subtitle-hint">Selected for this session</span>
+            <strong id="rollover-alert-title">Missed Daily Tasks Carried Forward</strong>
+            <p id="rollover-alert-desc">Uncompleted daily tasks from past days have been automatically moved to today's
+              schedule with a missed remark.</p>
           </div>
-          <div class="tasks-header-actions">
-            <button type="button" id="btn-choose-existing-header" class="btn-header-task-action" title="Pick from your StudyFlow tasks">
-              <span>📋 Choose Tasks</span>
+        </div>
+        <button class="tiny-btn" id="btn-filter-carried-over" type="button">View carried over</button>
+      </div>
+
+      <!-- Main Tasks Panel -->
+      <div class="panel tasks-panel">
+        <div id="tasks-list" class="task-list empty-state">No tasks in this view.</div>
+      </div>
+    </section>
+    <section id="view-calendar" class="view">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">PLAN YOUR SCHEDULE</div>
+          <h2>Study Calendar &amp; Deadlines</h2>
+          <p class="muted">Track your exams, classes, milestones, and task deadlines all in one interactive view.</p>
+        </div>
+        <div class="heading-actions-cluster">
+          <button type="button" class="btn-page-guide" data-open-guide="calendar">ℹ️ How it works</button>
+          <button class="primary-btn" id="calendar-add">＋ Add Event</button>
+          <button class="secondary-btn" id="calendar-add-task">＋ Add Deadline</button>
+        </div>
+      </div>
+
+      <!-- Calendar Month Highlights Bar -->
+      <div class="calendar-highlights-bar" id="calendar-highlights">
+        <div class="cal-stat-card">
+          <div class="cal-stat-icon">📅</div>
+          <div class="cal-stat-info">
+            <span class="cal-stat-val" id="cal-stat-events">0</span>
+            <span class="cal-stat-lbl">Events This Month</span>
+          </div>
+        </div>
+        <div class="cal-stat-card">
+          <div class="cal-stat-icon">🟠</div>
+          <div class="cal-stat-info">
+            <span class="cal-stat-val" id="cal-stat-deadlines">0</span>
+            <span class="cal-stat-lbl">Overall Deadlines</span>
+          </div>
+        </div>
+        <div class="cal-stat-card">
+          <div class="cal-stat-icon">☀️</div>
+          <div class="cal-stat-info">
+            <span class="cal-stat-val" id="cal-stat-daily">0</span>
+            <span class="cal-stat-lbl">Daily Tasks Due</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="calendar-layout">
+        <div class="panel calendar-panel">
+          <div class="calendar-head">
+            <div class="cal-nav-group">
+              <button class="icon-btn" id="prev-month" title="Previous Month">←</button>
+              <h3 id="month-label"></h3>
+              <button class="icon-btn" id="next-month" title="Next Month">→</button>
+              <button class="text-btn" id="today-btn">Today</button>
+            </div>
+            <div class="cal-filter-group" role="tablist">
+              <button type="button" class="cal-filter-chip active" data-cal-filter="all">All</button>
+              <button type="button" class="cal-filter-chip" data-cal-filter="events">📅 Events</button>
+              <button type="button" class="cal-filter-chip" data-cal-filter="deadlines">🟠 Deadlines</button>
+            </div>
+          </div>
+          <div class="weekdays">
+            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span
+              class="sun-header">Sun</span>
+          </div>
+          <div id="calendar-grid" class="calendar-grid"></div>
+        </div>
+
+        <div class="panel day-panel">
+          <div class="day-panel-head">
+            <div>
+              <div class="eyebrow">SELECTED DAY AGENDA</div>
+              <h3 id="selected-date-label"></h3>
+            </div>
+            <div class="day-panel-actions">
+              <button class="btn btn-secondary btn-sm" id="selected-add" title="Add event on this date">＋ Event</button>
+              <button class="btn btn-secondary btn-sm" id="selected-add-task" title="Add deadline on this date">＋
+                Task</button>
+            </div>
+          </div>
+          <div id="day-events" class="day-events-container">
+            <!-- Events & deadlines rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="view-reviews" class="view">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">LEARN FROM EVERY ATTEMPT</div>
+          <h2>Mock tests & paper reviews</h2>
+          <p class="muted">Upload your test papers (PDF or image), track marks, log question mistakes, and automatically
+            uncover your weakest topics.</p>
+        </div>
+        <div class="heading-actions-cluster">
+          <button type="button" class="btn-page-guide" data-open-guide="reviews">ℹ️ How it works</button>
+          <button class="primary-btn" id="btn-upload-excel-direct" style="background:#0f766e; border-color:#0f766e;"
+            title="Upload Excel sheet to automatically log mistakes">📊 Upload Excel Sheet</button>
+          <button class="secondary-btn" id="upload-test-btn">＋ Upload test paper</button>
+          <button class="secondary-btn" id="add-mistake">＋ Quick mistake</button>
+          <input type="file" id="excel-direct-file-input"
+            accept=".xlsx, .xls, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv"
+            style="display: none;">
+        </div>
+      </div>
+
+      <!-- Excel Drag & Drop Quick Banner -->
+      <div class="excel-quick-banner" id="excel-quick-dropzone" tabindex="0" role="button"
+        aria-label="Drop Excel sheet here to automatically log mistakes"
+        style="margin-bottom: 20px; border: 2px dashed #0f766e; border-radius: 12px; background: #f0fdfa; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer; transition: all 0.2s;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span style="font-size: 32px;">📊</span>
+          <div>
+            <h4 style="margin: 0 0 4px; color: #0f766e; font-size: 15px; font-weight: 700;">Drop Excel Sheet Here to
+              Automatically Log Mistakes</h4>
+            <p style="margin: 0; font-size: 12px; color: #134e4a;">
+              Supports <b>.xlsx</b>, <b>.xls</b>, and <b>.csv</b> sheets with columns: <code>Q No.</code> ·
+              <code>Your Answer</code> · <code>Correct Answer / Status</code> · <code>Topic</code> ·
+              <code>Why your response needs correction</code> · <code>Revision action</code> · <code>Marks</code>. Data
+              is read and saved to the database immediately without asking!
+            </p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-download-sample-template"
+            style="background: white;">📥 Sample Template</button>
+          <button type="button" class="btn btn-sm"
+            style="background: #0f766e; color: white; border: none; font-weight: 600; pointer-events: none;">Browse
+            File</button>
+        </div>
+      </div>
+
+      <div class="review-stats" id="mock-test-stats">
+        <div class="review-stat"><strong id="stat-total-tests">0</strong><small>Tests attempted</small></div>
+        <div class="review-stat"><strong id="stat-avg-score">0%</strong><small>Average marks</small></div>
+        <div class="review-stat"><strong id="stat-weakest-topic">—</strong><small>Overall weakest topic</small></div>
+        <div class="review-stat"><strong id="stat-total-mistakes">0</strong><small>Mistakes logged</small></div>
+      </div>
+
+      <div class="test-view-header">
+        <div class="filter-row">
+          <button class="filter active" data-test-tab="tests">Test papers (<span id="test-tab-count">0</span>)</button>
+          <button class="filter" data-test-tab="all-mistakes">All logged mistakes (<span
+              id="mistake-tab-count">0</span>)</button>
+        </div>
+        <div class="test-search-wrap">
+          <input type="text" id="test-search-input" placeholder="Search tests or topics…" class="test-search-box">
+        </div>
+      </div>
+
+      <div id="mock-tests-container">
+        <div id="mock-tests-grid" class="mock-tests-grid"></div>
+      </div>
+
+      <div id="all-mistakes-container" style="display: none;">
+        <div class="filter-row">
+          <button class="filter active" data-review-filter="all">All mistakes</button>
+          <button class="filter" data-review-filter="unresolved">Needs review</button>
+          <button class="filter" data-review-filter="resolved">Resolved</button>
+        </div>
+        <div id="mistakes-list" class="mistake-list empty-state">No mistakes logged yet. Add your first mock-test
+          review.</div>
+      </div>
+    </section>
+    <section id="view-profile" class="view">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">COMPREHENSIVE PERFORMANCE DASHBOARD</div>
+          <h2>Study Analytics & Profile</h2>
+          <p class="muted">Track your study velocity, examine weekly graphs, uncover weak spots, and get data-driven
+            recommendations.</p>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn-page-guide" data-open-guide="profile">ℹ️ How it works</button>
+          <button id="profile-refresh-btn" class="secondary-btn" type="button">↻ Refresh data</button>
+          <button id="profile-sign-out" class="secondary-btn" type="button">Sign out</button>
+        </div>
+      </div>
+
+      <!-- User Identity Card with Health Score & Badges -->
+      <div class="profile-identity panel">
+        <div class="profile-identity-main">
+          <div class="profile-avatar avatar" id="profile-avatar">SF</div>
+          <div>
+            <h3 id="profile-name">Loading profile…</h3>
+            <p id="profile-email" class="muted">Loading account details…</p>
+          </div>
+        </div>
+        <div class="profile-badges-cluster" id="profile-badges-cluster">
+          <!-- Dynamic badges: Streak, Scholar Level, Study Health Score -->
+        </div>
+      </div>
+
+      <!-- High-Impact Statistical KPI Grid -->
+      <div class="profile-section-title">
+        <div>
+          <div class="eyebrow">REAL-TIME PERFORMANCE METRICS</div>
+          <h3>Study Velocity & KPI Summary</h3>
+        </div>
+      </div>
+      <div id="profile-stats" class="profile-stats-grid">
+        <div class="panel empty-state">Loading your statistics…</div>
+      </div>
+
+      <!-- Visual Graphs Row 1: Weekly Focus Chart & Syllabus Mastery -->
+      <div class="profile-graphs-container">
+        <!-- Chart 1: 7-Day Focus Time Bar Chart -->
+        <div class="panel profile-graph-panel">
+          <div class="graph-panel-head">
+            <div>
+              <div class="eyebrow">LAST 7 DAYS FOCUS</div>
+              <h3>Weekly Focus Activity</h3>
+            </div>
+            <span class="graph-legend-badge">Daily Target: 60m</span>
+          </div>
+          <div id="profile-weekly-barchart" class="profile-barchart-wrap">
+            <!-- Injected dynamically -->
+          </div>
+          <div id="profile-weekly-summary" class="graph-summary-strip"></div>
+        </div>
+
+        <!-- Chart 2: Subject Syllabus Coverage -->
+        <div class="panel profile-graph-panel">
+          <div class="graph-panel-head">
+            <div>
+              <div class="eyebrow">SYLLABUS PROGRESS</div>
+              <h3>Subject Mastery Breakdown</h3>
+            </div>
+            <span id="profile-syllabus-total-badge" class="graph-legend-badge">0% Complete</span>
+          </div>
+          <div id="profile-subject-breakdown" class="profile-subject-bars-list">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Visual Graphs Row 2: Mock Test Mistake Distribution & Task Pipeline -->
+      <div class="profile-graphs-container">
+        <!-- Chart 3: Mock Test Mistake Category Distribution -->
+        <div class="panel profile-graph-panel">
+          <div class="graph-panel-head">
+            <div>
+              <div class="eyebrow">MOCK TEST DIAGNOSTICS</div>
+              <h3>Where You Drop Marks (Mistake Types)</h3>
+            </div>
+            <span id="profile-mistake-total-badge" class="graph-legend-badge">0 Mistakes</span>
+          </div>
+          <div id="profile-mistake-breakdown" class="profile-mistake-bars-list">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+
+        <!-- Chart 4: Task Execution Pipeline -->
+        <div class="panel profile-graph-panel">
+          <div class="graph-panel-head">
+            <div>
+              <div class="eyebrow">TASK PIPELINE HEALTH</div>
+              <h3>Task Status & Due Breakdown</h3>
+            </div>
+            <span id="profile-task-rate-badge" class="graph-legend-badge">0% Complete</span>
+          </div>
+          <div id="profile-task-pipeline" class="profile-pipeline-wrap">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Smart Actionable Recommendations Section -->
+      <div class="profile-section-title">
+        <div>
+          <div class="eyebrow">INTELLIGENT STUDY ADVISOR</div>
+          <h3>Actionable Recommendations</h3>
+        </div>
+        <span class="muted" style="font-size: 11px;">Data-driven guidance calculated from your current progress and
+          mistake trends</span>
+      </div>
+
+      <div id="profile-recommendations-grid" class="profile-recommendations-grid">
+        <!-- 4 Categorized recommendation cards injected dynamically -->
+      </div>
+    </section>
+    <section id="view-focus" class="view">
+      <div id="top-progress-bar"></div>
+      <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+      <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+      <div class="dt-inner">
+        <div class="dt-focus-header">
+          <div class="dt-brand-row">
+            <span class="dt-brand-icon">⏱️</span>
+            <div>
+              <span class="dt-brand-title">Focus Command Center</span>
+              <span class="dt-brand-subtitle">Pomodoro &amp; Deep Work Timer</span>
+            </div>
+          </div>
+          <div class="header-actions">
+            <div class="header-streak-badge" title="Focus streak based on completed sessions">
+              <span class="btn-icon">🔥</span>
+              <span class="btn-text" id="header-streak-count">1d Streak</span>
+            </div>
+            <button id="btn-open-analytics" class="dt-header-pill" title="View Focus Report"
+              aria-label="View Focus Report">
+              <span class="btn-icon">📊</span>
+              <span class="btn-text">Analytics</span>
             </button>
-            <div class="tasks-dropdown-wrap">
-              <button id="btn-tasks-menu" class="tasks-menu-btn" aria-label="Task options" aria-haspopup="true" aria-expanded="false">⋮</button>
-              <div id="tasks-dropdown-menu" class="tasks-dropdown-menu" role="menu">
-                <button type="button" id="btn-clear-finished-tasks" class="tasks-dropdown-item" role="menuitem"><span class="dropdown-item-icon">🧹</span><span>Clear finished tasks</span></button>
-                <button type="button" id="btn-clear-all-tasks" class="tasks-dropdown-item dropdown-item-danger" role="menuitem"><span class="dropdown-item-icon">🗑️</span><span>Clear session tasks</span></button>
+            <button id="btn-open-settings" class="dt-header-pill" title="Timer Settings &amp; Audio Alerts"
+              aria-label="Open Settings">
+              <span class="btn-icon">⚙️</span>
+              <span class="btn-text">Settings</span>
+            </button>
+            <button id="btn-shortcuts-help" class="dt-header-pill" title="Keyboard Shortcuts"
+              aria-label="Keyboard Shortcuts">
+              <span class="btn-icon">⌨️</span>
+              <span class="btn-text">Shortcuts</span>
+            </button>
+            <button type="button" class="dt-header-pill" data-open-guide="focus" title="How Focus Timer Works">
+              <span class="btn-icon">ℹ️</span>
+              <span class="btn-text">How it works</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="dt-main">
+          <section class="timer-box" aria-label="Pomodoro Timer">
+            <div class="timer-mode-pills" role="tablist" aria-label="Timer Mode Switcher">
+              <button class="mode-pill active" data-mode="pomodoro" role="tab" aria-selected="true">Pomodoro</button>
+              <button class="mode-pill" data-mode="short_break" role="tab" aria-selected="false">Short Break</button>
+              <button class="mode-pill" data-mode="long_break" role="tab" aria-selected="false">Long Break</button>
+            </div>
+
+            <!-- Session Differentiation Section -->
+            <div class="session-diff-section" aria-label="Session Duration Differentiation">
+              <div class="session-diff-header">
+                <span class="session-diff-label">SESSION TARGET &amp; DIFFERENTIATION</span>
+                <span class="session-diff-hint">Select a duration to set the timer for this session</span>
+              </div>
+              <div class="session-diff-presets" role="group" aria-label="Session Duration Presets">
+                <button type="button" class="session-diff-chip" data-diff-mins="15"
+                  title="15 minute quick focus sprint">
+                  <span class="diff-icon">⚡</span>
+                  <span class="diff-time">15m</span>
+                  <span class="diff-name">Sprint</span>
+                </button>
+                <button type="button" class="session-diff-chip" data-diff-mins="25" title="25 minute classic pomodoro">
+                  <span class="diff-icon">🍅</span>
+                  <span class="diff-time">25m</span>
+                  <span class="diff-name">Classic</span>
+                </button>
+                <button type="button" class="session-diff-chip active" data-diff-mins="30"
+                  title="30 minute deep focus block">
+                  <span class="diff-icon">🎯</span>
+                  <span class="diff-time">30m</span>
+                  <span class="diff-name">Deep Focus</span>
+                </button>
+                <button type="button" class="session-diff-chip" data-diff-mins="45"
+                  title="45 minute power study session">
+                  <span class="diff-icon">🧠</span>
+                  <span class="diff-time">45m</span>
+                  <span class="diff-name">Power Study</span>
+                </button>
+                <button type="button" class="session-diff-chip" data-diff-mins="60"
+                  title="60 minute intense focus block">
+                  <span class="diff-icon">📚</span>
+                  <span class="diff-time">60m</span>
+                  <span class="diff-name">Intense</span>
+                </button>
+                <button type="button" class="session-diff-chip" data-diff-mins="90"
+                  title="90 minute extended marathon session">
+                  <span class="diff-icon">🚀</span>
+                  <span class="diff-time">90m</span>
+                  <span class="diff-name">Marathon</span>
+                </button>
+              </div>
+              <div class="session-diff-custom-row">
+                <span class="diff-custom-label">Custom duration:</span>
+                <div class="diff-custom-input-box">
+                  <input type="number" id="custom-session-mins" class="diff-custom-input" min="1" max="240"
+                    placeholder="Mins" aria-label="Custom duration in minutes">
+                  <span class="diff-unit">min</span>
+                </div>
+                <button type="button" id="btn-apply-custom-session" class="btn-diff-set">Set Duration</button>
               </div>
             </div>
-          </div>
+
+            <div class="timer-display-area">
+              <button class="adjust-side-btn left" data-adjust="-300" title="Decrease by 5 minutes"
+                aria-label="Decrease 5 minutes">−</button>
+              <div id="timer-digits" class="timer-digits">30:00</div>
+              <button class="adjust-side-btn right" data-adjust="300" title="Increase by 5 minutes"
+                aria-label="Increase 5 minutes">+</button>
+            </div>
+            <div class="timer-controls-wrap">
+              <button id="btn-timer-reset" class="btn-icon-control" title="Reset Timer (R)" aria-label="Reset Timer">
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                </svg>
+              </button>
+              <button id="btn-timer-toggle" class="btn-start-large" title="Start/Pause Timer (Space)">START</button>
+              <button id="btn-timer-skip" class="btn-icon-control" title="Skip Session (S)" aria-label="Skip Session">
+                <svg viewBox="0 0 24 24">
+                  <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                </svg>
+              </button>
+            </div>
+            <div id="timer-active-task-pill" class="active-task-label-wrap">
+              <span id="header-cycle-count" class="active-task-cycle-num">🍅 Round 1 of 4 · (Long break after round
+                4)</span>
+              <span id="active-task-name-text" class="active-task-name-text">Free Focus Session (No task
+                attached)</span>
+            </div>
+          </section>
+          <section class="tasks-section" aria-label="Task Management">
+            <div class="tasks-header-row">
+              <div>
+                <span class="tasks-title-text">Focus Tasks</span>
+                <span class="tasks-subtitle-hint">Selected for this session</span>
+              </div>
+              <div class="tasks-header-actions">
+                <button type="button" id="btn-choose-existing-header" class="btn-header-task-action"
+                  title="Pick from your StudyFlow tasks">
+                  <span>📋 Choose Tasks</span>
+                </button>
+                <div class="tasks-dropdown-wrap">
+                  <button id="btn-tasks-menu" class="tasks-menu-btn" aria-label="Task options" aria-haspopup="true"
+                    aria-expanded="false">⋮</button>
+                  <div id="tasks-dropdown-menu" class="tasks-dropdown-menu" role="menu">
+                    <button type="button" id="btn-clear-finished-tasks" class="tasks-dropdown-item"
+                      role="menuitem"><span class="dropdown-item-icon">🧹</span><span>Clear finished
+                        tasks</span></button>
+                    <button type="button" id="btn-clear-all-tasks" class="tasks-dropdown-item dropdown-item-danger"
+                      role="menuitem"><span class="dropdown-item-icon">🗑️</span><span>Clear session
+                        tasks</span></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="dt-tasks-list" class="tasks-list" aria-live="polite"></div>
+            <div class="tasks-footer-actions">
+              <button type="button" id="btn-choose-existing-task" class="btn-task-action btn-task-choose">
+                <span>📋 Choose Existing Task</span>
+              </button>
+              <button type="button" id="btn-new-task" class="btn-task-action btn-task-add">
+                <span>➕ Add Extra Task</span>
+              </button>
+            </div>
+          </section>
+          <footer class="bottom-summary-box">
+            <div class="summary-stat-col">
+              <span class="summary-label">Today's Pomo Goal</span>
+              <span id="metric-daily-pomos" class="summary-value">0 / 4</span>
+              <small id="metric-daily-pomos-sub" class="summary-sub">0 of 4 completed today</small>
+            </div>
+            <div class="summary-stat-col">
+              <span class="summary-label">Estimated Finish</span>
+              <span id="estimated-finish-time" class="summary-value">--:--</span>
+              <small id="finish-time-sub" class="summary-sub">When timer starts</small>
+            </div>
+            <div class="summary-stat-col">
+              <span class="summary-label">Focused Today</span>
+              <span id="metric-daily-focus" class="summary-value">0h 00m</span>
+              <small id="metric-daily-focus-sub" class="summary-sub">Daily target: 2h 00m</small>
+            </div>
+          </footer>
         </div>
-        <div id="dt-tasks-list" class="tasks-list" aria-live="polite"></div>
-        <div class="tasks-footer-actions">
-          <button type="button" id="btn-choose-existing-task" class="btn-task-action btn-task-choose">
-            <span>📋 Choose Existing Task</span>
-          </button>
-          <button type="button" id="btn-new-task" class="btn-task-action btn-task-add">
-            <span>➕ Add Extra Task</span>
-          </button>
-        </div>
-      </section>
-      <footer class="bottom-summary-box">
-        <div class="summary-stat-col">
-          <span class="summary-label">Today's Pomo Goal</span>
-          <span id="metric-daily-pomos" class="summary-value">0 / 4</span>
-          <small id="metric-daily-pomos-sub" class="summary-sub">0 of 4 completed today</small>
-        </div>
-        <div class="summary-stat-col">
-          <span class="summary-label">Estimated Finish</span>
-          <span id="estimated-finish-time" class="summary-value">--:--</span>
-          <small id="finish-time-sub" class="summary-sub">When timer starts</small>
-        </div>
-        <div class="summary-stat-col">
-          <span class="summary-label">Focused Today</span>
-          <span id="metric-daily-focus" class="summary-value">0h 00m</span>
-          <small id="metric-daily-focus-sub" class="summary-sub">Daily target: 2h 00m</small>
-        </div>
-      </footer>
-    </div>
-  </div>
-</section>
-<footer>StudyFlow <span>·</span> Your progress stays in this browser.</footer>
-</main>
-<dialog id="item-dialog"><form method="dialog" id="item-form"><div class="modal-head"><div><div class="eyebrow" id="modal-eyebrow">NEW ITEM</div><h2 id="modal-title">Add task</h2></div><button type="button" class="icon-btn" data-close-item-dialog data-close-modal aria-label="Close" formnovalidate>×</button></div><div id="modal-fields"></div><div class="modal-actions"><button type="button" class="secondary-btn" data-close-item-dialog data-close-modal formnovalidate>Cancel</button><button type="submit" class="primary-btn" id="modal-save" value="default">Save</button></div></form></dialog>
+      </div>
+    </section>
+    <footer>StudyFlow <span>·</span> Your progress stays in this browser.</footer>
+  </main>
+  <dialog id="item-dialog">
+    <form method="dialog" id="item-form">
+      <div class="modal-head">
+        <div>
+          <div class="eyebrow" id="modal-eyebrow">NEW ITEM</div>
+          <h2 id="modal-title">Add task</h2>
+        </div><button type="button" class="icon-btn" data-close-item-dialog data-close-modal aria-label="Close"
+          formnovalidate>×</button>
+      </div>
+      <div id="modal-fields"></div>
+      <div class="modal-actions"><button type="button" class="secondary-btn" data-close-item-dialog data-close-modal
+          formnovalidate>Cancel</button><button type="submit" class="primary-btn" id="modal-save"
+          value="default">Save</button></div>
+    </form>
+  </dialog>
 
   <!-- Mock Test & Paper Review Modals -->
   <!-- 1. Upload/Edit Test Paper Modal -->
@@ -560,7 +717,8 @@
         <div class="form-group">
           <label class="form-label">Test paper file (PDF or Image)</label>
           <input type="file" id="paper-file-input" accept=".pdf,application/pdf,image/*" style="display:none">
-          <div class="paper-dropzone" id="paper-dropzone" tabindex="0" role="button" aria-label="Click or drag paper here">
+          <div class="paper-dropzone" id="paper-dropzone" tabindex="0" role="button"
+            aria-label="Click or drag paper here">
             <div class="dropzone-content" id="dropzone-prompt">
               <span class="dropzone-icon">📄</span>
               <div class="dropzone-text">
@@ -587,18 +745,21 @@
         <!-- Title -->
         <div class="form-group">
           <label class="form-label" for="test-title">Mock test title / name *</label>
-          <input type="text" id="test-title" name="name" required class="form-input" placeholder="e.g. GATE CS Full Length Mock #1">
+          <input type="text" id="test-title" name="name" required class="form-input"
+            placeholder="e.g. GATE CS Full Length Mock #1">
         </div>
 
         <!-- Marks Grid -->
         <div class="field-grid">
           <div class="form-group">
             <label class="form-label" for="test-marks">Marks obtained *</label>
-            <input type="number" step="0.01" id="test-marks" name="marks" required class="form-input" placeholder="e.g. 68.5">
+            <input type="number" step="0.01" id="test-marks" name="marks" required class="form-input"
+              placeholder="e.g. 68.5">
           </div>
           <div class="form-group">
             <label class="form-label" for="test-total-marks">Total marks *</label>
-            <input type="number" step="0.01" id="test-total-marks" name="totalMarks" value="100" required class="form-input" placeholder="e.g. 100">
+            <input type="number" step="0.01" id="test-total-marks" name="totalMarks" value="100" required
+              class="form-input" placeholder="e.g. 100">
           </div>
         </div>
 
@@ -606,7 +767,8 @@
         <div class="field-grid">
           <div class="form-group">
             <label class="form-label" for="test-subject">Subject / Syllabus area</label>
-            <input type="text" id="test-subject" name="subject" class="form-input" list="subject-datalist" placeholder="e.g. Computer Science, Algorithms">
+            <input type="text" id="test-subject" name="subject" class="form-input" list="subject-datalist"
+              placeholder="e.g. Computer Science, Algorithms">
             <datalist id="subject-datalist"></datalist>
           </div>
           <div class="form-group">
@@ -618,13 +780,15 @@
         <!-- Description -->
         <div class="form-group">
           <label class="form-label" for="test-description">Description & attempt summary</label>
-          <textarea id="test-description" name="description" class="form-textarea" rows="3" placeholder="Describe the test paper, pacing, which sections felt tough, and overall thoughts..."></textarea>
+          <textarea id="test-description" name="description" class="form-textarea" rows="3"
+            placeholder="Describe the test paper, pacing, which sections felt tough, and overall thoughts..."></textarea>
         </div>
 
         <!-- Strategy Pointers -->
         <div class="form-group">
           <label class="form-label" for="test-pointers">Initial pointers & notes</label>
-          <textarea id="test-pointers" name="pointers" class="form-textarea" rows="2" placeholder="e.g. Need to revise Tree algorithms; don't spend more than 3 minutes on 2-mark MCQs."></textarea>
+          <textarea id="test-pointers" name="pointers" class="form-textarea" rows="2"
+            placeholder="e.g. Need to revise Tree algorithms; don't spend more than 3 minutes on 2-mark MCQs."></textarea>
         </div>
       </div>
       <div class="modal-footer modal-footer-between">
@@ -643,7 +807,8 @@
         <div class="test-badges-row" id="detail-badges-row"></div>
       </div>
       <div class="detail-header-actions">
-        <button type="button" class="btn btn-secondary btn-sm" data-open-guide="reviews" title="Paper Review Instructions">ℹ️ Paper Guide</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-open-guide="reviews"
+          title="Paper Review Instructions">ℹ️ Paper Guide</button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-edit-test-details">✏️ Edit test</button>
         <button type="button" class="modal-close-btn" data-close-detail-modal aria-label="Close dialog">&times;</button>
       </div>
@@ -666,18 +831,23 @@
         <div class="section-heading-sub">
           <div>
             <h3 class="sub-title">Logged mistakes & solution pointers</h3>
-            <p class="muted">Add each question or concept where you lost marks. Weakest topics are calculated automatically from these.</p>
+            <p class="muted">Add each question or concept where you lost marks. Weakest topics are calculated
+              automatically from these.</p>
           </div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button type="button" class="btn btn-secondary" id="btn-import-excel-for-test" title="Import mistakes from Excel or CSV sheet">📊 Import from Excel / CSV</button>
+            <button type="button" class="btn btn-secondary" id="btn-import-excel-for-test"
+              title="Import mistakes from Excel or CSV sheet">📊 Import from Excel / CSV</button>
             <button type="button" class="btn btn-primary" id="btn-log-mistake-for-test">＋ Log mistake</button>
           </div>
         </div>
 
         <div class="filter-row test-mistake-filters">
-          <button class="filter active" data-test-mistake-filter="all">All mistakes (<span id="detail-filter-all-count">0</span>)</button>
-          <button class="filter" data-test-mistake-filter="unresolved">Needs review (<span id="detail-filter-unresolved-count">0</span>)</button>
-          <button class="filter" data-test-mistake-filter="resolved">Resolved (<span id="detail-filter-resolved-count">0</span>)</button>
+          <button class="filter active" data-test-mistake-filter="all">All mistakes (<span
+              id="detail-filter-all-count">0</span>)</button>
+          <button class="filter" data-test-mistake-filter="unresolved">Needs review (<span
+              id="detail-filter-unresolved-count">0</span>)</button>
+          <button class="filter" data-test-mistake-filter="resolved">Resolved (<span
+              id="detail-filter-resolved-count">0</span>)</button>
         </div>
 
         <div id="detail-mistakes-list" class="test-mistakes-container empty-state">
@@ -694,7 +864,8 @@
           </div>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-save-detail-pointers">Save pointers</button>
         </div>
-        <textarea id="detail-test-pointers-input" class="form-textarea" rows="2" placeholder="Record takeaways for next time (e.g. speed pacing, topics to revise, traps to avoid)..."></textarea>
+        <textarea id="detail-test-pointers-input" class="form-textarea" rows="2"
+          placeholder="Record takeaways for next time (e.g. speed pacing, topics to revise, traps to avoid)..."></textarea>
       </div>
     </div>
     <div class="modal-footer modal-footer-between">
@@ -718,25 +889,45 @@
       <div class="modal-body">
         <div class="form-group" style="margin-bottom: 12px;">
           <label class="form-label" for="mistake-target-test-select">Associated Mock Test Paper</label>
-          <select id="mistake-target-test-select" name="mockTestId" class="form-select" style="background: white; border-color: var(--sf-border); font-weight: 600;">
+          <select id="mistake-target-test-select" name="mockTestId" class="form-select"
+            style="background: white; border-color: var(--sf-border); font-weight: 600;">
             <!-- Populated by JS -->
           </select>
         </div>
         <div class="field-grid">
           <div class="form-group">
-            <label class="form-label" for="mistake-qno">Question # / identifier</label>
-            <input type="text" id="mistake-qno" name="questionNo" class="form-input" placeholder="e.g. Q14, Section B - Q2">
+            <label class="form-label" for="mistake-qno">Q No. (Question Number)</label>
+            <input type="text" id="mistake-qno" name="questionNo" class="form-input" placeholder="e.g. Q1, Q14">
           </div>
           <div class="form-group">
-            <label class="form-label" for="mistake-topic">Topic / concept *</label>
-            <input type="text" id="mistake-topic" name="topic" required class="form-input" list="mistake-topics-datalist" placeholder="e.g. Dynamic Programming, Cache Memory">
+            <label class="form-label" for="mistake-topic">Topic *</label>
+            <input type="text" id="mistake-topic" name="topic" required class="form-input"
+              list="mistake-topics-datalist" placeholder="e.g. Dynamic Programming, Cache Memory">
             <datalist id="mistake-topics-datalist"></datalist>
           </div>
         </div>
 
         <div class="field-grid">
           <div class="form-group">
-            <label class="form-label" for="mistake-type">Reason / mistake category</label>
+            <label class="form-label" for="mistake-user-answer">Your Answer</label>
+            <input type="text" id="mistake-user-answer" name="userAnswer" class="form-input"
+              placeholder="e.g. B, 42.5, Unattempted">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="mistake-correct-answer">Correct Answer / Status</label>
+            <input type="text" id="mistake-correct-answer" name="correctAnswer" class="form-input"
+              placeholder="e.g. C, Incorrect, Blank">
+          </div>
+        </div>
+
+        <div class="field-grid">
+          <div class="form-group">
+            <label class="form-label" for="mistake-marks">Marks / Marks lost</label>
+            <input type="number" step="0.01" id="mistake-marks" name="marks" class="form-input"
+              placeholder="e.g. 1.0, 2.0, 0.33">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="mistake-type">Reason category</label>
             <select id="mistake-type" name="mistakeType" class="form-select">
               <option value="Conceptual misunderstanding">Conceptual misunderstanding</option>
               <option value="Calculation / Numerical error">Calculation / Numerical error</option>
@@ -744,32 +935,27 @@
               <option value="Question misread / missed condition">Question misread / missed condition</option>
               <option value="Time pressure / rushed attempt">Time pressure / rushed attempt</option>
               <option value="Silly slip / bubbling error">Silly slip / bubbling error</option>
+              <option value="Unattempted / Left blank">Unattempted / Left blank</option>
               <option value="Other">Other</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="mistake-marks-lost">Marks lost</label>
-            <input type="number" step="0.01" id="mistake-marks-lost" name="marksLost" class="form-input" placeholder="e.g. 1.0, 2.0, 0.33">
-          </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="mistake-error">What mistake did you make? *</label>
-          <textarea id="mistake-error" name="error" required class="form-textarea" rows="3" placeholder="Explain your thought process and where you went wrong..."></textarea>
+          <label class="form-label" for="mistake-why">Why your response needs correction *</label>
+          <textarea id="mistake-why" name="whyCorrection" required class="form-textarea" rows="2"
+            placeholder="Explain your thought process and why your response went wrong..."></textarea>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="mistake-correction">Correct concept / solution pointer</label>
-          <textarea id="mistake-correction" name="correction" class="form-textarea" rows="3" placeholder="What is the correct concept, formula, or takeaway you should apply next time?"></textarea>
+          <label class="form-label" for="mistake-action">Revision action</label>
+          <textarea id="mistake-action" name="revisionAction" class="form-textarea" rows="2"
+            placeholder="What is the revision action, formula, or takeaway you should apply next time?"></textarea>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="mistake-pointers">Extra pointers / note (optional)</label>
-          <input type="text" id="mistake-pointers" name="pointers" class="form-input" placeholder="e.g. Review Cormen ch 15; practise 5 more 0/1 knapsack problems">
-        </div>
-
-        <div class="form-group">
-          <label class="topic" style="padding: 10px; border-radius: 9px; border: 1px solid var(--sf-border); display: flex; align-items: center; gap: 8px;">
+          <label class="topic"
+            style="padding: 10px; border-radius: 9px; border: 1px solid var(--sf-border); display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="mistake-resolved" name="resolved">
             <b>Mark as resolved (concept thoroughly understood)</b>
           </label>
@@ -790,7 +976,8 @@
         <h2 id="viewer-paper-title" class="modal-title" style="font-size: 20px;">Paper Preview</h2>
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
-        <a id="viewer-open-tab-btn" class="btn btn-primary btn-sm" target="_blank" rel="noopener noreferrer">↗ Open in new tab</a>
+        <a id="viewer-open-tab-btn" class="btn btn-primary btn-sm" target="_blank" rel="noopener noreferrer">↗ Open in
+          new tab</a>
         <a id="viewer-download-link" class="btn btn-secondary btn-sm" download="paper" target="_blank">⬇ Download</a>
         <button type="button" class="modal-close-btn" data-close-viewer-modal aria-label="Close dialog">&times;</button>
       </div>
@@ -800,12 +987,13 @@
     </div>
   </dialog>
 
-  <!-- 5. Bulk Excel / CSV Mistake Import Modal -->
-  <dialog id="modal-import-excel-mistakes" class="modal-dialog excel-import-dialog" aria-labelledby="excel-import-modal-title">
+  <!-- 5. Instant Excel / CSV Mistake Upload Modal -->
+  <dialog id="modal-import-excel-mistakes" class="modal-dialog excel-import-dialog"
+    aria-labelledby="excel-import-modal-title">
     <div class="modal-header">
       <div>
-        <div class="eyebrow">BULK MISTAKE & QUESTION IMPORT</div>
-        <h2 id="excel-import-modal-title" class="modal-title">Import Questions from Excel / CSV</h2>
+        <div class="eyebrow">AUTOMATIC MISTAKE LOGGING</div>
+        <h2 id="excel-import-modal-title" class="modal-title">Upload Excel Sheet</h2>
         <div id="excel-import-test-banner" class="excel-target-test-banner"></div>
       </div>
       <button type="button" class="modal-close-btn" data-close-excel-modal aria-label="Close dialog">&times;</button>
@@ -817,7 +1005,8 @@
           <div>
             <h4 style="margin: 0 0 4px; color: var(--sf-navy); font-size: 14px;">Expected Spreadsheet Columns</h4>
             <p style="margin: 0; font-size: 11px; color: var(--sf-navy-soft);">
-              Upload an <b>.xlsx</b>, <b>.xls</b>, or <b>.csv</b> sheet containing your question analysis with these columns:
+              Upload an <b>.xlsx</b>, <b>.xls</b>, or <b>.csv</b> sheet containing your question analysis with these 7
+              columns:
             </p>
           </div>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-download-excel-template">
@@ -834,26 +1023,32 @@
           <span class="col-tag"><code>Marks</code></span>
         </div>
         <div class="excel-format-note">
-          💡 Questions where <i>Your Answer</i> or <i>Status</i> is empty, "Unattempted", or "Blank" are automatically registered as <b>⚪ Left Blank / Unattempted</b>. Topics and weak areas will be calculated automatically.
+          ⚡ <b>Instant & Automatic:</b> The moment you drop or select your sheet, StudyFlow reads all rows, logs
+          mistakes, updates your weakest topics, and saves directly to the database without asking you to save.
         </div>
       </div>
 
       <!-- Target Test Selector -->
       <div class="form-group" style="margin-bottom: 4px;">
-        <label for="excel-target-test-select" class="form-label" style="font-weight: 700; color: var(--sf-navy);">Target Mock Test</label>
-        <select id="excel-target-test-select" class="form-select" style="background: white; border-color: var(--sf-border); font-weight: 600;">
+        <label for="excel-target-test-select" class="form-label" style="font-weight: 700; color: var(--sf-navy);">Target
+          Mock Test</label>
+        <select id="excel-target-test-select" class="form-select"
+          style="background: white; border-color: var(--sf-border); font-weight: 600;">
           <!-- Populated by JS -->
         </select>
       </div>
 
       <!-- Dropzone -->
-      <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv" style="display: none;">
-      <div class="excel-dropzone" id="excel-dropzone" tabindex="0" role="button" aria-label="Drop Excel or CSV file here">
+      <input type="file" id="excel-file-input"
+        accept=".xlsx, .xls, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv"
+        style="display: none;">
+      <div class="excel-dropzone" id="excel-dropzone" tabindex="0" role="button"
+        aria-label="Drop Excel or CSV file here">
         <div class="excel-dropzone-inner" id="excel-dropzone-prompt">
           <span class="excel-upload-icon">📊</span>
           <div class="excel-upload-text">
             <b>Click or drag & drop your Excel (.xlsx) or CSV file here</b>
-            <small>Supports .xlsx, .xls, and .csv files</small>
+            <small>Data will be read and saved automatically</small>
           </div>
         </div>
         <div class="excel-file-selected-bar" id="excel-file-selected-bar" hidden>
@@ -861,60 +1056,20 @@
             <span style="font-size: 24px;">📊</span>
             <div>
               <b id="excel-selected-filename">mistakes.xlsx</b>
-              <small id="excel-selected-filesize">0 KB</small>
+              <small id="excel-selected-filesize">Logging mistakes...</small>
             </div>
           </div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-change-excel-file">Choose another file</button>
-        </div>
-      </div>
-
-      <!-- Preview Section -->
-      <div id="excel-preview-section" class="excel-preview-section" hidden>
-        <div class="excel-preview-summary-bar">
-          <div id="excel-preview-stats" class="excel-preview-stats">
-            <!-- Rendered by JS -->
-          </div>
-          <div class="excel-mode-toggle">
-            <label class="excel-mode-label">
-              <input type="radio" name="excel-import-mode" value="append" checked>
-              <span>Append to existing</span>
-            </label>
-            <label class="excel-mode-label">
-              <input type="radio" name="excel-import-mode" value="replace">
-              <span>Replace existing</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="excel-preview-table-wrap">
-          <table class="excel-preview-table">
-            <thead>
-              <tr>
-                <th style="width: 60px;">Q No.</th>
-                <th style="width: 100px;">Your Ans</th>
-                <th style="width: 120px;">Correct / Status</th>
-                <th style="width: 140px;">Topic</th>
-                <th>Why Correction Needed</th>
-                <th>Revision Action</th>
-                <th style="width: 65px;">Marks</th>
-                <th style="width: 110px;">Status</th>
-              </tr>
-            </thead>
-            <tbody id="excel-preview-tbody">
-              <!-- Rendered rows -->
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
     <div class="modal-footer modal-footer-between">
-      <button type="button" class="btn btn-secondary" data-close-excel-modal>Cancel</button>
-      <button type="button" class="btn btn-primary" id="btn-confirm-excel-import" disabled>
-        Import questions
+      <button type="button" class="btn btn-secondary" data-close-excel-modal>Close</button>
+      <button type="button" class="btn btn-primary" id="btn-browse-excel-file">
+        Choose Excel File
       </button>
     </div>
   </dialog>
-<div id="toast" class="toast"></div>
+  <div id="toast" class="toast"></div>
 
   <!-- DeepTick Modals -->
   <!-- 1. Task Create/Edit Modal -->
@@ -928,11 +1083,13 @@
         <input type="hidden" id="task-input-id" value="">
         <div class="form-group">
           <label for="task-input-title" class="form-label">Task Title *</label>
-          <input type="text" id="task-input-title" class="form-input" placeholder="e.g. Study Python Algorithms" required autofocus>
+          <input type="text" id="task-input-title" class="form-input" placeholder="e.g. Study Python Algorithms"
+            required autofocus>
         </div>
         <div class="form-group">
           <label for="task-input-desc" class="form-label">Description / Notes (Optional)</label>
-          <textarea id="task-input-desc" class="form-textarea" placeholder="Add key points, links, or notes..."></textarea>
+          <textarea id="task-input-desc" class="form-textarea"
+            placeholder="Add key points, links, or notes..."></textarea>
         </div>
         <div class="form-group">
           <label for="task-input-priority" class="form-label">Priority</label>
@@ -945,15 +1102,20 @@
         <div class="form-group">
           <label class="form-label">
             <span>Act / Est Pomodoros</span>
-            <span style="font-size: 0.75rem; color: var(--text-modal-muted); font-weight: normal;">Pomodoros ↔ Minutes</span>
+            <span style="font-size: 0.75rem; color: var(--text-modal-muted); font-weight: normal;">Pomodoros ↔
+              Minutes</span>
           </label>
           <div class="dual-estimate-grid">
             <div>
-              <label for="task-input-pomos" style="font-size: 0.8rem; color: var(--text-modal-muted); display: block; margin-bottom: 0.25rem;">Est Pomodoros</label>
+              <label for="task-input-pomos"
+                style="font-size: 0.8rem; color: var(--text-modal-muted); display: block; margin-bottom: 0.25rem;">Est
+                Pomodoros</label>
               <input type="number" id="task-input-pomos" class="form-input" min="1" max="50" step="1" value="2">
             </div>
             <div>
-              <label for="task-input-mins" style="font-size: 0.8rem; color: var(--text-modal-muted); display: block; margin-bottom: 0.25rem;">Est Minutes</label>
+              <label for="task-input-mins"
+                style="font-size: 0.8rem; color: var(--text-modal-muted); display: block; margin-bottom: 0.25rem;">Est
+                Minutes</label>
               <input type="number" id="task-input-mins" class="form-input" min="1" max="1440" step="1" value="60">
             </div>
             <div class="dual-estimate-formula">
@@ -963,7 +1125,8 @@
         </div>
       </div>
       <div class="modal-footer modal-footer-between">
-        <button type="button" id="btn-delete-task-modal" class="btn btn-danger" style="display: none;">Delete Task</button>
+        <button type="button" id="btn-delete-task-modal" class="btn btn-danger" style="display: none;">Delete
+          Task</button>
         <div class="modal-footer-actions">
           <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
           <button type="submit" class="btn btn-primary">Save Task</button>
@@ -983,93 +1146,187 @@
         <div class="settings-section">
           <h3 class="settings-section-header">⏱️ Timer</h3>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Pomodoro Duration</div><div class="setting-desc">Length of focus session</div></div>
-            <div class="setting-control"><input type="number" id="setting-pomodoro-duration" class="form-input" min="1" max="120"><span class="setting-unit">min</span></div>
+            <div class="setting-info">
+              <div class="setting-label">Pomodoro Duration</div>
+              <div class="setting-desc">Length of focus session</div>
+            </div>
+            <div class="setting-control"><input type="number" id="setting-pomodoro-duration" class="form-input" min="1"
+                max="120"><span class="setting-unit">min</span></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Short Break</div><div class="setting-desc">Rest duration between sessions</div></div>
-            <div class="setting-control"><input type="number" id="setting-short-break" class="form-input" min="1" max="60"><span class="setting-unit">min</span></div>
+            <div class="setting-info">
+              <div class="setting-label">Short Break</div>
+              <div class="setting-desc">Rest duration between sessions</div>
+            </div>
+            <div class="setting-control"><input type="number" id="setting-short-break" class="form-input" min="1"
+                max="60"><span class="setting-unit">min</span></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Long Break</div><div class="setting-desc">Extended rest duration</div></div>
-            <div class="setting-control"><input type="number" id="setting-long-break" class="form-input" min="1" max="120"><span class="setting-unit">min</span></div>
+            <div class="setting-info">
+              <div class="setting-label">Long Break</div>
+              <div class="setting-desc">Extended rest duration</div>
+            </div>
+            <div class="setting-control"><input type="number" id="setting-long-break" class="form-input" min="1"
+                max="120"><span class="setting-unit">min</span></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Long Break Interval</div><div class="setting-desc">Pomodoros before long break</div></div>
-            <div class="setting-control"><input type="number" id="setting-long-interval" class="form-input" min="1" max="12"><span class="setting-unit">pomos</span></div>
+            <div class="setting-info">
+              <div class="setting-label">Long Break Interval</div>
+              <div class="setting-desc">Pomodoros before long break</div>
+            </div>
+            <div class="setting-control"><input type="number" id="setting-long-interval" class="form-input" min="1"
+                max="12"><span class="setting-unit">pomos</span></div>
           </div>
         </div>
         <div class="settings-section">
           <h3 class="settings-section-header">⚡ Automation</h3>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Auto-Start Breaks</div><div class="setting-desc">Automatically begin break on focus end</div></div>
-            <div class="setting-control"><label class="toggle-switch"><input type="checkbox" id="setting-auto-breaks"><span class="toggle-slider"></span></label></div>
+            <div class="setting-info">
+              <div class="setting-label">Auto-Start Breaks</div>
+              <div class="setting-desc">Automatically begin break on focus end</div>
+            </div>
+            <div class="setting-control"><label class="toggle-switch"><input type="checkbox"
+                  id="setting-auto-breaks"><span class="toggle-slider"></span></label></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Auto-Start Pomodoros</div><div class="setting-desc">Automatically begin focus when break ends</div></div>
-            <div class="setting-control"><label class="toggle-switch"><input type="checkbox" id="setting-auto-pomos"><span class="toggle-slider"></span></label></div>
+            <div class="setting-info">
+              <div class="setting-label">Auto-Start Pomodoros</div>
+              <div class="setting-desc">Automatically begin focus when break ends</div>
+            </div>
+            <div class="setting-control"><label class="toggle-switch"><input type="checkbox"
+                  id="setting-auto-pomos"><span class="toggle-slider"></span></label></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Confirm Discard / Reset</div><div class="setting-desc">Warn before resetting running session</div></div>
-            <div class="setting-control"><label class="toggle-switch"><input type="checkbox" id="setting-confirm-delete"><span class="toggle-slider"></span></label></div>
+            <div class="setting-info">
+              <div class="setting-label">Confirm Discard / Reset</div>
+              <div class="setting-desc">Warn before resetting running session</div>
+            </div>
+            <div class="setting-control"><label class="toggle-switch"><input type="checkbox"
+                  id="setting-confirm-delete"><span class="toggle-slider"></span></label></div>
           </div>
         </div>
         <div class="settings-section">
           <h3 class="settings-section-header">🎯 Daily Goals</h3>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Daily Pomodoro Goal</div><div class="setting-desc">Target focus sessions per day</div></div>
-            <div class="setting-control"><input type="number" id="setting-daily-pomos" class="form-input" min="1" max="30"><span class="setting-unit">pomos</span></div>
+            <div class="setting-info">
+              <div class="setting-label">Daily Pomodoro Goal</div>
+              <div class="setting-desc">Target focus sessions per day</div>
+            </div>
+            <div class="setting-control"><input type="number" id="setting-daily-pomos" class="form-input" min="1"
+                max="30"><span class="setting-unit">pomos</span></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Daily Focus Time Goal</div><div class="setting-desc">Target focus hours</div></div>
-            <div class="setting-control"><input type="number" id="setting-daily-hours" class="form-input" min="0.5" max="16" step="0.5"><span class="setting-unit">hours</span></div>
+            <div class="setting-info">
+              <div class="setting-label">Daily Focus Time Goal</div>
+              <div class="setting-desc">Target focus hours</div>
+            </div>
+            <div class="setting-control"><input type="number" id="setting-daily-hours" class="form-input" min="0.5"
+                max="16" step="0.5"><span class="setting-unit">hours</span></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Primary Target Display</div><div class="setting-desc">Show pomos or time on footer</div></div>
-            <div class="setting-control"><select id="setting-goal-type" class="form-select" style="width: 130px;"><option value="pomodoros">Pomodoros</option><option value="time">Focus Time</option><option value="both">Both</option></select></div>
+            <div class="setting-info">
+              <div class="setting-label">Primary Target Display</div>
+              <div class="setting-desc">Show pomos or time on footer</div>
+            </div>
+            <div class="setting-control"><select id="setting-goal-type" class="form-select" style="width: 130px;">
+                <option value="pomodoros">Pomodoros</option>
+                <option value="time">Focus Time</option>
+                <option value="both">Both</option>
+              </select></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Show Completed Tasks</div><div class="setting-desc">Keep finished tasks in list</div></div>
-            <div class="setting-control"><label class="toggle-switch"><input type="checkbox" id="setting-show-completed"><span class="toggle-slider"></span></label></div>
+            <div class="setting-info">
+              <div class="setting-label">Show Completed Tasks</div>
+              <div class="setting-desc">Keep finished tasks in list</div>
+            </div>
+            <div class="setting-control"><label class="toggle-switch"><input type="checkbox"
+                  id="setting-show-completed"><span class="toggle-slider"></span></label></div>
           </div>
         </div>
         <div class="settings-section">
           <h3 class="settings-section-header">🔔 Sounds &amp; Alerts</h3>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Sound Notifications</div><div class="setting-desc">Play synthesized chime on completion</div></div>
-            <div class="setting-control"><label class="toggle-switch"><input type="checkbox" id="setting-sound-enabled"><span class="toggle-slider"></span></label></div>
+            <div class="setting-info">
+              <div class="setting-label">Sound Notifications</div>
+              <div class="setting-desc">Play synthesized chime on completion</div>
+            </div>
+            <div class="setting-control"><label class="toggle-switch"><input type="checkbox"
+                  id="setting-sound-enabled"><span class="toggle-slider"></span></label></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Pomodoro Sound</div><div class="setting-desc">Focus completion sound</div></div>
-            <div class="setting-control"><select id="setting-pomo-sound" class="form-select" style="width: 140px;"><option value="bell">🔔 Crystal Bell</option><option value="digital">📟 Digital Beep</option><option value="marimba">🪵 Marimba Chord</option><option value="gong">🧘 Zen Gong</option><option value="chime">✨ Morning Chime</option><option value="kitchen">⏲️ Vintage Kitchen</option></select></div>
+            <div class="setting-info">
+              <div class="setting-label">Pomodoro Sound</div>
+              <div class="setting-desc">Focus completion sound</div>
+            </div>
+            <div class="setting-control"><select id="setting-pomo-sound" class="form-select" style="width: 140px;">
+                <option value="bell">🔔 Crystal Bell</option>
+                <option value="digital">📟 Digital Beep</option>
+                <option value="marimba">🪵 Marimba Chord</option>
+                <option value="gong">🧘 Zen Gong</option>
+                <option value="chime">✨ Morning Chime</option>
+                <option value="kitchen">⏲️ Vintage Kitchen</option>
+              </select></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Break Sound</div><div class="setting-desc">Rest completion sound</div></div>
-            <div class="setting-control"><select id="setting-break-sound" class="form-select" style="width: 140px;"><option value="marimba">🪵 Marimba Chord</option><option value="bell">🔔 Crystal Bell</option><option value="digital">📟 Digital Beep</option><option value="gong">🧘 Zen Gong</option><option value="chime">✨ Morning Chime</option><option value="kitchen">⏲️ Vintage Kitchen</option></select></div>
+            <div class="setting-info">
+              <div class="setting-label">Break Sound</div>
+              <div class="setting-desc">Rest completion sound</div>
+            </div>
+            <div class="setting-control"><select id="setting-break-sound" class="form-select" style="width: 140px;">
+                <option value="marimba">🪵 Marimba Chord</option>
+                <option value="bell">🔔 Crystal Bell</option>
+                <option value="digital">📟 Digital Beep</option>
+                <option value="gong">🧘 Zen Gong</option>
+                <option value="chime">✨ Morning Chime</option>
+                <option value="kitchen">⏲️ Vintage Kitchen</option>
+              </select></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Volume (<span id="volume-display-val">75%</span>)</div></div>
-            <div class="setting-control" style="width: 150px;"><input type="range" id="setting-volume" min="0" max="100" value="75" style="width: 100%;"></div>
+            <div class="setting-info">
+              <div class="setting-label">Volume (<span id="volume-display-val">75%</span>)</div>
+            </div>
+            <div class="setting-control" style="width: 150px;"><input type="range" id="setting-volume" min="0" max="100"
+                value="75" style="width: 100%;"></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Repeat Sound</div><div class="setting-desc">Play chime multiple times</div></div>
-            <div class="setting-control" style="gap: 6px; display: flex;"><label class="toggle-switch"><input type="checkbox" id="setting-repeat-sound"><span class="toggle-slider"></span></label><input type="number" id="setting-repeat-count" class="form-input" min="1" max="5" value="2" style="width: 50px;"></div>
+            <div class="setting-info">
+              <div class="setting-label">Repeat Sound</div>
+              <div class="setting-desc">Play chime multiple times</div>
+            </div>
+            <div class="setting-control" style="gap: 6px; display: flex;"><label class="toggle-switch"><input
+                  type="checkbox" id="setting-repeat-sound"><span class="toggle-slider"></span></label><input
+                type="number" id="setting-repeat-count" class="form-input" min="1" max="5" value="2"
+                style="width: 50px;"></div>
           </div>
-          <div style="margin-top: 0.5rem;"><button type="button" id="btn-test-sound" class="btn btn-secondary" style="width: 100%; border: 1px solid #cbd5e1;">▶ Test Sound Preview</button></div>
+          <div style="margin-top: 0.5rem;"><button type="button" id="btn-test-sound" class="btn btn-secondary"
+              style="width: 100%; border: 1px solid #cbd5e1;">▶ Test Sound Preview</button></div>
         </div>
         <div class="settings-section">
           <h3 class="settings-section-header">💾 Data Management</h3>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Export Data Backup</div><div class="setting-desc">JSON backup of tasks &amp; history</div></div>
-            <div class="setting-control"><button type="button" id="btn-export-json" class="btn btn-secondary" style="border: 1px solid #cbd5e1; font-size: 0.8rem;">Export JSON</button></div>
+            <div class="setting-info">
+              <div class="setting-label">Export Data Backup</div>
+              <div class="setting-desc">JSON backup of tasks &amp; history</div>
+            </div>
+            <div class="setting-control"><button type="button" id="btn-export-json" class="btn btn-secondary"
+                style="border: 1px solid #cbd5e1; font-size: 0.8rem;">Export JSON</button></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Export CSV Log</div><div class="setting-desc">CSV spreadsheet of sessions</div></div>
-            <div class="setting-control"><button type="button" id="btn-export-csv" class="btn btn-secondary" style="border: 1px solid #cbd5e1; font-size: 0.8rem;">Export CSV</button></div>
+            <div class="setting-info">
+              <div class="setting-label">Export CSV Log</div>
+              <div class="setting-desc">CSV spreadsheet of sessions</div>
+            </div>
+            <div class="setting-control"><button type="button" id="btn-export-csv" class="btn btn-secondary"
+                style="border: 1px solid #cbd5e1; font-size: 0.8rem;">Export CSV</button></div>
           </div>
           <div class="setting-row">
-            <div class="setting-info"><div class="setting-label">Restore Data</div><div class="setting-desc">Import from JSON file</div></div>
-            <div class="setting-control"><label class="btn btn-secondary" style="border: 1px solid #cbd5e1; font-size: 0.8rem; cursor: pointer;">Import JSON<input type="file" id="input-import-json" accept=".json" style="display: none;"></label></div>
+            <div class="setting-info">
+              <div class="setting-label">Restore Data</div>
+              <div class="setting-desc">Import from JSON file</div>
+            </div>
+            <div class="setting-control"><label class="btn btn-secondary"
+                style="border: 1px solid #cbd5e1; font-size: 0.8rem; cursor: pointer;">Import JSON<input type="file"
+                  id="input-import-json" accept=".json" style="display: none;"></label></div>
           </div>
         </div>
       </div>
@@ -1088,9 +1345,18 @@
     </div>
     <div class="modal-body">
       <div class="analytics-summary-grid">
-        <div class="analytics-stat-card"><div id="analytics-total-pomos" class="analytics-stat-val">0</div><div class="analytics-stat-lbl">Weekly Pomodoros</div></div>
-        <div class="analytics-stat-card"><div id="analytics-total-hours" class="analytics-stat-val">0.0h</div><div class="analytics-stat-lbl">Weekly Focus Time</div></div>
-        <div class="analytics-stat-card"><div id="analytics-streak-val" class="analytics-stat-val">1d</div><div class="analytics-stat-lbl">Active Streak</div></div>
+        <div class="analytics-stat-card">
+          <div id="analytics-total-pomos" class="analytics-stat-val">0</div>
+          <div class="analytics-stat-lbl">Weekly Pomodoros</div>
+        </div>
+        <div class="analytics-stat-card">
+          <div id="analytics-total-hours" class="analytics-stat-val">0.0h</div>
+          <div class="analytics-stat-lbl">Weekly Focus Time</div>
+        </div>
+        <div class="analytics-stat-card">
+          <div id="analytics-streak-val" class="analytics-stat-val">1d</div>
+          <div class="analytics-stat-lbl">Active Streak</div>
+        </div>
       </div>
       <div class="analytics-chart-wrap">
         <div class="analytics-chart-title">Last 7 Days (Pomodoros)</div>
@@ -1126,7 +1392,8 @@
   </dialog>
 
   <!-- 5. Modal: Choose from Pre-existing StudyFlow Tasks -->
-  <dialog id="modal-choose-existing-task" class="modal-dialog choose-task-dialog" aria-labelledby="choose-task-modal-title">
+  <dialog id="modal-choose-existing-task" class="modal-dialog choose-task-dialog"
+    aria-labelledby="choose-task-modal-title">
     <div class="modal-header">
       <div>
         <div class="eyebrow">STUDYFLOW WORKSPACE</div>
@@ -1136,7 +1403,8 @@
     </div>
     <div class="modal-body choose-task-modal-body">
       <div class="choose-task-toolbar">
-        <input type="text" id="choose-task-search" class="form-input" placeholder="🔍 Search tasks by title or subject..." autocomplete="off">
+        <input type="text" id="choose-task-search" class="form-input"
+          placeholder="🔍 Search tasks by title or subject..." autocomplete="off">
         <div class="choose-task-filter-pills" role="tablist">
           <button type="button" class="choose-filter-pill active" data-choose-scope="all">All Open</button>
           <button type="button" class="choose-filter-pill" data-choose-scope="daily">☀️ Daily Tasks</button>
@@ -1156,7 +1424,8 @@
     <div class="modal-header">
       <div>
         <div class="eyebrow">STUDYFLOW DOCUMENTATION &amp; HANDBOOK</div>
-        <h2 id="manual-modal-title" class="modal-title" style="font-size: 22px;">📖 StudyFlow Feature Manual &amp; Page Guide</h2>
+        <h2 id="manual-modal-title" class="modal-title" style="font-size: 22px;">📖 StudyFlow Feature Manual &amp; Page
+          Guide</h2>
       </div>
       <button type="button" class="modal-close-btn" data-close-manual-modal aria-label="Close dialog">&times;</button>
     </div>
@@ -1176,23 +1445,32 @@
           <!-- Overview Tab -->
           <div class="manual-panel-view active" id="manual-tab-content-overview">
             <h3 class="manual-view-title">◫ Overview Page</h3>
-            <p class="manual-view-desc">Your command center uniting daily study priorities, syllabus completion metrics, and upcoming milestones into one cohesive workspace.</p>
+            <p class="manual-view-desc">Your command center uniting daily study priorities, syllabus completion metrics,
+              and upcoming milestones into one cohesive workspace.</p>
             <div class="manual-feature-grid">
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>📊</span><b>Overall Syllabus Bar</b><span class="manual-item-tag">Curriculum</span></div>
-                <p>Tracks your aggregate topic completion across all academic &amp; GATE subjects. Check off topics in the Subjects view to move this bar forward.</p>
+                <div class="manual-item-head"><span>📊</span><b>Overall Syllabus Bar</b><span
+                    class="manual-item-tag">Curriculum</span></div>
+                <p>Tracks your aggregate topic completion across all academic &amp; GATE subjects. Check off topics in
+                  the Subjects view to move this bar forward.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>☀️</span><b>Today's Priorities (Next up)</b><span class="manual-item-tag">Daily Tasks</span></div>
-                <p>Lists urgent daily study tasks due today. Complete tasks directly with the checkbox. Unfinished daily tasks automatically carry forward tomorrow with a missed remark.</p>
+                <div class="manual-item-head"><span>☀️</span><b>Today's Priorities (Next up)</b><span
+                    class="manual-item-tag">Daily Tasks</span></div>
+                <p>Lists urgent daily study tasks due today. Complete tasks directly with the checkbox. Unfinished daily
+                  tasks automatically carry forward tomorrow with a missed remark.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>🗓️</span><b>Upcoming Deadlines</b><span class="manual-item-tag">Milestones</span></div>
-                <p>Strictly monitors long-term overall task milestones, term submissions, and calendar events. Daily tasks are excluded here to keep major deadlines distinct.</p>
+                <div class="manual-item-head"><span>🗓️</span><b>Upcoming Deadlines</b><span
+                    class="manual-item-tag">Milestones</span></div>
+                <p>Strictly monitors long-term overall task milestones, term submissions, and calendar events. Daily
+                  tasks are excluded here to keep major deadlines distinct.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>⏱️</span><b>Focus Minutes Today</b><span class="manual-item-tag">DeepTick</span></div>
-                <p>Shows total minutes of deep focus logged today. Click "Start a focus session" to launch the DeepTick Pomodoro timer immediately.</p>
+                <div class="manual-item-head"><span>⏱️</span><b>Focus Minutes Today</b><span
+                    class="manual-item-tag">DeepTick</span></div>
+                <p>Shows total minutes of deep focus logged today. Click "Start a focus session" to launch the DeepTick
+                  Pomodoro timer immediately.</p>
               </div>
             </div>
           </div>
@@ -1200,23 +1478,32 @@
           <!-- Subjects Tab -->
           <div class="manual-panel-view" id="manual-tab-content-subjects">
             <h3 class="manual-view-title">▤ GATE &amp; Academic Syllabus</h3>
-            <p class="manual-view-desc">Organize every course subject, extract syllabus topics from lecture handouts via AI Optical Character Recognition (OCR), and track mastery topic-by-topic.</p>
+            <p class="manual-view-desc">Organize every course subject, extract syllabus topics from lecture handouts via
+              AI Optical Character Recognition (OCR), and track mastery topic-by-topic.</p>
             <div class="manual-feature-grid">
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>＋</span><b>Add Subject</b><span class="manual-item-tag">Management</span></div>
-                <p>Create subjects with code (e.g. CS201), semester/term, and syllabus topic lists. Each topic line becomes an interactive checkbox.</p>
+                <div class="manual-item-head"><span>＋</span><b>Add Subject</b><span
+                    class="manual-item-tag">Management</span></div>
+                <p>Create subjects with code (e.g. CS201), semester/term, and syllabus topic lists. Each topic line
+                  becomes an interactive checkbox.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>📷</span><b>Syllabus OCR Import</b><span class="manual-item-tag">AI Powered</span></div>
-                <p>Upload a photo or screenshot of your syllabus or lecture schedule. Built-in Tesseract OCR automatically reads the text and extracts topic lines into checkboxes.</p>
+                <div class="manual-item-head"><span>📷</span><b>Syllabus OCR Import</b><span class="manual-item-tag">AI
+                    Powered</span></div>
+                <p>Upload a photo or screenshot of your syllabus or lecture schedule. Built-in Tesseract OCR
+                  automatically reads the text and extracts topic lines into checkboxes.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>☑️</span><b>Topic Checklists</b><span class="manual-item-tag">Mastery</span></div>
-                <p>Check off topics as you complete lectures, readings, or revisions. Mastery percentages update across the entire app and your Scholar Profile.</p>
+                <div class="manual-item-head"><span>☑️</span><b>Topic Checklists</b><span
+                    class="manual-item-tag">Mastery</span></div>
+                <p>Check off topics as you complete lectures, readings, or revisions. Mastery percentages update across
+                  the entire app and your Scholar Profile.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>✏️</span><b>Edit &amp; Delete</b><span class="manual-item-tag">Controls</span></div>
-                <p>Use "Edit" to add newly introduced course topics or reorganize units. Deleting a subject cleans up associated topics safely.</p>
+                <div class="manual-item-head"><span>✏️</span><b>Edit &amp; Delete</b><span
+                    class="manual-item-tag">Controls</span></div>
+                <p>Use "Edit" to add newly introduced course topics or reorganize units. Deleting a subject cleans up
+                  associated topics safely.</p>
               </div>
             </div>
           </div>
@@ -1224,23 +1511,33 @@
           <!-- Skills Tab -->
           <div class="manual-panel-view" id="manual-tab-content-skills">
             <h3 class="manual-view-title">✳ Extra Skills Beyond Syllabus</h3>
-            <p class="manual-view-desc">Track practical skills outside traditional academic syllabi (e.g., Python, Cloud, Machine Learning, System Design, Professional Speaking).</p>
+            <p class="manual-view-desc">Track practical skills outside traditional academic syllabi (e.g., Python,
+              Cloud, Machine Learning, System Design, Professional Speaking).</p>
             <div class="manual-feature-grid">
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>🚀</span><b>Add Skill Plan</b><span class="manual-item-tag">Learning</span></div>
-                <p>Define new skills with learning category, target completion date, current proficiency (Beginner to Advanced), and study notes.</p>
+                <div class="manual-item-head"><span>🚀</span><b>Add Skill Plan</b><span
+                    class="manual-item-tag">Learning</span></div>
+                <p>Define new skills with learning category, target completion date, current proficiency (Beginner to
+                  Advanced), and study notes.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>📚</span><b>Learning Resources Hub</b><span class="manual-item-tag">Materials</span></div>
-                <p>Link courses, YouTube playlists, official documentation, articles, or textbooks. Use <code>Title | Link</code> format to generate clickable launch buttons.</p>
+                <div class="manual-item-head"><span>📚</span><b>Learning Resources Hub</b><span
+                    class="manual-item-tag">Materials</span></div>
+                <p>Link courses, YouTube playlists, official documentation, articles, or textbooks. Use
+                  <code>Title | Link</code> format to generate clickable launch buttons.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>✨</span><b>Real-Time Milestone Logging</b><span class="manual-item-tag">Accomplishment</span></div>
-                <p>Instead of rigid pre-planned checklists, log what you learned whenever you grasp an important concept, build a project, or finish a tutorial. Every entry records an achieved milestone with optional key takeaways.</p>
+                <div class="manual-item-head"><span>✨</span><b>Real-Time Milestone Logging</b><span
+                    class="manual-item-tag">Accomplishment</span></div>
+                <p>Instead of rigid pre-planned checklists, log what you learned whenever you grasp an important
+                  concept, build a project, or finish a tutorial. Every entry records an achieved milestone with
+                  optional key takeaways.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>📈</span><b>Mastery &amp; Completion</b><span class="manual-item-tag">Progress</span></div>
-                <p>Track your total logged milestones across all skills, monitor skills in progress, and celebrate skills marked as Completed.</p>
+                <div class="manual-item-head"><span>📈</span><b>Mastery &amp; Completion</b><span
+                    class="manual-item-tag">Progress</span></div>
+                <p>Track your total logged milestones across all skills, monitor skills in progress, and celebrate
+                  skills marked as Completed.</p>
               </div>
             </div>
           </div>
@@ -1248,23 +1545,32 @@
           <!-- Calendar Tab -->
           <div class="manual-panel-view" id="manual-tab-content-calendar">
             <h3 class="manual-view-title">▦ Study Calendar &amp; Deadlines</h3>
-            <p class="manual-view-desc">Plan exams, project submissions, class sessions, and deadlines with an equally spaced 7-day grid and selected day agenda.</p>
+            <p class="manual-view-desc">Plan exams, project submissions, class sessions, and deadlines with an equally
+              spaced 7-day grid and selected day agenda.</p>
             <div class="manual-feature-grid">
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>📊</span><b>Month Highlights Bar</b><span class="manual-item-tag">Metrics</span></div>
-                <p>Instant breakdown of total scheduled events, overall deadlines, and daily tasks due in the active month.</p>
+                <div class="manual-item-head"><span>📊</span><b>Month Highlights Bar</b><span
+                    class="manual-item-tag">Metrics</span></div>
+                <p>Instant breakdown of total scheduled events, overall deadlines, and daily tasks due in the active
+                  month.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>🏷️</span><b>Filter Chips (All / Events / Deadlines)</b><span class="manual-item-tag">Filtering</span></div>
-                <p>Filter cell badges in real time to isolate 📅 Events, 🟠 Overall Deadlines, or ☀️ Daily tasks without page reloads.</p>
+                <div class="manual-item-head"><span>🏷️</span><b>Filter Chips (All / Events / Deadlines)</b><span
+                    class="manual-item-tag">Filtering</span></div>
+                <p>Filter cell badges in real time to isolate 📅 Events, 🟠 Overall Deadlines, or ☀️ Daily tasks without
+                  page reloads.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>🗓️</span><b>Equally Spaced 7-Day Grid</b><span class="manual-item-tag">Layout</span></div>
-                <p>All Monday–Sunday columns are strictly identical in width. Mini-pills truncate cleanly with "+X more" indicators so the layout never distorts.</p>
+                <div class="manual-item-head"><span>🗓️</span><b>Equally Spaced 7-Day Grid</b><span
+                    class="manual-item-tag">Layout</span></div>
+                <p>All Monday–Sunday columns are strictly identical in width. Mini-pills truncate cleanly with "+X more"
+                  indicators so the layout never distorts.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>📋</span><b>Selected Day Agenda</b><span class="manual-item-tag">Actionable</span></div>
-                <p>Click any day to open its full agenda. Check off tasks inline directly from the calendar, edit event times, or add new items pre-filled to that date.</p>
+                <div class="manual-item-head"><span>📋</span><b>Selected Day Agenda</b><span
+                    class="manual-item-tag">Actionable</span></div>
+                <p>Click any day to open its full agenda. Check off tasks inline directly from the calendar, edit event
+                  times, or add new items pre-filled to that date.</p>
               </div>
             </div>
           </div>
@@ -1272,23 +1578,33 @@
           <!-- Tasks Tab -->
           <div class="manual-panel-view" id="manual-tab-content-tasks">
             <h3 class="manual-view-title">☑ Tasks &amp; Daily Flow (Daily vs Overall)</h3>
-            <p class="manual-view-desc">StudyFlow provides two dedicated task engines to separate immediate daily study commitments from long-term academic milestones.</p>
+            <p class="manual-view-desc">StudyFlow provides two dedicated task engines to separate immediate daily study
+              commitments from long-term academic milestones.</p>
             <div class="manual-feature-grid">
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>☀️</span><b>Daily Tasks</b><span class="manual-item-tag">Immediate</span></div>
-                <p>Tasks committed for today. If any daily task is uncompleted when the day passes, StudyFlow automatically rolls it over to the next day with an explicit <code>⚠️ Missed &amp; Carried Forward</code> remark so work is never forgotten.</p>
+                <div class="manual-item-head"><span>☀️</span><b>Daily Tasks</b><span
+                    class="manual-item-tag">Immediate</span></div>
+                <p>Tasks committed for today. If any daily task is uncompleted when the day passes, StudyFlow
+                  automatically rolls it over to the next day with an explicit
+                  <code>⚠️ Missed &amp; Carried Forward</code> remark so work is never forgotten.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>📋</span><b>Overall Tasks</b><span class="manual-item-tag">Milestones</span></div>
-                <p>Master backlog for multi-day assignments, term projects, thesis preparation, and exam dates. These exclusively populate the Overview's Upcoming Deadlines.</p>
+                <div class="manual-item-head"><span>📋</span><b>Overall Tasks</b><span
+                    class="manual-item-tag">Milestones</span></div>
+                <p>Master backlog for multi-day assignments, term projects, thesis preparation, and exam dates. These
+                  exclusively populate the Overview's Upcoming Deadlines.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>🔍</span><b>Scope Tabs &amp; Status Filters</b><span class="manual-item-tag">Navigation</span></div>
-                <p>Switch between ☀️ Daily, 📋 Overall, or 📑 All. Filter by Open, Completed, or isolate carried-over tasks with the <code>⚠️ Carried Over</code> button.</p>
+                <div class="manual-item-head"><span>🔍</span><b>Scope Tabs &amp; Status Filters</b><span
+                    class="manual-item-tag">Navigation</span></div>
+                <p>Switch between ☀️ Daily, 📋 Overall, or 📑 All. Filter by Open, Completed, or isolate carried-over
+                  tasks with the <code>⚠️ Carried Over</code> button.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>⏰</span><b>Reminders &amp; Pomo Estimation</b><span class="manual-item-tag">DeepTick</span></div>
-                <p>Set browser push notifications for exact reminder times, attach course subjects, and assign estimated pomodoro focus blocks.</p>
+                <div class="manual-item-head"><span>⏰</span><b>Reminders &amp; Pomo Estimation</b><span
+                    class="manual-item-tag">DeepTick</span></div>
+                <p>Set browser push notifications for exact reminder times, attach course subjects, and assign estimated
+                  pomodoro focus blocks.</p>
               </div>
             </div>
           </div>
@@ -1296,31 +1612,45 @@
           <!-- Reviews Tab (The Paper Manual!) -->
           <div class="manual-panel-view" id="manual-tab-content-reviews">
             <h3 class="manual-view-title">↗ Mock Tests &amp; Paper Review (The Paper Manual)</h3>
-            <p class="manual-view-desc">This system transforms test attempts into academic gains. Upload actual written papers, log question mistakes, and let StudyFlow automatically uncover your weakest syllabus topics.</p>
+            <p class="manual-view-desc">This system transforms test attempts into academic gains. Upload actual written
+              papers, log question mistakes, and let StudyFlow automatically uncover your weakest syllabus topics.</p>
             <div class="manual-feature-grid">
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>📄</span><b>Upload Test Paper</b><span class="manual-item-tag">Paper Storage</span></div>
-                <p>Attach your written exam as a PDF or image (PNG, JPG, WebP). Files are stored offline in browser IndexedDB with automatic thumbnail generation.</p>
+                <div class="manual-item-head"><span>📄</span><b>Upload Test Paper</b><span class="manual-item-tag">Paper
+                    Storage</span></div>
+                <p>Attach your written exam as a PDF or image (PNG, JPG, WebP). Files are stored offline in browser
+                  IndexedDB with automatic thumbnail generation.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>👁️</span><b>Full Paper Lightbox Viewer</b><span class="manual-item-tag">Reader</span></div>
-                <p>Click "View paper" on any test card to inspect your full written paper in high resolution with download capabilities and zoom.</p>
+                <div class="manual-item-head"><span>👁️</span><b>Full Paper Lightbox Viewer</b><span
+                    class="manual-item-tag">Reader</span></div>
+                <p>Click "View paper" on any test card to inspect your full written paper in high resolution with
+                  download capabilities and zoom.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>❌</span><b>Mistake Classification Logger</b><span class="manual-item-tag">Analysis</span></div>
-                <p>Log mistakes by Question Number, Marks Lost, and Mistake Type (<code>Conceptual</code>, <code>Calculation</code>, <code>Silly / Reading</code>, <code>Time management</code>, <code>Unattempted</code>). Record the correct approach and the key lesson to prevent repeats.</p>
+                <div class="manual-item-head"><span>❌</span><b>Mistake Classification Logger</b><span
+                    class="manual-item-tag">Analysis</span></div>
+                <p>Log mistakes by Question Number, Marks Lost, and Mistake Type (<code>Conceptual</code>,
+                  <code>Calculation</code>, <code>Silly / Reading</code>, <code>Time management</code>,
+                  <code>Unattempted</code>). Record the correct approach and the key lesson to prevent repeats.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>🧠</span><b>Automated Topic Weakness Engine</b><span class="manual-item-tag">Analytics</span></div>
-                <p>StudyFlow analyzes mark losses across all tests and ranks syllabus topics by total marks lost, pinpointing exactly which topics need revision first.</p>
+                <div class="manual-item-head"><span>🧠</span><b>Automated Topic Weakness Engine</b><span
+                    class="manual-item-tag">Analytics</span></div>
+                <p>StudyFlow analyzes mark losses across all tests and ranks syllabus topics by total marks lost,
+                  pinpointing exactly which topics need revision first.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>💡</span><b>Exam Strategy &amp; Pointers</b><span class="manual-item-tag">Strategy</span></div>
-                <p>Record exam pacing rules, negative marking traps, and actionable guidelines in the dedicated pointers box for each mock test.</p>
+                <div class="manual-item-head"><span>💡</span><b>Exam Strategy &amp; Pointers</b><span
+                    class="manual-item-tag">Strategy</span></div>
+                <p>Record exam pacing rules, negative marking traps, and actionable guidelines in the dedicated pointers
+                  box for each mock test.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>✓</span><b>Resolution Workflow</b><span class="manual-item-tag">Mastery</span></div>
-                <p>Once you thoroughly re-solve and understand a question, mark it "Resolved". The question turns green and updates your revision metrics.</p>
+                <div class="manual-item-head"><span>✓</span><b>Resolution Workflow</b><span
+                    class="manual-item-tag">Mastery</span></div>
+                <p>Once you thoroughly re-solve and understand a question, mark it "Resolved". The question turns green
+                  and updates your revision metrics.</p>
               </div>
             </div>
           </div>
@@ -1328,27 +1658,38 @@
           <!-- Focus Tab -->
           <div class="manual-panel-view" id="manual-tab-content-focus">
             <h3 class="manual-view-title">◷ Focus Timer &amp; Pomodoro (DeepTick)</h3>
-            <p class="manual-view-desc">DeepTick delivers science-backed focus intervals with cycle tracking, session presets, and dynamic completion time calculations.</p>
+            <p class="manual-view-desc">DeepTick delivers science-backed focus intervals with cycle tracking, session
+              presets, and dynamic completion time calculations.</p>
             <div class="manual-feature-grid">
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>⏱️</span><b>Session Differentiation Presets</b><span class="manual-item-tag">Presets</span></div>
-                <p>Choose 15m (Quick Sprint), 25m (Standard Pomodoro), 30m (Study Block), 45m (Deep Session), or 60m (Intense Focus). Clicking any preset instantly sets the clock duration.</p>
+                <div class="manual-item-head"><span>⏱️</span><b>Session Differentiation Presets</b><span
+                    class="manual-item-tag">Presets</span></div>
+                <p>Choose 15m (Quick Sprint), 25m (Standard Pomodoro), 30m (Study Block), 45m (Deep Session), or 60m
+                  (Intense Focus). Clicking any preset instantly sets the clock duration.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>🍅</span><b>Pomodoro Cycle Rounds</b><span class="manual-item-tag">Intervals</span></div>
-                <p>Displays <code>🍅 Round X of 4 · (Long break after round 4)</code>. Each cycle consists of 4 focus rounds separated by 5m short breaks, followed by a rewarding 15m long break after round 4.</p>
+                <div class="manual-item-head"><span>🍅</span><b>Pomodoro Cycle Rounds</b><span
+                    class="manual-item-tag">Intervals</span></div>
+                <p>Displays <code>🍅 Round X of 4 · (Long break after round 4)</code>. Each cycle consists of 4 focus
+                  rounds separated by 5m short breaks, followed by a rewarding 15m long break after round 4.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>📋</span><b>Assign Focus Tasks</b><span class="manual-item-tag">Tracking</span></div>
-                <p>Click "Choose Existing Task" to attach a StudyFlow task to your timer, or "+ Add Extra Task" for impromptu work. Tracks completed vs estimated pomodoros.</p>
+                <div class="manual-item-head"><span>📋</span><b>Assign Focus Tasks</b><span
+                    class="manual-item-tag">Tracking</span></div>
+                <p>Click "Choose Existing Task" to attach a StudyFlow task to your timer, or "+ Add Extra Task" for
+                  impromptu work. Tracks completed vs estimated pomodoros.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>📊</span><b>Today's Pomo Goal vs Cycle Count</b><span class="manual-item-tag">Clarity</span></div>
-                <p>The footer tracks your daily goal (e.g. 0 / 4 Pomos completed today), while the timer banner tracks your position in the 4-round break cycle.</p>
+                <div class="manual-item-head"><span>📊</span><b>Today's Pomo Goal vs Cycle Count</b><span
+                    class="manual-item-tag">Clarity</span></div>
+                <p>The footer tracks your daily goal (e.g. 0 / 4 Pomos completed today), while the timer banner tracks
+                  your position in the 4-round break cycle.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>🏁</span><b>Dynamic Finish At Calculation</b><span class="manual-item-tag">Estimation</span></div>
-                <p>Calculates the exact wall-clock time you will complete your queued work. Displays <code>--:--</code> when idle so it never projects imaginary marathon sessions.</p>
+                <div class="manual-item-head"><span>🏁</span><b>Dynamic Finish At Calculation</b><span
+                    class="manual-item-tag">Estimation</span></div>
+                <p>Calculates the exact wall-clock time you will complete your queued work. Displays <code>--:--</code>
+                  when idle so it never projects imaginary marathon sessions.</p>
               </div>
             </div>
           </div>
@@ -1356,19 +1697,26 @@
           <!-- Profile Tab -->
           <div class="manual-panel-view" id="manual-tab-content-profile">
             <h3 class="manual-view-title">👤 Scholar Profile &amp; Performance Analytics</h3>
-            <p class="manual-view-desc">Your scholar dashboard provides visual analytics on study habits, syllabus mastery distributions, and automated study recommendations.</p>
+            <p class="manual-view-desc">Your scholar dashboard provides visual analytics on study habits, syllabus
+              mastery distributions, and automated study recommendations.</p>
             <div class="manual-feature-grid">
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>📊</span><b>Weekly Study Hours Chart</b><span class="manual-item-tag">Graph</span></div>
-                <p>Visual bar breakdown of hours logged Monday through Sunday. Hover over bars to see daily focus times and maintain consistent study velocity.</p>
+                <div class="manual-item-head"><span>📊</span><b>Weekly Study Hours Chart</b><span
+                    class="manual-item-tag">Graph</span></div>
+                <p>Visual bar breakdown of hours logged Monday through Sunday. Hover over bars to see daily focus times
+                  and maintain consistent study velocity.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>🎯</span><b>Subject Mastery Breakdown</b><span class="manual-item-tag">Syllabus</span></div>
-                <p>Visual meters showing topic completion percentages per subject to easily identify neglected course modules.</p>
+                <div class="manual-item-head"><span>🎯</span><b>Subject Mastery Breakdown</b><span
+                    class="manual-item-tag">Syllabus</span></div>
+                <p>Visual meters showing topic completion percentages per subject to easily identify neglected course
+                  modules.</p>
               </div>
               <div class="manual-feature-item">
-                <div class="manual-item-head"><span>💡</span><b>Intelligent Study Recommendations</b><span class="manual-item-tag">AI Guidance</span></div>
-                <p>Dynamic coaching prompts synthesized from upcoming deadlines, mock test weakest topics, and recent study streaks.</p>
+                <div class="manual-item-head"><span>💡</span><b>Intelligent Study Recommendations</b><span
+                    class="manual-item-tag">AI Guidance</span></div>
+                <p>Dynamic coaching prompts synthesized from upcoming deadlines, mock test weakest topics, and recent
+                  study streaks.</p>
               </div>
             </div>
           </div>
@@ -1381,7 +1729,10 @@
     </div>
   </dialog>
 
-<script type="module" src="app.js"></script>
-<script type="module" src="deeptick/init.js"></script>
-<script type="module" src="auth-client.js"></script>
-<script type="module" src="profile-client.js"></script></body></html>
+  <script type="module" src="app.js"></script>
+  <script type="module" src="deeptick/init.js"></script>
+  <script type="module" src="auth-client.js"></script>
+  <script type="module" src="profile-client.js"></script>
+</body>
+
+</html>

@@ -14,6 +14,14 @@
       "destination": "/api/statistics.js"
     },
     {
+      "source": "/api/mistakes",
+      "destination": "/api/mistakes.js"
+    },
+    {
+      "source": "/api/mistakes/:match*",
+      "destination": "/api/mistakes.js"
+    },
+    {
       "source": "/api/health",
       "destination": "/api/health.js"
     },
