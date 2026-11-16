@@ -22,6 +22,14 @@
       "destination": "/api/mistakes.js"
     },
     {
+      "source": "/api/papers",
+      "destination": "/api/papers.js"
+    },
+    {
+      "source": "/api/papers/:match*",
+      "destination": "/api/papers.js"
+    },
+    {
       "source": "/api/health",
       "destination": "/api/health.js"
     },

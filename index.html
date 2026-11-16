@@ -1064,6 +1064,23 @@
           </div>
         </div>
       </div>
+
+      <!-- Optional Question Paper PDF Attachment -->
+      <div class="form-group" style="margin-top: 14px; margin-bottom: 6px;">
+        <label class="form-label" style="font-weight: 700; color: var(--sf-navy);">Attach Question Paper PDF (Optional)</label>
+        <input type="file" id="excel-modal-paper-input" accept=".pdf,application/pdf,image/*" style="display: none;">
+        <div class="excel-paper-attach-box" id="excel-paper-attach-box" tabindex="0" role="button" aria-label="Attach question paper PDF"
+          style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: white; border: 1.5px dashed var(--sf-border); border-radius: 10px; cursor: pointer;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span id="excel-paper-icon" style="font-size: 22px;">📄</span>
+            <div>
+              <b id="excel-paper-file-label" style="font-size: 13px; color: var(--sf-navy);">Attach Question Paper PDF</b>
+              <small id="excel-paper-file-sub" style="display: block; font-size: 11px; color: var(--sf-navy-soft);">Store the question paper PDF alongside your mistake log</small>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-browse-excel-paper" style="pointer-events: none;">Browse PDF</button>
+        </div>
+      </div>
     </div>
     <div class="modal-footer modal-footer-between">
       <button type="button" class="btn btn-secondary" data-close-excel-modal>Close</button>
@@ -1072,6 +1089,7 @@
       </button>
     </div>
   </dialog>
+  <input type="file" id="direct-paper-file-input" accept=".pdf,application/pdf,image/*" style="display: none;">
   <div id="toast" class="toast"></div>
 
   <!-- DeepTick Modals -->

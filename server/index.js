@@ -25,7 +25,8 @@ app.use(cors({
   credentials: true
 }));
 app.all('/api/auth/*splat', toNodeHandler(auth));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 async function requireSession(req, res, next) {
   try {
@@ -196,10 +197,21 @@ app.get(['/api/workspace', '/workspace'], requireSession, async (req, res, next)
           date: safeIsoDate(row.tested_at) || safeIsoDate(row.created_at),
           description: row.notes || '',
           pointers: row.notes || '',
-          hasPaper: false,
+          hasPaper: Boolean(row.has_paper),
+          fileName: row.file_name || '',
+          fileType: row.file_type || '',
+          fileSize: Number(row.file_size) || 0,
           createdAt: row.created_at ? row.created_at.toISOString() : new Date().toISOString()
         });
         existingTestIds.add(testId);
+      } else {
+        const existing = stateObj.mockTests.find(t => t && String(t.id) === testId);
+        if (existing && row.has_paper) {
+          existing.hasPaper = true;
+          existing.fileName = existing.fileName || row.file_name || '';
+          existing.fileType = existing.fileType || row.file_type || '';
+          existing.fileSize = existing.fileSize || Number(row.file_size) || 0;
+        }
       }
     }
 
@@ -273,18 +285,24 @@ app.put(['/api/workspace', '/workspace'], requireSession, async (req, res, next)
         if (!test || !test.id) continue;
         const testDate = safeIsoDate(test.date) || safeIsoDate(test.createdAt);
         await client.query(
-          `INSERT INTO mock_tests (user_id, client_id, name, tested_at, score, notes)
-           VALUES ($1, $2, $3, $4, $5, $6)
+          `INSERT INTO mock_tests (user_id, client_id, name, tested_at, score, notes, has_paper, file_name, file_type, file_size)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            ON CONFLICT (user_id, client_id) WHERE client_id IS NOT NULL
            DO UPDATE SET name = EXCLUDED.name, tested_at = EXCLUDED.tested_at,
-             score = EXCLUDED.score, notes = EXCLUDED.notes`,
+             score = EXCLUDED.score, notes = EXCLUDED.notes,
+             has_paper = EXCLUDED.has_paper, file_name = EXCLUDED.file_name,
+             file_type = EXCLUDED.file_type, file_size = EXCLUDED.file_size`,
           [
             userId,
             String(test.id),
             String(test.name || 'Mock Test'),
             testDate,
             parseFloat(test.marks) || 0,
-            test.description || test.pointers || null
+            test.description || test.pointers || null,
+            Boolean(test.hasPaper),
+            test.fileName || null,
+            test.fileType || null,
+            parseInt(test.fileSize, 10) || 0
           ]
         );
       }
@@ -355,6 +373,12 @@ app.put(['/api/workspace', '/workspace'], requireSession, async (req, res, next)
         [userId, testIds]
       );
       await client.query(
+        `DELETE FROM mock_test_papers
+         WHERE user_id = $1
+           AND NOT (test_id = ANY($2::text[]))`,
+        [userId, testIds]
+      );
+      await client.query(
         `INSERT INTO user_settings (user_id, settings, updated_at)
          VALUES ($1, $2::jsonb, NOW())
          ON CONFLICT (user_id)
@@ -399,20 +423,44 @@ app.post(['/api/mistakes/upload', '/mistakes/upload', '/api/mistakes', '/mistake
     try {
       await client.query('BEGIN');
 
-      // 1. Upsert mock test
+      // 1. Check existing paper and upsert mock test
+      const existingPaperRes = await client.query('SELECT file_name, file_type, file_size FROM mock_test_papers WHERE user_id = $1 AND test_id = $2', [userId, testId]);
+      const hasExistingPaper = existingPaperRes.rows.length > 0;
+      const willHavePaper = Boolean(body.paperFileData || hasExistingPaper);
+      const finalFileName = body.paperFileName || (hasExistingPaper ? existingPaperRes.rows[0].file_name : '');
+      const finalFileType = body.paperFileType || (hasExistingPaper ? existingPaperRes.rows[0].file_type : '');
+      const finalFileSize = parseInt(body.paperFileSize, 10) || (hasExistingPaper ? existingPaperRes.rows[0].file_size : 0);
+
+      if (body.paperFileData) {
+        await client.query(
+          `INSERT INTO mock_test_papers (user_id, test_id, file_name, file_type, file_size, file_data, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())
+           ON CONFLICT (user_id, test_id)
+           DO UPDATE SET file_name = EXCLUDED.file_name, file_type = EXCLUDED.file_type,
+             file_size = EXCLUDED.file_size, file_data = EXCLUDED.file_data, updated_at = NOW()`,
+          [userId, testId, finalFileName || 'question-paper.pdf', finalFileType || 'application/pdf', finalFileSize, body.paperFileData]
+        );
+      }
+
       await client.query(
-        `INSERT INTO mock_tests (user_id, client_id, name, tested_at, score, notes)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO mock_tests (user_id, client_id, name, tested_at, score, notes, has_paper, file_name, file_type, file_size)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (user_id, client_id) WHERE client_id IS NOT NULL
          DO UPDATE SET name = EXCLUDED.name, tested_at = EXCLUDED.tested_at,
-           score = EXCLUDED.score, notes = EXCLUDED.notes`,
+           score = EXCLUDED.score, notes = EXCLUDED.notes,
+           has_paper = EXCLUDED.has_paper, file_name = EXCLUDED.file_name,
+           file_type = EXCLUDED.file_type, file_size = EXCLUDED.file_size`,
         [
           userId,
           testId,
           testName,
           testDate,
           score,
-          `Imported ${inputMistakes.length} questions from spreadsheet`
+          `Imported ${inputMistakes.length} questions from spreadsheet`,
+          willHavePaper,
+          finalFileName,
+          finalFileType,
+          finalFileSize
         ]
       );
 
@@ -424,7 +472,10 @@ app.post(['/api/mistakes/upload', '/mistakes/upload', '/api/mistakes', '/mistake
         date: testDate,
         description: `Imported ${inputMistakes.length} questions from spreadsheet`,
         pointers: '',
-        hasPaper: false,
+        hasPaper: willHavePaper,
+        fileName: finalFileName,
+        fileType: finalFileType,
+        fileSize: finalFileSize,
         createdAt: new Date().toISOString()
       };
 
@@ -578,6 +629,10 @@ app.delete(['/api/mistakes/test/:testId', '/mistakes/test/:testId'], requireSess
         'DELETE FROM mock_tests WHERE user_id = $1 AND (client_id = $2 OR id::text = $2)',
         [userId, String(testId)]
       );
+      await client.query(
+        'DELETE FROM mock_test_papers WHERE user_id = $1 AND test_id = $2',
+        [userId, String(testId)]
+      );
 
       const settingsRes = await client.query('SELECT settings FROM user_settings WHERE user_id = $1', [userId]);
       const currentSettings = settingsRes.rows[0]?.settings || {};
@@ -618,6 +673,7 @@ app.delete(['/api/mistakes/all', '/mistakes/all'], requireSession, async (req, r
       await client.query('BEGIN');
       await client.query('DELETE FROM mock_test_mistakes WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM mock_tests WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM mock_test_papers WHERE user_id = $1', [userId]);
 
       const settingsRes = await client.query('SELECT settings FROM user_settings WHERE user_id = $1', [userId]);
       const currentSettings = settingsRes.rows[0]?.settings || {};
@@ -685,6 +741,194 @@ app.delete(['/api/mistakes/:id', '/mistakes/:id'], requireSession, async (req, r
     }
 
     res.json({ ok: true, deletedId: id });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =========================================================================
+// Question Paper Storage Endpoints (PDF / Images)
+// =========================================================================
+
+// Upload / Save Paper File
+app.post(['/api/papers/upload', '/papers/upload', '/api/papers', '/papers'], requireSession, async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const { testId, fileName, fileType, fileSize, fileData } = req.body || {};
+
+    if (!testId || !fileData) {
+      res.status(400).json({ error: 'testId and fileData are required.' });
+      return;
+    }
+
+    const cleanFileName = String(fileName || 'question-paper.pdf').trim();
+    const cleanFileType = String(fileType || 'application/pdf').trim();
+    const cleanFileSize = parseInt(fileSize, 10) || 0;
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Upsert into mock_test_papers table
+      await client.query(
+        `INSERT INTO mock_test_papers (user_id, test_id, file_name, file_type, file_size, file_data, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())
+         ON CONFLICT (user_id, test_id)
+         DO UPDATE SET file_name = EXCLUDED.file_name, file_type = EXCLUDED.file_type,
+           file_size = EXCLUDED.file_size, file_data = EXCLUDED.file_data, updated_at = NOW()`,
+        [userId, String(testId), cleanFileName, cleanFileType, cleanFileSize, fileData]
+      );
+
+      // 2. Update mock_tests metadata in Neon DB table
+      await client.query(
+        `UPDATE mock_tests
+         SET has_paper = TRUE, file_name = $3, file_type = $4, file_size = $5
+         WHERE user_id = $1 AND (client_id = $2 OR id::text = $2)`,
+        [userId, String(testId), cleanFileName, cleanFileType, cleanFileSize]
+      );
+
+      // 3. Keep user_settings snapshot synced
+      const settingsRes = await client.query('SELECT settings FROM user_settings WHERE user_id = $1', [userId]);
+      const currentSettings = settingsRes.rows[0]?.settings || {};
+      if (Array.isArray(currentSettings.mockTests)) {
+        const t = currentSettings.mockTests.find(x => x && String(x.id) === String(testId));
+        if (t) {
+          t.hasPaper = true;
+          t.fileName = cleanFileName;
+          t.fileType = cleanFileType;
+          t.fileSize = cleanFileSize;
+        }
+      }
+      await client.query(
+        `INSERT INTO user_settings (user_id, settings, updated_at)
+         VALUES ($1, $2::jsonb, NOW())
+         ON CONFLICT (user_id)
+         DO UPDATE SET settings = EXCLUDED.settings, updated_at = NOW()`,
+        [userId, JSON.stringify(currentSettings)]
+      );
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    res.json({
+      ok: true,
+      testId,
+      fileName: cleanFileName,
+      fileType: cleanFileType,
+      fileSize: cleanFileSize
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Retrieve / View Paper File
+app.get(['/api/papers/:testId', '/papers/:testId'], requireSession, async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const { testId } = req.params;
+
+    const result = await query(
+      `SELECT file_name, file_type, file_size, file_data, updated_at
+       FROM mock_test_papers
+       WHERE user_id = $1 AND test_id = $2
+       LIMIT 1`,
+      [userId, String(testId)]
+    );
+
+    if (!result.rows.length) {
+      res.status(404).json({ error: 'Paper file not found for this test.' });
+      return;
+    }
+
+    const row = result.rows[0];
+
+    // Raw file streaming for in-browser PDF viewer or direct download
+    if (req.query.raw === '1' || req.query.view === '1' || req.query.download === '1') {
+      let base64Data = row.file_data;
+      if (base64Data.includes(',')) {
+        base64Data = base64Data.split(',')[1];
+      }
+      const buffer = Buffer.from(base64Data, 'base64');
+      const mime = row.file_type || 'application/pdf';
+      res.setHeader('Content-Type', mime);
+      res.setHeader('Content-Length', buffer.length);
+      const disposition = req.query.download === '1' ? 'attachment' : 'inline';
+      res.setHeader('Content-Disposition', `${disposition}; filename="${encodeURIComponent(row.file_name || 'paper.pdf')}"`);
+      res.send(buffer);
+      return;
+    }
+
+    res.json({
+      ok: true,
+      testId,
+      fileName: row.file_name,
+      fileType: row.file_type,
+      fileSize: row.file_size,
+      fileData: row.file_data,
+      updatedAt: row.updated_at
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete Paper File
+app.delete(['/api/papers/:testId', '/papers/:testId'], requireSession, async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const { testId } = req.params;
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      await client.query(
+        'DELETE FROM mock_test_papers WHERE user_id = $1 AND test_id = $2',
+        [userId, String(testId)]
+      );
+
+      await client.query(
+        `UPDATE mock_tests
+         SET has_paper = FALSE, file_name = '', file_type = '', file_size = 0
+         WHERE user_id = $1 AND (client_id = $2 OR id::text = $2)`,
+        [userId, String(testId)]
+      );
+
+      const settingsRes = await client.query('SELECT settings FROM user_settings WHERE user_id = $1', [userId]);
+      const currentSettings = settingsRes.rows[0]?.settings || {};
+      if (Array.isArray(currentSettings.mockTests)) {
+        const t = currentSettings.mockTests.find(x => x && String(x.id) === String(testId));
+        if (t) {
+          t.hasPaper = false;
+          t.fileName = '';
+          t.fileType = '';
+          t.fileSize = 0;
+          t.thumbnail = null;
+        }
+      }
+      await client.query(
+        `INSERT INTO user_settings (user_id, settings, updated_at)
+         VALUES ($1, $2::jsonb, NOW())
+         ON CONFLICT (user_id)
+         DO UPDATE SET settings = EXCLUDED.settings, updated_at = NOW()`,
+        [userId, JSON.stringify(currentSettings)]
+      );
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    res.json({ ok: true, deleted: true, testId });
   } catch (error) {
     next(error);
   }

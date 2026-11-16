@@ -148,9 +148,23 @@ async function loadWorkspaceForUser(userId){
         date:r.tested_at?String(r.tested_at).slice(0,10):null,
         description:r.notes||'',
         pointers:r.notes||'',
-        hasPaper:false,
+        hasPaper:Boolean(r.has_paper),
+        fileName:r.file_name||'',
+        fileType:r.file_type||'',
+        fileSize:Number(r.file_size)||0,
         createdAt:r.created_at?String(r.created_at):todayISO()
       }));
+    } else if (Array.isArray(payload.mockTests) && Array.isArray(serverState.mockTests)) {
+      payload.mockTests.forEach(r => {
+        const testId = String(r.client_id || r.id);
+        const t = serverState.mockTests.find(x => x && String(x.id) === testId);
+        if (t && r.has_paper) {
+          t.hasPaper = true;
+          t.fileName = t.fileName || r.file_name || '';
+          t.fileType = t.fileType || r.file_type || '';
+          t.fileSize = t.fileSize || Number(r.file_size) || 0;
+        }
+      });
     }
     if (Array.isArray(payload.mistakes)&&payload.mistakes.length&&(!serverState.mistakes||!serverState.mistakes.length)){
       serverState.mistakes=payload.mistakes.map(r=>({
@@ -183,6 +197,23 @@ async function loadWorkspaceForUser(userId){
       // For mockTests and mistakes, serverState is authoritative (prevents resurrecting deleted tests/mistakes)
       mergedState.mockTests=Array.isArray(serverState.mockTests)?serverState.mockTests:[];
       mergedState.mistakes=Array.isArray(serverState.mistakes)?serverState.mistakes:[];
+
+      if (Array.isArray(localWorkspace.mockTests)) {
+        mergedState.mockTests.forEach(t => {
+          const localTest = localWorkspace.mockTests.find(lt => lt && String(lt.id) === String(t.id));
+          if (localTest) {
+            if (!t.hasPaper && localTest.hasPaper) {
+              t.hasPaper = true;
+              t.fileName = t.fileName || localTest.fileName || '';
+              t.fileType = t.fileType || localTest.fileType || '';
+              t.fileSize = t.fileSize || localTest.fileSize || 0;
+            }
+            if (!t.thumbnail && localTest.thumbnail) {
+              t.thumbnail = localTest.thumbnail;
+            }
+          }
+        });
+      }
 
       ['subjects','tasks','events','skills'].forEach(collection=>{
         const serverItems=Array.isArray(serverState[collection])?serverState[collection]:[];
@@ -826,12 +857,12 @@ function renderReviews(){
         let paperStrip='';
         if(t.hasPaper){
           if(t.fileType?.startsWith('image/')&&t.thumbnail){
-            paperStrip=`<div class="test-paper-strip"><img src="${t.thumbnail}" class="test-paper-thumb" alt="Paper thumbnail"><div class="test-paper-info"><b>${esc(t.fileName||'Paper Image')}</b><small>${formatFileSize(t.fileSize)} · Image attached</small></div></div>`;
+            paperStrip=`<div class="test-paper-strip" data-view-paper="${t.id}" title="Click to view full paper"><img src="${t.thumbnail}" class="test-paper-thumb" alt="Paper thumbnail"><div class="test-paper-info"><b>${esc(t.fileName||'Paper Image')}</b><small>${formatFileSize(t.fileSize)} · Image attached · Click to view</small></div><button type="button" class="tiny-btn" data-view-paper="${t.id}" style="margin-left:auto;">👁 View</button></div>`;
           }else{
-            paperStrip=`<div class="test-paper-strip"><div class="test-paper-icon">📄</div><div class="test-paper-info"><b>${esc(t.fileName||'Test_Paper.pdf')}</b><small>${formatFileSize(t.fileSize)} · PDF attached</small></div></div>`;
+            paperStrip=`<div class="test-paper-strip" data-view-paper="${t.id}" title="Click to view question paper PDF"><div class="test-paper-icon">📄</div><div class="test-paper-info"><b>${esc(t.fileName||'Question_Paper.pdf')}</b><small>${formatFileSize(t.fileSize)} · PDF Question Paper · Click to view</small></div><button type="button" class="tiny-btn" data-view-paper="${t.id}" style="margin-left:auto;">👁 Preview</button></div>`;
           }
         }else{
-          paperStrip=`<div class="test-paper-strip"><div class="test-paper-icon">📝</div><div class="test-paper-info"><b>Test record</b><small>No paper file attached</small></div></div>`;
+          paperStrip=`<div class="test-paper-strip"><div class="test-paper-icon">📝</div><div class="test-paper-info"><b>Question Paper</b><small>No PDF attached</small></div><button type="button" class="tiny-btn" data-attach-paper="${t.id}" style="margin-left:auto;">📎 Attach PDF</button></div>`;
         }
 
         return `
@@ -1025,25 +1056,30 @@ async function openMockTestDetail(testId){
       <div class="paper-attached-card">
         ${thumbHtml}
         <div class="paper-card-meta">
-          <b>${esc(t.fileName||'Test_Paper')}</b>
-          <small>${formatFileSize(t.fileSize)} · ${t.fileType?.includes('pdf')?'PDF Document':'Image Paper'}</small>
+          <b>${esc(t.fileName||'Question_Paper.pdf')}</b>
+          <small>${formatFileSize(t.fileSize)} · ${t.fileType?.includes('pdf')?'PDF Question Paper':'Image Paper'}</small>
         </div>
       </div>
-      <div class="paper-btn-group">
-        <button type="button" class="btn btn-secondary btn-sm" data-view-paper="${t.id}">🔍 View full paper</button>
-        <button type="button" class="btn btn-secondary btn-sm" data-download-paper="${t.id}">⬇ Download</button>
+      <div class="paper-btn-group" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+        <button type="button" class="btn btn-primary btn-sm" data-view-paper="${t.id}">🔍 View Paper Preview</button>
+        <a href="${API_BASE}/papers/${encodeURIComponent(t.id)}?raw=1" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" data-direct-paper-link="${t.id}">↗ Open in new tab</a>
+        <button type="button" class="btn btn-secondary btn-sm" data-download-paper="${t.id}">⬇ Download PDF</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-attach-paper="${t.id}">📎 Replace</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-remove-paper="${t.id}" style="color:#b91c1c;">🗑 Remove</button>
       </div>
     `;
   }else{
     paperContainer.innerHTML=`
       <div class="paper-attached-card">
-        <div class="paper-card-icon">📝</div>
+        <div class="paper-card-icon">📄</div>
         <div class="paper-card-meta">
-          <b>No paper attached</b>
-          <small>Upload the paper image or PDF to view it alongside your review.</small>
+          <b>No Question Paper attached</b>
+          <small>Upload your question paper PDF to view it alongside your mistakes.</small>
         </div>
       </div>
-      <button type="button" class="btn btn-secondary btn-sm" data-edit-mock-test="${t.id}">＋ Upload paper file</button>
+      <div class="paper-btn-group" style="margin-top:8px;">
+        <button type="button" class="btn btn-primary btn-sm" data-attach-paper="${t.id}">📎 Attach Question Paper PDF</button>
+      </div>
     `;
   }
 
@@ -1239,7 +1275,6 @@ function openMistakeModal(mistakeId=null,testId=null){
 }
 
 async function viewPaperFull(testId){
-  const record=await getPaperFile(testId);
   const t=db.mockTests.find(x=>x.id===testId);
   const dialog=$('#modal-paper-viewer');
   const contentEl=$('#viewer-content');
@@ -1247,77 +1282,109 @@ async function viewPaperFull(testId){
   const downloadLink=$('#viewer-download-link');
   const openTabBtn=$('#viewer-open-tab-btn');
 
-  titleEl.textContent=t?.name?`${t.name} — Paper Preview`:'Paper Preview';
-  if(!record||!record.blob){
+  titleEl.textContent=t?.name?`${t.name} — Question Paper`:'Question Paper Preview';
+  contentEl.innerHTML=`
+    <div class="viewer-empty-state">
+      <span style="font-size:36px;">⏳</span>
+      <h4 style="margin:12px 0 6px; color:var(--sf-navy);">Loading Question Paper...</h4>
+      <p style="margin:0; font-size:12px; color:var(--sf-navy-soft);">Fetching paper from storage...</p>
+    </div>
+  `;
+  dialog.showModal();
+
+  const record=await getPaperFile(testId);
+  if(!record||(!record.blob && !record.dataUrl)){
     contentEl.innerHTML=`
       <div class="viewer-empty-state">
         <span style="font-size:36px;">📄</span>
         <h4 style="margin:12px 0 6px; color:var(--sf-navy);">No paper file attached</h4>
-        <p style="margin:0; font-size:12px; color:var(--sf-navy-soft);">This mock test was saved without an uploaded PDF or image file.</p>
+        <p style="margin:0; font-size:12px; color:var(--sf-navy-soft);">This mock test was saved without an attached question paper file.</p>
+        <button type="button" class="btn btn-primary btn-sm" style="margin-top:14px;" data-attach-paper="${testId}">📎 Attach Question Paper PDF Now</button>
       </div>
     `;
     downloadLink.hidden=true;
     if(openTabBtn)openTabBtn.hidden=true;
-    dialog.showModal();
     return;
   }
 
-  const isPdf=(record.type&&record.type.includes('pdf'))||(record.name&&record.name.toLowerCase().endsWith('.pdf'));
+  const isPdf=(record.type&&record.type.toLowerCase().includes('pdf'))||(record.name&&record.name.toLowerCase().endsWith('.pdf'));
   let displayBlob=record.blob;
-  if(isPdf&&(!displayBlob.type||displayBlob.type!=='application/pdf')){
-    displayBlob=new Blob([record.blob],{type:'application/pdf'});
+  if(!displayBlob && record.dataUrl){
+    try{
+      let base64 = record.dataUrl;
+      if(base64.includes(',')) base64 = base64.split(',')[1];
+      const byteChars = atob(base64);
+      const byteNums = new Array(byteChars.length);
+      for(let i=0; i<byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+      displayBlob = new Blob([new Uint8Array(byteNums)], { type: record.type || 'application/pdf' });
+    }catch(e){
+      console.warn('Could not decode base64 dataUrl into blob:', e);
+    }
   }
 
-  const url=URL.createObjectURL(displayBlob);
+  const blobUrl = displayBlob ? URL.createObjectURL(displayBlob) : '';
+  const serverViewUrl = `${API_BASE}/papers/${encodeURIComponent(testId)}?raw=1`;
+  const viewUrl = blobUrl || serverViewUrl;
+
   downloadLink.hidden=false;
-  downloadLink.href=url;
-  downloadLink.download=record.name||'test-paper';
+  downloadLink.href=viewUrl;
+  downloadLink.download=record.name||'question-paper.pdf';
 
   if(openTabBtn){
     openTabBtn.hidden=false;
-    openTabBtn.href=url;
+    openTabBtn.href=serverViewUrl;
   }
 
   if(record.type?.startsWith('image/')&&!isPdf){
-    contentEl.innerHTML=`<img src="${url}" class="viewer-img" alt="Test paper preview">`;
+    contentEl.innerHTML=`<img src="${viewUrl}" class="viewer-img" alt="Question paper preview">`;
   }else{
     contentEl.innerHTML=`
       <div class="pdf-viewer-wrap">
-        <object data="${url}" type="application/pdf" class="viewer-pdf-frame" aria-label="PDF paper preview">
-          <iframe src="${url}" class="viewer-pdf-frame" title="PDF preview"></iframe>
-        </object>
+        <iframe src="${viewUrl}" class="viewer-pdf-frame" title="PDF Question Paper Viewer" frameborder="0"></iframe>
         <div class="pdf-fallback-bar">
-          <span>📄 <b>${esc(record.name||'test-paper.pdf')}</b> (${formatFileSize(record.size||displayBlob.size)})</span>
+          <span>📄 <b>${esc(record.name||'question-paper.pdf')}</b> (${formatFileSize(record.size||displayBlob?.size)})</span>
           <div style="display:flex;gap:8px;align-items:center;">
-            <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">↗ Open in new tab</a>
-            <a href="${url}" download="${esc(record.name||'paper.pdf')}" class="btn btn-secondary btn-sm">⬇ Download PDF</a>
+            <a href="${serverViewUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">↗ Open in new tab</a>
+            <a href="${viewUrl}" download="${esc(record.name||'question-paper.pdf')}" class="btn btn-secondary btn-sm">⬇ Download PDF</a>
           </div>
         </div>
       </div>
     `;
   }
-  dialog.showModal();
 }
 
 async function downloadPaperFile(testId){
   const record=await getPaperFile(testId);
-  if(!record||!record.blob){
-    toast('Paper file not available for download.');
+  if(!record||(!record.blob && !record.dataUrl)){
+    window.open(`${API_BASE}/papers/${encodeURIComponent(testId)}?download=1`, '_blank');
     return;
   }
-  const isPdf=(record.type&&record.type.includes('pdf'))||(record.name&&record.name.toLowerCase().endsWith('.pdf'));
+  const isPdf=(record.type&&record.type.toLowerCase().includes('pdf'))||(record.name&&record.name.toLowerCase().endsWith('.pdf'));
   let displayBlob=record.blob;
-  if(isPdf&&(!displayBlob.type||displayBlob.type!=='application/pdf')){
-    displayBlob=new Blob([record.blob],{type:'application/pdf'});
+  if(!displayBlob && record.dataUrl){
+    try{
+      let base64 = record.dataUrl;
+      if(base64.includes(',')) base64 = base64.split(',')[1];
+      const byteChars = atob(base64);
+      const byteNums = new Array(byteChars.length);
+      for(let i=0; i<byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+      displayBlob = new Blob([new Uint8Array(byteNums)], { type: record.type || 'application/pdf' });
+    }catch(e){
+      console.warn('Could not decode base64 dataUrl for download:', e);
+    }
   }
-  const url=URL.createObjectURL(displayBlob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=record.name||'test-paper';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  if(displayBlob){
+    const url=URL.createObjectURL(displayBlob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=record.name||(isPdf?'question-paper.pdf':'paper-file');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+  } else {
+    window.open(`${API_BASE}/papers/${encodeURIComponent(testId)}?download=1`, '_blank');
+  }
 }
 
 // =========================================================================
@@ -1466,6 +1533,16 @@ function openExcelImportModal(testId){
     const test=db.mockTests.find(x=>x.id===activeExcelImportTestId);
     banner.innerHTML=test?`Target Mock Test: <b>${esc(test.name)}</b>`:'Automatic Question Import';
   }
+  selectedExcelPaperFile=null;
+  const paperFileInput=$('#excel-modal-paper-input');
+  if(paperFileInput)paperFileInput.value='';
+  if($('#excel-paper-file-label'))$('#excel-paper-file-label').textContent='Attach Question Paper PDF (Optional)';
+  if($('#excel-paper-file-sub'))$('#excel-paper-file-sub').textContent='Store the question paper PDF alongside your mistake log';
+  if($('#excel-paper-icon'))$('#excel-paper-icon').textContent='📄';
+  if($('#excel-paper-attach-box')){
+    $('#excel-paper-attach-box').style.borderColor='var(--sf-border)';
+    $('#excel-paper-attach-box').style.background='white';
+  }
   const fileInput=$('#excel-file-input');
   if(fileInput)fileInput.value='';
   if($('#excel-file-selected-bar'))$('#excel-file-selected-bar').hidden=true;
@@ -1588,12 +1665,31 @@ async function handleAutoExcelUpload(file,customTargetTestId=null){
         description:`Imported from spreadsheet (${parsedRows.length} questions analysed)`,
         pointers:'',
         hasPaper:false,
+        fileName:'',
+        fileType:'',
+        fileSize:0,
+        thumbnail:null,
         createdAt:new Date().toISOString()
       };
       db.mockTests.unshift(targetTest);
     }else{
       targetTest.marks=calculatedScore;
       targetTest.description=`Updated with ${parsedRows.length} questions from ${cleanName}`;
+    }
+
+    if(selectedExcelPaperFile){
+      const isPdf=(selectedExcelPaperFile.type&&selectedExcelPaperFile.type.toLowerCase().includes('pdf'))||
+                  (selectedExcelPaperFile.name&&selectedExcelPaperFile.name.toLowerCase().endsWith('.pdf'));
+      targetTest.hasPaper=true;
+      targetTest.fileName=selectedExcelPaperFile.name;
+      targetTest.fileType=isPdf?'application/pdf':(selectedExcelPaperFile.type||'image/jpeg');
+      targetTest.fileSize=selectedExcelPaperFile.size;
+      try{
+        await savePaperFile(targetTestId,selectedExcelPaperFile);
+      }catch(paperErr){
+        console.warn('Could not save attached question paper file:',paperErr);
+      }
+      selectedExcelPaperFile=null;
     }
 
     // Construct new mistake records with all 7 columns
@@ -1916,6 +2012,7 @@ if(testForm){
       }else{
         thumbnail=null;
       }
+      selectedPaperFile=null;
     }
 
     const testData={
@@ -2100,6 +2197,28 @@ if(excelDropzone&&excelFileInput){
     if(file)handleAutoExcelUpload(file,activeExcelImportTestId);
   });
 }
+
+// Modal Excel Question Paper Attachment
+let selectedExcelPaperFile=null;
+const excelPaperBox=$('#excel-paper-attach-box');
+const excelPaperInput=$('#excel-modal-paper-input');
+if(excelPaperBox&&excelPaperInput){
+  excelPaperBox.onclick=()=>excelPaperInput.click();
+  excelPaperInput.onchange=()=>{
+    const file=excelPaperInput.files?.[0];
+    if(file){
+      selectedExcelPaperFile=file;
+      const label=$('#excel-paper-file-label');
+      const sub=$('#excel-paper-file-sub');
+      const icon=$('#excel-paper-icon');
+      if(label)label.textContent=file.name;
+      if(sub)sub.textContent=`${formatFileSize(file.size)} · Ready to attach to test`;
+      if(icon)icon.textContent='✅';
+      excelPaperBox.style.borderColor='#0f766e';
+      excelPaperBox.style.background='#f0fdfa';
+    }
+  };
+}
 $('#btn-save-detail-pointers')?.addEventListener('click',()=>{
   if(!activeMockTestId)return;
   const t=db.mockTests.find(x=>x.id===activeMockTestId);
@@ -2215,10 +2334,74 @@ document.addEventListener('click',e=>{
   if(b.dataset.viewPaper){
     e.stopPropagation();
     viewPaperFull(b.dataset.viewPaper);
+    return;
   }
   if(b.dataset.downloadPaper){
     e.stopPropagation();
     downloadPaperFile(b.dataset.downloadPaper);
+    return;
+  }
+  if(b.dataset.attachPaper || b.dataset.replacePaper){
+    e.stopPropagation();
+    const testId = b.dataset.attachPaper || b.dataset.replacePaper;
+    const directInput = $('#direct-paper-file-input');
+    if(directInput){
+      directInput.value = '';
+      directInput.onchange = async () => {
+        const file = directInput.files?.[0];
+        if(!file) return;
+        const isPdf = (file.type && file.type.toLowerCase().includes('pdf')) ||
+                      (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        const mimeType = isPdf ? 'application/pdf' : (file.type || 'image/jpeg');
+        toast('Saving question paper file...');
+        try {
+          await savePaperFile(testId, file);
+          const t = db.mockTests.find(x => x && String(x.id) === String(testId));
+          if(t){
+            t.hasPaper = true;
+            t.fileName = file.name;
+            t.fileType = mimeType;
+            t.fileSize = file.size;
+            if(mimeType.startsWith('image/') && !isPdf){
+              t.thumbnail = await generateImageThumbnail(file);
+            }
+          }
+          save();
+          renderReviews();
+          if(activeMockTestId && String(activeMockTestId) === String(testId)){
+            openMockTestDetail(testId);
+          }
+          toast('Question paper PDF attached & saved successfully!');
+        } catch(err) {
+          console.error('Error attaching paper:', err);
+          toast('Could not attach paper. Please try again.');
+        }
+      };
+      directInput.click();
+    }
+    return;
+  }
+  if(b.dataset.removePaper){
+    e.stopPropagation();
+    const testId = b.dataset.removePaper;
+    if(confirm('Remove attached question paper file from this test?')){
+      deletePaperFile(testId);
+      const t = db.mockTests.find(x => x && String(x.id) === String(testId));
+      if(t){
+        t.hasPaper = false;
+        t.fileName = '';
+        t.fileType = '';
+        t.fileSize = 0;
+        t.thumbnail = null;
+      }
+      save();
+      renderReviews();
+      if(activeMockTestId && String(activeMockTestId) === String(testId)){
+        openMockTestDetail(testId);
+      }
+      toast('Question paper removed.');
+    }
+    return;
   }
   if(b.dataset.editTestMistake){
     openMistakeModal(b.dataset.editTestMistake,activeMockTestId);
