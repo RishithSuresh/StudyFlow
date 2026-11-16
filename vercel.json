@@ -2,38 +2,6 @@
   "version": 2,
   "rewrites": [
     {
-      "source": "/api/workspace",
-      "destination": "/api/workspace.js"
-    },
-    {
-      "source": "/api/me",
-      "destination": "/api/me.js"
-    },
-    {
-      "source": "/api/statistics",
-      "destination": "/api/statistics.js"
-    },
-    {
-      "source": "/api/mistakes",
-      "destination": "/api/mistakes.js"
-    },
-    {
-      "source": "/api/mistakes/:match*",
-      "destination": "/api/mistakes.js"
-    },
-    {
-      "source": "/api/papers",
-      "destination": "/api/papers.js"
-    },
-    {
-      "source": "/api/papers/:match*",
-      "destination": "/api/papers.js"
-    },
-    {
-      "source": "/api/health",
-      "destination": "/api/health.js"
-    },
-    {
       "source": "/api/auth/:match*",
       "destination": "/api/auth/[...all].js"
     },
