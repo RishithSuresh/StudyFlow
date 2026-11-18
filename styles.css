@@ -7586,46 +7586,53 @@ dialog:not([open]) {
 }
 
 /* Color Palettes */
-.sticky-card.color-yellow {
-  background: #FFF59D;
+.sticky-card.color-yellow,
+.sticky-detail-container.color-yellow {
+  background-color: #FFF59D !important;
   color: #2E2900;
-  border-top: 4px solid #FBC02D;
+  border-top: 5px solid #FBC02D;
 }
 
-.sticky-card.color-mint {
-  background: #C8E6C9;
+.sticky-card.color-mint,
+.sticky-detail-container.color-mint {
+  background-color: #C8E6C9 !important;
   color: #0F3815;
-  border-top: 4px solid #66BB6A;
+  border-top: 5px solid #66BB6A;
 }
 
-.sticky-card.color-peach {
-  background: #FFCCBC;
+.sticky-card.color-peach,
+.sticky-detail-container.color-peach {
+  background-color: #FFCCBC !important;
   color: #3E1E12;
-  border-top: 4px solid #FF7043;
+  border-top: 5px solid #FF7043;
 }
 
-.sticky-card.color-lavender {
-  background: #E1BEE7;
+.sticky-card.color-lavender,
+.sticky-detail-container.color-lavender {
+  background-color: #E1BEE7 !important;
   color: #31133F;
-  border-top: 4px solid #AB47BC;
+  border-top: 5px solid #AB47BC;
 }
 
-.sticky-card.color-rose {
-  background: #F8BBD0;
+.sticky-card.color-rose,
+.sticky-detail-container.color-rose {
+  background-color: #F8BBD0 !important;
   color: #3E1020;
-  border-top: 4px solid #EC407A;
+  border-top: 5px solid #EC407A;
 }
 
-.sticky-card.color-sky {
-  background: #B3E5FC;
+.sticky-card.color-sky,
+.sticky-detail-container.color-sky {
+  background-color: #B3E5FC !important;
   color: #0A2D3E;
-  border-top: 4px solid #29B6F6;
+  border-top: 5px solid #29B6F6;
 }
 
-.sticky-card.color-dark {
-  background: #1E2530;
+.sticky-card.color-dark,
+.sticky-detail-container.color-dark {
+  background-color: #1E2530 !important;
   color: #F8FAFC;
-  border-top: 4px solid #64748B;
+  border-top: 5px solid #64748B;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
@@ -7651,20 +7658,24 @@ dialog:not([open]) {
 }
 
 /* Paper Textures */
-.sticky-card.texture-lined {
+.sticky-card.texture-lined,
+.sticky-detail-container.texture-lined {
   background-image: repeating-linear-gradient(transparent, transparent 23px, rgba(0, 0, 0, 0.06) 24px);
 }
 
-.sticky-card.color-dark.texture-lined {
+.sticky-card.color-dark.texture-lined,
+.sticky-detail-container.color-dark.texture-lined {
   background-image: repeating-linear-gradient(transparent, transparent 23px, rgba(255, 255, 255, 0.06) 24px);
 }
 
-.sticky-card.texture-grid {
+.sticky-card.texture-grid,
+.sticky-detail-container.texture-grid {
   background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1.2px, transparent 1.2px);
   background-size: 16px 16px;
 }
 
-.sticky-card.color-dark.texture-grid {
+.sticky-card.color-dark.texture-grid,
+.sticky-detail-container.color-dark.texture-grid {
   background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1.2px, transparent 1.2px);
   background-size: 16px 16px;
 }
@@ -8019,6 +8030,8 @@ dialog:not([open]) {
 }
 
 .sticky-detail-container {
+  background-color: #FFF59D; /* Solid base background so it is completely opaque */
+  color: #2E2900;
   border-radius: 4px 4px 24px 4px;
   padding: 26px 24px 20px;
   position: relative;
@@ -8026,7 +8039,39 @@ dialog:not([open]) {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.sticky-detail-container::-webkit-scrollbar,
+.sticky-detail-body::-webkit-scrollbar {
+  width: 7px;
+}
+
+.sticky-detail-container::-webkit-scrollbar-track,
+.sticky-detail-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.sticky-detail-container::-webkit-scrollbar-thumb,
+.sticky-detail-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 10px;
+}
+
+.sticky-detail-container::-webkit-scrollbar-thumb:hover,
+.sticky-detail-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.sticky-detail-container.color-dark::-webkit-scrollbar-thumb,
+.sticky-detail-container.color-dark .sticky-detail-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sticky-detail-container.color-dark::-webkit-scrollbar-track,
+.sticky-detail-container.color-dark .sticky-detail-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .sticky-detail-container::after {
