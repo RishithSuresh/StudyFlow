@@ -340,13 +340,16 @@
       </div>
 
       <div id="all-mistakes-container" style="display: none;">
-        <div class="filter-row" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div class="filter-row"
+          style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <div style="display: flex; gap: 8px;">
             <button class="filter active" data-review-filter="all">All mistakes</button>
             <button class="filter" data-review-filter="unresolved">Needs review</button>
             <button class="filter" data-review-filter="resolved">Resolved</button>
           </div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-all-mistakes" style="color: #b91c1c; border-color: #fca5a5; background: #fff5f5;" title="Delete all mistakes from your account">🗑️ Clear all mistakes</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-all-mistakes"
+            style="color: #b91c1c; border-color: #fca5a5; background: #fff5f5;"
+            title="Delete all mistakes from your account">🗑️ Clear all mistakes</button>
         </div>
         <div id="mistakes-list" class="mistake-list empty-state">No mistakes logged yet. Add your first mock-test
           review.</div>
@@ -510,18 +513,28 @@
         </div>
 
         <div class="dt-main">
+          <!-- 1. Hero Timer Box (Centered on Top) -->
           <section class="timer-box" aria-label="Pomodoro Timer">
             <div class="timer-mode-pills" role="tablist" aria-label="Timer Mode Switcher">
-              <button class="mode-pill active" data-mode="pomodoro" role="tab" aria-selected="true">Pomodoro</button>
-              <button class="mode-pill" data-mode="short_break" role="tab" aria-selected="false">Short Break</button>
-              <button class="mode-pill" data-mode="long_break" role="tab" aria-selected="false">Long Break</button>
+              <button class="mode-pill active" data-mode="pomodoro" role="tab" aria-selected="true">
+                <span class="mode-emoji">🍅</span> Pomodoro
+              </button>
+              <button class="mode-pill" data-mode="short_break" role="tab" aria-selected="false">
+                <span class="mode-emoji">☕</span> Short Break
+              </button>
+              <button class="mode-pill" data-mode="long_break" role="tab" aria-selected="false">
+                <span class="mode-emoji">🌴</span> Long Break
+              </button>
             </div>
 
             <!-- Session Differentiation Section -->
             <div class="session-diff-section" aria-label="Session Duration Differentiation">
               <div class="session-diff-header">
-                <span class="session-diff-label">SESSION TARGET &amp; DIFFERENTIATION</span>
-                <span class="session-diff-hint">Select a duration to set the timer for this session</span>
+                <div class="session-diff-title-row">
+                  <span class="session-diff-icon">🎯</span>
+                  <span class="session-diff-label">SESSION TARGET &amp; PACE</span>
+                </div>
+                <span class="session-diff-hint">Select a duration preset or set custom minutes</span>
               </div>
               <div class="session-diff-presets" role="group" aria-label="Session Duration Presets">
                 <button type="button" class="session-diff-chip" data-diff-mins="15"
@@ -564,7 +577,7 @@
                 <span class="diff-custom-label">Custom duration:</span>
                 <div class="diff-custom-input-box">
                   <input type="number" id="custom-session-mins" class="diff-custom-input" min="1" max="240"
-                    placeholder="Mins" aria-label="Custom duration in minutes">
+                    placeholder="30" aria-label="Custom duration in minutes">
                   <span class="diff-unit">min</span>
                 </div>
                 <button type="button" id="btn-apply-custom-session" class="btn-diff-set">Set Duration</button>
@@ -572,43 +585,70 @@
             </div>
 
             <div class="timer-display-area">
-              <button class="adjust-side-btn left" data-adjust="-300" title="Decrease by 5 minutes"
-                aria-label="Decrease 5 minutes">−</button>
+              <button class="adjust-side-btn left" data-adjust="-300" title="Decrease by 5 minutes (-5m)"
+                aria-label="Decrease 5 minutes">
+                <span class="adjust-symbol">−</span>
+                <span class="adjust-step-tag">5m</span>
+              </button>
               <div id="timer-digits" class="timer-digits">30:00</div>
-              <button class="adjust-side-btn right" data-adjust="300" title="Increase by 5 minutes"
-                aria-label="Increase 5 minutes">+</button>
+              <button class="adjust-side-btn right" data-adjust="300" title="Increase by 5 minutes (+5m)"
+                aria-label="Increase 5 minutes">
+                <span class="adjust-symbol">+</span>
+                <span class="adjust-step-tag">5m</span>
+              </button>
             </div>
+
             <div class="timer-controls-wrap">
-              <button id="btn-timer-reset" class="btn-icon-control" title="Reset Timer (R)" aria-label="Reset Timer">
+              <button id="btn-timer-reset" class="btn-icon-control" title="Reset Timer (Press R)"
+                aria-label="Reset Timer">
                 <svg viewBox="0 0 24 24">
                   <path
                     d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
                 </svg>
               </button>
-              <button id="btn-timer-toggle" class="btn-start-large" title="Start/Pause Timer (Space)">START</button>
-              <button id="btn-timer-skip" class="btn-icon-control" title="Skip Session (S)" aria-label="Skip Session">
+              <button id="btn-timer-toggle" class="btn-start-large" title="Start/Pause Timer (Space)">
+                <span id="btn-timer-text">START</span>
+                <span class="btn-kbd-cue">Space</span>
+              </button>
+              <button id="btn-timer-skip" class="btn-icon-control" title="Skip Session (Press S)"
+                aria-label="Skip Session">
                 <svg viewBox="0 0 24 24">
                   <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
                 </svg>
               </button>
             </div>
+
             <div id="timer-active-task-pill" class="active-task-label-wrap">
-              <span id="header-cycle-count" class="active-task-cycle-num">🍅 Round 1 of 4 · (Long break after round
-                4)</span>
-              <span id="active-task-name-text" class="active-task-name-text">Free Focus Session (No task
-                attached)</span>
+              <div class="active-task-cycle-badge">
+                <span id="header-cycle-count" class="active-task-cycle-num">🍅 Round 1 of 4 · Long break after round
+                  4</span>
+              </div>
+              <div class="active-task-current-badge">
+                <span class="active-task-icon">🎯</span>
+                <span id="active-task-name-text" class="active-task-name-text">Free Focus Session (No task
+                  attached)</span>
+              </div>
             </div>
           </section>
+
+          <!-- 2. Focus Tasks Section (Positioned Directly Below the Timer) -->
           <section class="tasks-section" aria-label="Task Management">
             <div class="tasks-header-row">
-              <div>
-                <span class="tasks-title-text">Focus Tasks</span>
-                <span class="tasks-subtitle-hint">Selected for this session</span>
+              <div class="tasks-heading-col">
+                <div class="tasks-title-line">
+                  <span class="tasks-title-text">Focus Tasks</span>
+                  <span id="tasks-count-pill" class="tasks-count-pill">0 tasks</span>
+                </div>
+                <span class="tasks-subtitle-hint">Queue tasks for this study session and log completed pomodoros</span>
               </div>
               <div class="tasks-header-actions">
                 <button type="button" id="btn-choose-existing-header" class="btn-header-task-action"
-                  title="Pick from your StudyFlow tasks">
+                  title="Pick from your StudyFlow backlog">
                   <span>📋 Choose Tasks</span>
+                </button>
+                <button type="button" id="btn-header-add-task" class="btn-header-task-action btn-header-add"
+                  title="Add extra task for this session">
+                  <span>➕ Add Task</span>
                 </button>
                 <div class="tasks-dropdown-wrap">
                   <button id="btn-tasks-menu" class="tasks-menu-btn" aria-label="Task options" aria-haspopup="true"
@@ -627,26 +667,40 @@
             <div id="dt-tasks-list" class="tasks-list" aria-live="polite"></div>
             <div class="tasks-footer-actions">
               <button type="button" id="btn-choose-existing-task" class="btn-task-action btn-task-choose">
-                <span>📋 Choose Existing Task</span>
+                <span>📋 Choose More Tasks</span>
               </button>
               <button type="button" id="btn-new-task" class="btn-task-action btn-task-add">
-                <span>➕ Add Extra Task</span>
+                <span>➕ Add Another Task</span>
               </button>
             </div>
           </section>
+
+          <!-- 3. Daily Goal & Focus Telemetry (Bottom Ribbon) -->
           <footer class="bottom-summary-box">
             <div class="summary-stat-col">
-              <span class="summary-label">Today's Pomo Goal</span>
+              <div class="summary-stat-head">
+                <span class="summary-stat-icon">🎯</span>
+                <span class="summary-label">Today's Pomo Goal</span>
+              </div>
               <span id="metric-daily-pomos" class="summary-value">0 / 4</span>
+              <div class="summary-progress-track">
+                <div id="summary-pomo-progress-fill" class="summary-progress-fill" style="width: 0%;"></div>
+              </div>
               <small id="metric-daily-pomos-sub" class="summary-sub">0 of 4 completed today</small>
             </div>
             <div class="summary-stat-col">
-              <span class="summary-label">Estimated Finish</span>
+              <div class="summary-stat-head">
+                <span class="summary-stat-icon">⏱️</span>
+                <span class="summary-label">Estimated Finish</span>
+              </div>
               <span id="estimated-finish-time" class="summary-value">--:--</span>
               <small id="finish-time-sub" class="summary-sub">When timer starts</small>
             </div>
             <div class="summary-stat-col">
-              <span class="summary-label">Focused Today</span>
+              <div class="summary-stat-head">
+                <span class="summary-stat-icon">⚡</span>
+                <span class="summary-label">Focused Today</span>
+              </div>
               <span id="metric-daily-focus" class="summary-value">0h 00m</span>
               <small id="metric-daily-focus-sub" class="summary-sub">Daily target: 2h 00m</small>
             </div>
@@ -1036,18 +1090,24 @@
 
       <!-- Optional Question Paper PDF Attachment -->
       <div class="form-group" style="margin-top: 14px; margin-bottom: 6px;">
-        <label class="form-label" style="font-weight: 700; color: var(--sf-navy);">Attach Question Paper PDF (Optional)</label>
+        <label class="form-label" style="font-weight: 700; color: var(--sf-navy);">Attach Question Paper PDF
+          (Optional)</label>
         <input type="file" id="excel-modal-paper-input" accept=".pdf,application/pdf,image/*" style="display: none;">
-        <div class="excel-paper-attach-box" id="excel-paper-attach-box" tabindex="0" role="button" aria-label="Attach question paper PDF"
+        <div class="excel-paper-attach-box" id="excel-paper-attach-box" tabindex="0" role="button"
+          aria-label="Attach question paper PDF"
           style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: white; border: 1.5px dashed var(--sf-border); border-radius: 10px; cursor: pointer;">
           <div style="display: flex; align-items: center; gap: 10px;">
             <span id="excel-paper-icon" style="font-size: 22px;">📄</span>
             <div>
-              <b id="excel-paper-file-label" style="font-size: 13px; color: var(--sf-navy);">Attach Question Paper PDF</b>
-              <small id="excel-paper-file-sub" style="display: block; font-size: 11px; color: var(--sf-navy-soft);">Store the question paper PDF alongside your mistake log</small>
+              <b id="excel-paper-file-label" style="font-size: 13px; color: var(--sf-navy);">Attach Question Paper
+                PDF</b>
+              <small id="excel-paper-file-sub"
+                style="display: block; font-size: 11px; color: var(--sf-navy-soft);">Store the question paper PDF
+                alongside your mistake log</small>
             </div>
           </div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-browse-excel-paper" style="pointer-events: none;">Browse PDF</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-browse-excel-paper"
+            style="pointer-events: none;">Browse PDF</button>
         </div>
       </div>
     </div>
@@ -1514,7 +1574,8 @@
                 <div class="manual-item-head"><span>📚</span><b>Learning Resources Hub</b><span
                     class="manual-item-tag">Materials</span></div>
                 <p>Link courses, YouTube playlists, official documentation, articles, or textbooks. Use
-                  <code>Title | Link</code> format to generate clickable launch buttons.</p>
+                  <code>Title | Link</code> format to generate clickable launch buttons.
+                </p>
               </div>
               <div class="manual-feature-item">
                 <div class="manual-item-head"><span>✨</span><b>Real-Time Milestone Logging</b><span
@@ -1576,7 +1637,8 @@
                     class="manual-item-tag">Immediate</span></div>
                 <p>Tasks committed for today. If any daily task is uncompleted when the day passes, StudyFlow
                   automatically rolls it over to the next day with an explicit
-                  <code>⚠️ Missed &amp; Carried Forward</code> remark so work is never forgotten.</p>
+                  <code>⚠️ Missed &amp; Carried Forward</code> remark so work is never forgotten.
+                </p>
               </div>
               <div class="manual-feature-item">
                 <div class="manual-item-head"><span>📋</span><b>Overall Tasks</b><span
@@ -1622,7 +1684,8 @@
                     class="manual-item-tag">Analysis</span></div>
                 <p>Log mistakes by Question Number, Marks Lost, and Mistake Type (<code>Conceptual</code>,
                   <code>Calculation</code>, <code>Silly / Reading</code>, <code>Time management</code>,
-                  <code>Unattempted</code>). Record the correct approach and the key lesson to prevent repeats.</p>
+                  <code>Unattempted</code>). Record the correct approach and the key lesson to prevent repeats.
+                </p>
               </div>
               <div class="manual-feature-item">
                 <div class="manual-item-head"><span>🧠</span><b>Automated Topic Weakness Engine</b><span

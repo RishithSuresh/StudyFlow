@@ -93,14 +93,26 @@ class UIManager {
 
     // Start / Pause Button
     const playBtn = document.getElementById('btn-timer-toggle');
+    const playBtnText = document.getElementById('btn-timer-text');
     if (playBtn) {
       if (status === 'running') {
-        playBtn.textContent = 'PAUSE';
+        if (playBtnText) playBtnText.textContent = 'PAUSE';
+        else playBtn.textContent = 'PAUSE';
         playBtn.classList.add('is-active-running');
       } else {
-        playBtn.textContent = status === 'paused' ? 'RESUME' : 'START';
+        const txt = status === 'paused' ? 'RESUME' : 'START';
+        if (playBtnText) playBtnText.textContent = txt;
+        else playBtn.textContent = txt;
         playBtn.classList.remove('is-active-running');
       }
+    }
+
+    // Live mode tag in header
+    const modeTag = document.getElementById('dt-mode-status-tag');
+    if (modeTag) {
+      if (mode === 'pomodoro') modeTag.textContent = '🎯 Deep Study';
+      else if (mode === 'short_break') modeTag.textContent = '☕ Short Break';
+      else modeTag.textContent = '🌴 Long Break';
     }
 
     // Active Task Banner
@@ -109,7 +121,7 @@ class UIManager {
       if (activeTask) {
         const est = activeTask.estimatedPomodoros || 1;
         const done = activeTask.completedPomodoros || 0;
-        activeTaskName.textContent = `🎯 ${activeTask.title} (${done}/${est} Pomos)`;
+        activeTaskName.textContent = `${activeTask.title} (${done}/${est} Pomos)`;
       } else {
         activeTaskName.textContent = 'Free Focus Session (No task attached)';
       }
@@ -119,11 +131,11 @@ class UIManager {
     const interval = settings.longBreakInterval || 4;
     if (cycleInfo) {
       if (mode === 'pomodoro') {
-        cycleInfo.textContent = `🍅 Round ${cycleCount} of ${interval} · (Long break after round ${interval})`;
+        cycleInfo.textContent = `🍅 Round ${cycleCount} of ${interval} · Long break after round ${interval}`;
       } else if (mode === 'short_break') {
-        cycleInfo.textContent = `☕ Short Break (Round ${cycleCount} of ${interval} completed)`;
+        cycleInfo.textContent = `☕ Short Break · Round ${cycleCount} of ${interval} done`;
       } else {
-        cycleInfo.textContent = `🌴 Long Break (${interval} focus rounds completed!)`;
+        cycleInfo.textContent = `🌴 Long Break · ${interval} focus rounds completed!`;
       }
     }
 
@@ -149,18 +161,27 @@ class UIManager {
 
     const tasks = taskManager.getTasks();
     const activeTaskId = state.timerState.activeTaskId;
+    const tasksSection = listContainer.closest('.tasks-section');
+    const countBadge = document.getElementById('tasks-count-pill');
+
+    if (countBadge) {
+      countBadge.textContent = `${tasks.length} task${tasks.length === 1 ? '' : 's'}`;
+    }
 
     if (tasks.length === 0) {
+      if (tasksSection) tasksSection.classList.add('is-empty');
       listContainer.innerHTML = `
         <div class="tasks-empty-state-card">
-          <div class="tasks-empty-icon">🎯</div>
+          <div class="tasks-empty-icon-wrap">
+            <span class="tasks-empty-icon">🎯</span>
+          </div>
           <div class="tasks-empty-title">No focus tasks selected</div>
           <p class="tasks-empty-desc">Choose from your existing StudyFlow tasks or add an extra task for this focus session.</p>
           <div class="tasks-empty-actions">
-            <button type="button" class="btn btn-primary btn-sm btn-action-choose-existing">
-              📋 Choose Existing Task
+            <button type="button" class="btn-empty-primary btn-action-choose-existing">
+              📋 Choose from Existing Tasks
             </button>
-            <button type="button" class="btn btn-secondary btn-sm btn-action-add-new">
+            <button type="button" class="btn-empty-secondary btn-action-add-new">
               ➕ Add Extra Task
             </button>
           </div>
@@ -169,18 +190,27 @@ class UIManager {
       return;
     }
 
+    if (tasksSection) tasksSection.classList.remove('is-empty');
+
     listContainer.innerHTML = tasks.map(task => {
       const isActive = task.id === activeTaskId;
       const isOver = task.completedPomodoros > task.estimatedPomodoros;
       const excessCount = task.completedPomodoros - task.estimatedPomodoros;
       const mins = task.estimatedMinutes || (task.estimatedPomodoros * (state.settings.pomodoroDuration || 30));
+      const isDaily = task.scope === 'daily' || task.due === new Date().toISOString().slice(0, 10);
 
       return `
         <div class="task-item ${isActive ? 'is-active-task' : ''} ${task.isCompleted ? 'is-completed' : ''}" data-task-id="${task.id}">
           <div class="task-left-wrap" data-action="select-task" data-task-id="${task.id}">
-            <button class="task-check-circle ${task.isCompleted ? 'checked' : ''}" data-action="toggle-complete" data-task-id="${task.id}" aria-label="Toggle completion" title="${task.isCompleted ? 'Mark as incomplete' : 'Mark as completed'}">${task.isCompleted ? '<span class="task-check-icon">✓</span>' : ''}</button>
+            <button class="task-check-circle ${task.isCompleted ? 'checked' : ''}" data-action="toggle-complete" data-task-id="${task.id}" aria-label="Toggle completion" title="${task.isCompleted ? 'Mark as incomplete' : 'Mark as completed'}">
+              ${task.isCompleted ? '<span class="task-check-icon">✓</span>' : ''}
+            </button>
             <div class="task-info-col">
-              <span class="task-title-text">${this.escapeHtml(task.title)}</span>
+              <div class="task-title-line-row">
+                ${isActive ? '<span class="task-active-badge">Active Focus</span>' : ''}
+                <span class="task-scope-pill ${isDaily ? 'scope-daily' : 'scope-overall'}">${isDaily ? '☀️ Daily' : '📋 Overall'}</span>
+                <span class="task-title-text">${this.escapeHtml(task.title)}</span>
+              </div>
               ${task.description ? `<span class="task-desc-text">${this.escapeHtml(task.description)}</span>` : ''}
             </div>
           </div>
@@ -189,10 +219,13 @@ class UIManager {
             <button type="button" class="task-duration-pill" data-action="set-task-duration" data-mins="${mins}" title="Click to set timer to this task's duration (${mins} min)">
               ⏱️ ${mins}m
             </button>
-            <span class="task-pomos-badge" title="Completed pomos">${task.completedPomodoros} / ${task.estimatedPomodoros}</span>
-            ${isOver ? `<span class="task-excess-pill">+${excessCount}</span>` : ''}
+            <div class="task-pomos-pill" title="${task.completedPomodoros} of ${task.estimatedPomodoros} pomos completed">
+              <span class="pomo-dot-icon">🍅</span>
+              <span>${task.completedPomodoros} / ${task.estimatedPomodoros}</span>
+              ${isOver ? `<span class="task-excess-pill">+${excessCount}</span>` : ''}
+            </div>
             <div class="task-actions-group">
-              <button class="task-action-btn task-focus-btn" data-action="set-task-duration" data-mins="${mins}" title="Focus on this task and set timer" aria-label="Focus on this task">
+              <button class="task-action-btn task-focus-btn ${isActive ? 'is-current-active' : ''}" data-action="set-active-task" data-task-id="${task.id}" title="${isActive ? 'Currently active focus task' : 'Set as active focus task'}" aria-label="Focus on this task">
                 🎯
               </button>
               <button class="task-action-btn task-edit-btn" data-action="edit-task" data-task-id="${task.id}" title="Edit Task" aria-label="Edit Task">
@@ -289,6 +322,12 @@ class UIManager {
     if (dailyPomoSub) {
       const remaining = Math.max(0, goalPomos - daily.pomodorosCompleted);
       dailyPomoSub.textContent = remaining === 0 ? '🎉 Daily goal reached!' : `${remaining} more to reach daily goal`;
+    }
+
+    const progressFill = document.getElementById('summary-pomo-progress-fill');
+    if (progressFill) {
+      const pct = Math.min(100, Math.round(((daily.pomodorosCompleted || 0) / goalPomos) * 100));
+      progressFill.style.width = `${pct}%`;
     }
 
     const dailyFocusVal = document.getElementById('metric-daily-focus');
@@ -575,6 +614,16 @@ class UIManager {
           return;
         }
 
+        // Set as active task
+        const activeBtn = target.closest('[data-action="set-active-task"]');
+        if (activeBtn) {
+          e.stopPropagation();
+          taskManager.setActiveTask(taskId);
+          this.renderAll();
+          notifier.notify('Active Task', 'Selected as active focus task.');
+          return;
+        }
+
         // Remove from session
         const removeBtn = target.closest('[data-action="remove-focus"]');
         if (removeBtn) {
@@ -733,6 +782,11 @@ class UIManager {
     const btnNewTask = document.getElementById('btn-new-task');
     if (btnNewTask) {
       btnNewTask.addEventListener('click', () => this.openTaskModal(null));
+    }
+
+    const btnHeaderAddTask = document.getElementById('btn-header-add-task');
+    if (btnHeaderAddTask) {
+      btnHeaderAddTask.addEventListener('click', () => this.openTaskModal(null));
     }
 
     const btnDeleteModal = document.getElementById('btn-delete-task-modal');
