@@ -45,6 +45,7 @@
       <button class="nav-item active" data-view="overview">◫ <span>Overview</span></button>
       <button class="nav-item" data-view="subjects">▤ <span>GATE & academic syllabus</span></button>
       <button class="nav-item" data-view="skills">✳ <span>Extra skills</span></button>
+      <button class="nav-item" data-view="notes">📌 <span>Notes & pointers</span></button>
       <button class="nav-item" data-view="calendar">▦ <span>Calendar</span></button>
       <button class="nav-item" data-view="tasks">☑ <span>Tasks & deadlines</span></button>
       <button class="nav-item" data-view="reviews">↗ <span>Mock tests & review</span></button>
@@ -159,6 +160,123 @@
       </div>
       <div class="skill-summary" id="skill-summary"></div>
       <div class="skill-grid" id="skills-list"></div>
+    </section>
+
+    <!-- Notes & Pointers / Tactile Sticky Board View -->
+    <section id="view-notes" class="view">
+      <div class="section-heading notes-heading-bar">
+        <div>
+          <div class="eyebrow">TACTILE BRAIN DUMP &amp; PINBOARD</div>
+          <h2>Notes &amp; Pointers</h2>
+          <p class="muted">Your visual sticky board for exam pointers, quick thoughts, formulas, traps &amp; mental sparks.</p>
+        </div>
+        <div class="heading-actions-cluster">
+          <button type="button" class="btn-page-guide" data-open-guide="notes" title="How Notes &amp; Pointers Works">ℹ️ How it works</button>
+          <button type="button" class="secondary-btn" id="btn-export-notes" title="Export or copy all pointers &amp; notes">📋 Export Pointers</button>
+          <button type="button" class="primary-btn" id="btn-add-sticky-note">＋ New Sticky Note</button>
+        </div>
+      </div>
+
+      <!-- Tactile Board Control Deck -->
+      <div class="sticky-board-control-deck">
+        <!-- Quick Jot Dock ("Slam a Sticky") -->
+        <div class="quick-jot-container">
+          <div class="quick-jot-bar" id="quick-jot-bar">
+            <div class="quick-jot-type-toggle" role="group" aria-label="Sticky note format">
+              <button type="button" class="quick-type-btn active" data-quick-type="pointers" title="Bulleted checkable pointers">⚡ Pointers</button>
+              <button type="button" class="quick-type-btn" data-quick-type="note" title="Freeform text note">📝 Note</button>
+            </div>
+            <div class="quick-jot-color-picker" id="quick-jot-colors" title="Select paper color">
+              <button type="button" class="color-dot active" data-color="yellow" title="Sunburst Yellow" style="--dot-color: #FFF59D;"></button>
+              <button type="button" class="color-dot" data-color="mint" title="Matcha Mint" style="--dot-color: #C8E6C9;"></button>
+              <button type="button" class="color-dot" data-color="peach" title="Peach Blossom" style="--dot-color: #FFCCBC;"></button>
+              <button type="button" class="color-dot" data-color="lavender" title="Lavender Mist" style="--dot-color: #E1BEE7;"></button>
+              <button type="button" class="color-dot" data-color="rose" title="Blush Rose" style="--dot-color: #F8BBD0;"></button>
+              <button type="button" class="color-dot" data-color="sky" title="Glacier Sky" style="--dot-color: #B3E5FC;"></button>
+              <button type="button" class="color-dot" data-color="dark" title="Obsidian Slate" style="--dot-color: #2E3440;"></button>
+            </div>
+            <input type="text" id="quick-jot-input" class="quick-jot-input" placeholder="Drop a quick pointer or study spark... (Press Enter to post)" maxlength="200" autocomplete="off" />
+            <select id="quick-jot-tag" class="quick-jot-tag-select" title="Category Tag">
+              <option value="QuickTip">🏷️ Quick Tip</option>
+              <option value="Formula">📐 Formula</option>
+              <option value="Revision">⚡ Revision Pointer</option>
+              <option value="GATE">🎯 GATE / Exam</option>
+              <option value="Idea">💡 Idea</option>
+              <option value="Reminder">⏰ Reminder</option>
+            </select>
+            <button type="button" id="quick-jot-submit" class="quick-jot-submit-btn" title="Stick it to the board!">📌 Stick It</button>
+          </div>
+        </div>
+
+        <!-- Filter, Appearance & Board Toolbar -->
+        <div class="board-toolbar">
+          <div class="board-search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="notes-search-input" placeholder="Search stickies, pointers, tags..." autocomplete="off" />
+            <button type="button" id="notes-search-clear" class="search-clear-btn" style="display:none;" title="Clear search">&times;</button>
+          </div>
+
+          <div class="board-filters-group" id="notes-filter-chips">
+            <button type="button" class="filter active" data-notes-filter="all">All <span class="filter-count" id="count-all">0</span></button>
+            <button type="button" class="filter" data-notes-filter="pinned">📌 Pinned <span class="filter-count" id="count-pinned">0</span></button>
+            <button type="button" class="filter" data-notes-filter="pointers">⚡ Pointers <span class="filter-count" id="count-pointers">0</span></button>
+            <button type="button" class="filter" data-notes-filter="notes">📝 Notes <span class="filter-count" id="count-notes">0</span></button>
+            <div id="notes-tag-filters" class="notes-tag-filters-inline"></div>
+          </div>
+
+          <div class="board-appearance-cluster">
+            <!-- Theme: Corkboard, Midnight, Craft, Whiteboard -->
+            <div class="theme-switcher-pills" id="board-theme-switcher" title="Board Atmosphere">
+              <button type="button" class="theme-pill active" data-board-theme="cork" title="Corkboard Studio">📌 Cork</button>
+              <button type="button" class="theme-pill" data-board-theme="midnight" title="Midnight Slate">🌌 Midnight</button>
+              <button type="button" class="theme-pill" data-board-theme="craft" title="Warm Craft Paper">📜 Craft</button>
+              <button type="button" class="theme-pill" data-board-theme="whiteboard" title="Studio Whiteboard">🧼 Board</button>
+            </div>
+
+            <!-- Mode: Artistic Pinboard vs Clean Grid -->
+            <div class="layout-switcher-pills" id="board-layout-switcher" title="Arrangement Style">
+              <button type="button" class="layout-pill active" data-board-layout="scatter" title="Artistic Pinboard (Natural organic tilts)">🎨 Scatter</button>
+              <button type="button" class="layout-pill" data-board-layout="grid" title="Clean Aligned Studio Grid">📐 Grid</button>
+            </div>
+
+            <button type="button" id="btn-shuffle-angles" class="icon-tool-btn" title="Re-shuffle organic sticky angles">🔀</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- The Tactile Sticky Notes Canvas -->
+      <div id="sticky-board-canvas" class="sticky-board-canvas theme-cork layout-scatter">
+        <!-- Pinned Pointers VIP Rack (Hidden if 0 pinned) -->
+        <div id="pinned-notes-rack" class="pinned-notes-rack" style="display:none;">
+          <div class="rack-header">
+            <span class="rack-pin-icon">📌</span>
+            <span class="rack-title">VIP Pinned Pointers &amp; Critical Traps</span>
+            <span class="rack-badge" id="pinned-count-badge">0 Pinned</span>
+          </div>
+          <div id="pinned-notes-grid" class="sticky-notes-rack-grid"></div>
+        </div>
+
+        <!-- Main Stickies Stream / Board -->
+        <div class="board-main-stream">
+          <div class="stream-header-info" id="stream-header-info">
+            <span id="board-status-text">All Sticky Notes &amp; Pointers</span>
+          </div>
+          <div id="notes-board-grid" class="sticky-notes-board-grid">
+            <!-- Sticky cards dynamically injected here -->
+          </div>
+        </div>
+
+        <!-- Empty State (Shown when no stickies match) -->
+        <div id="notes-empty-state" class="notes-empty-state" style="display:none;">
+          <div class="empty-sticky-illustration">
+            <div class="ghost-sticky">
+              <div class="ghost-pin">📌</div>
+              <p>Nothing stuck here yet.</p>
+              <small>Click "＋ New Sticky Note" or use the quick jot bar above!</small>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section id="view-tasks" class="view">
@@ -726,7 +844,138 @@
     </form>
   </dialog>
 
-  <!-- Mock Test & Paper Review Modals -->
+  <!-- Sticky Note Create / Edit Modal -->
+  <dialog id="modal-sticky-note" class="modal-dialog sticky-note-modal-dialog" aria-labelledby="sticky-modal-title">
+    <div class="modal-header sticky-modal-header">
+      <div>
+        <div class="eyebrow" id="sticky-modal-eyebrow">STICKY NOTE WORKSPACE</div>
+        <h2 id="sticky-modal-title" class="modal-title">Create Sticky Note</h2>
+      </div>
+      <button type="button" class="modal-close-btn" data-close-modal aria-label="Close dialog">&times;</button>
+    </div>
+    <form id="sticky-note-form" class="modal-body sticky-note-form" method="dialog">
+      <input type="hidden" id="sticky-edit-id" value="" />
+
+      <!-- Top Row: Type & Pin -->
+      <div class="sticky-type-row">
+        <div>
+          <label class="sticky-field-label">Note Format</label>
+          <div class="sticky-type-selector">
+            <button type="button" class="type-pill-btn active" id="btn-format-pointers" data-select-format="pointers">⚡ Pointers / Checklist</button>
+            <button type="button" class="type-pill-btn" id="btn-format-note" data-select-format="note">📝 Freeform Note</button>
+          </div>
+        </div>
+        <label class="pin-checkbox-label" title="Pin to top VIP shelf">
+          <input type="checkbox" id="sticky-is-pinned" />
+          <span>📌 Pin to VIP Rack</span>
+        </label>
+      </div>
+
+      <!-- Title Input -->
+      <div class="sticky-field">
+        <label for="sticky-input-title" class="sticky-field-label">Topic / Heading</label>
+        <input type="text" id="sticky-input-title" class="sticky-input" placeholder="e.g. Dijkstra vs Bellman-Ford or Linear Algebra Traps" required maxlength="120" autocomplete="off" />
+      </div>
+
+      <!-- Styling: Color Palette, Pin Style, Paper Texture -->
+      <div class="sticky-style-controls-grid">
+        <div class="sticky-style-col">
+          <label class="sticky-field-label">Paper Color</label>
+          <div class="sticky-palette-selector" id="modal-color-palette">
+            <button type="button" class="palette-swatch yellow active" data-color="yellow" title="Sunburst Yellow"></button>
+            <button type="button" class="palette-swatch mint" data-color="mint" title="Matcha Mint"></button>
+            <button type="button" class="palette-swatch peach" data-color="peach" title="Peach Blossom"></button>
+            <button type="button" class="palette-swatch lavender" data-color="lavender" title="Lavender Mist"></button>
+            <button type="button" class="palette-swatch rose" data-color="rose" title="Blush Rose"></button>
+            <button type="button" class="palette-swatch sky" data-color="sky" title="Glacier Sky"></button>
+            <button type="button" class="palette-swatch dark" data-color="dark" title="Obsidian Slate"></button>
+          </div>
+        </div>
+
+        <div class="sticky-style-col">
+          <label for="sticky-pin-style" class="sticky-field-label">Attachment Style</label>
+          <select id="sticky-pin-style" class="sticky-select">
+            <option value="pushpin">📌 Classic Pushpin</option>
+            <option value="tape">🩹 Washi Tape Strip</option>
+            <option value="magnet">🧲 Round Magnet</option>
+            <option value="minimal">📐 Corner Peel Only</option>
+          </select>
+        </div>
+
+        <div class="sticky-style-col">
+          <label for="sticky-paper-style" class="sticky-field-label">Paper Texture</label>
+          <select id="sticky-paper-style" class="sticky-select">
+            <option value="lined">📝 Ruled Lined Paper</option>
+            <option value="grid">▦ Engineering Dot Grid</option>
+            <option value="blank">📄 Clean Blank Smooth</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Category / Tag -->
+      <div class="sticky-field">
+        <label for="sticky-input-tag" class="sticky-field-label">Category / Tag</label>
+        <input type="text" id="sticky-input-tag" class="sticky-input" placeholder="e.g. Formula, Revision, GATE, Trick, Reminder" maxlength="30" list="sticky-tag-suggestions" autocomplete="off" />
+        <datalist id="sticky-tag-suggestions">
+          <option value="QuickTip">
+          <option value="Formula">
+          <option value="Revision">
+          <option value="GATE">
+          <option value="ExamTip">
+          <option value="Idea">
+          <option value="Reminder">
+          <option value="Shortcut">
+        </datalist>
+      </div>
+
+      <!-- Mode A: Pointers / Checklist Editor -->
+      <div id="sticky-pointers-editor-section" class="sticky-editor-pane">
+        <div class="pointers-editor-head">
+          <label class="sticky-field-label">Pointers / Checklist Items</label>
+          <span class="pointers-count-hint" id="modal-pointers-count-hint">0 pointers</span>
+        </div>
+        <p class="sticky-field-hint">Add bullet points, exam traps, key steps, or checkable study pointers:</p>
+        <div id="sticky-pointers-list" class="sticky-pointers-list-edit">
+          <!-- Dynamic pointer inputs injected here -->
+        </div>
+        <button type="button" id="btn-add-pointer-row" class="btn-add-pointer">＋ Add Pointer Line</button>
+      </div>
+
+      <!-- Mode B: Freeform Note Editor -->
+      <div id="sticky-note-editor-section" class="sticky-editor-pane" style="display:none;">
+        <label for="sticky-input-content" class="sticky-field-label">Note Content</label>
+        <textarea id="sticky-input-content" class="sticky-textarea" rows="7" placeholder="Write whatever you want — exam thoughts, memory mnemonics, study summaries, key formulas..."></textarea>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer sticky-modal-footer">
+        <button type="button" class="secondary-btn" data-close-modal>Cancel</button>
+        <button type="submit" class="primary-btn" id="sticky-save-btn">📌 Stick Note to Board</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Export Notes / Pointers Dialog -->
+  <dialog id="modal-export-notes" class="modal-dialog export-notes-dialog" aria-labelledby="export-modal-title">
+    <div class="modal-header">
+      <div>
+        <div class="eyebrow">STUDY CHEAT-SHEET EXPORT</div>
+        <h2 id="export-modal-title" class="modal-title">Export Notes &amp; Pointers</h2>
+      </div>
+      <button type="button" class="modal-close-btn" data-close-modal aria-label="Close dialog">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="muted" style="margin-top: 0; font-size: 13px;">Here is your compiled study cheat-sheet formatted in clean Markdown. Copy it directly or download it as a markdown file.</p>
+      <textarea id="export-notes-markdown" class="export-markdown-textarea" rows="14" readonly></textarea>
+    </div>
+    <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <button type="button" class="secondary-btn" data-close-modal>Close</button>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="secondary-btn" id="btn-download-export-md">⬇️ Download .md</button>
+        <button type="button" class="primary-btn" id="btn-copy-export-md">📋 Copy to Clipboard</button>
+      </div>
+    </div>
+  </dialog>
   <!-- 1. Upload/Edit Test Paper Modal -->
   <dialog id="modal-upload-test" class="modal-dialog" aria-labelledby="test-modal-title">
     <div class="modal-header">
@@ -1485,6 +1734,7 @@
           <button type="button" class="manual-tab-btn active" data-manual-tab="overview">◫ Overview</button>
           <button type="button" class="manual-tab-btn" data-manual-tab="subjects">▤ Subjects &amp; OCR</button>
           <button type="button" class="manual-tab-btn" data-manual-tab="skills">✳ Extra Skills</button>
+          <button type="button" class="manual-tab-btn" data-manual-tab="notes">📌 Notes &amp; Pointers</button>
           <button type="button" class="manual-tab-btn" data-manual-tab="calendar">▦ Calendar &amp; Deadlines</button>
           <button type="button" class="manual-tab-btn" data-manual-tab="tasks">☑ Tasks (Daily vs Overall)</button>
           <button type="button" class="manual-tab-btn" data-manual-tab="reviews">↗ Mock Tests &amp; Papers</button>
@@ -1589,6 +1839,34 @@
                     class="manual-item-tag">Progress</span></div>
                 <p>Track your total logged milestones across all skills, monitor skills in progress, and celebrate
                   skills marked as Completed.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes & Pointers Tab -->
+          <div class="manual-panel-view" id="manual-tab-content-notes">
+            <h3 class="manual-view-title">📌 Notes &amp; Pointers Board</h3>
+            <p class="manual-view-desc">A tactile, sticky-note inspired workspace designed for quick thoughts, exam traps, key formulas, and checkable revision pointers.</p>
+            <div class="manual-feature-grid">
+              <div class="manual-feature-item">
+                <div class="manual-item-head"><span>⚡</span><b>Dual Mode: Pointers vs Notes</b><span
+                    class="manual-item-tag">Format</span></div>
+                <p>Create bulleted checkable pointers (perfect for key exam steps, traps, or revision checklists) or freeform rich notes with formulas, mnemonics, and code thoughts.</p>
+              </div>
+              <div class="manual-feature-item">
+                <div class="manual-item-head"><span>📌</span><b>VIP Pinned Rack</b><span
+                    class="manual-item-tag">Priority</span></div>
+                <p>Pin critical formulas or high-priority exam pointers to lock them at the top of your board so you never lose sight of essential facts.</p>
+              </div>
+              <div class="manual-feature-item">
+                <div class="manual-item-head"><span>🎨</span><b>Board Atmospheres &amp; Tilts</b><span
+                    class="manual-item-tag">Aesthetics</span></div>
+                <p>Switch between Corkboard Studio, Midnight Blueprint, Warm Craft Paper, and Ceramic Whiteboard. Toggle between natural organic scatter and aligned studio grid.</p>
+              </div>
+              <div class="manual-feature-item">
+                <div class="manual-item-head"><span>📝</span><b>Tactile Paper Details</b><span
+                    class="manual-item-tag">Unique UI</span></div>
+                <p>Enjoy realistic 3D pushpins, washi tape strips, folded dog-ear corners, lined/grid paper textures, real-time live search, and one-click cheat-sheet export.</p>
               </div>
             </div>
           </div>

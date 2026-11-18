@@ -272,7 +272,8 @@ app.get(['/api/workspace', '/workspace'], requireSession, async (req, res, next)
       events: userSettingsObj.events || [],
       focus: userSettingsObj.focus || { minutes: {}, sessions: 0 },
       mockTests: userSettingsObj.mockTests || [],
-      mistakes: userSettingsObj.mistakes || []
+      mistakes: userSettingsObj.mistakes || [],
+      notes: userSettingsObj.notes || []
     };
 
     // Ensure mock_tests from Neon DB table are merged into stateObj.mockTests

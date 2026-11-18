@@ -7,7 +7,7 @@ const API_BASE=window.STUDYFLOW_API_URL
   || (window.location.hostname==='localhost'?'http://localhost:3000/api':'/api');
 const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const uid=()=>Math.random().toString(36).slice(2,10);
-const starter=()=>({subjects:[],tasks:[],events:[],mistakes:[],mockTests:[],skills:[],focus:{minutes:{},sessions:0}});
+const starter=()=>({subjects:[],tasks:[],events:[],mistakes:[],mockTests:[],skills:[],notes:[],focus:{minutes:{},sessions:0}});
 let storageKey=KEY;
 try{
   const cachedUserStr=localStorage.getItem('studyflow_user');
@@ -26,6 +26,7 @@ try{
 }
 db.mockTests = db.mockTests || [];
 db.mistakes = db.mistakes || [];
+db.notes = db.notes || [];
 const save=()=>{
   workspaceDirty=true;
   try{
@@ -337,7 +338,7 @@ async function loadWorkspaceForUser(userId){
         });
       }
 
-      ['subjects','tasks','events','skills'].forEach(collection=>{
+      ['subjects','tasks','events','skills','notes'].forEach(collection=>{
         const serverItems=Array.isArray(serverState[collection])?serverState[collection]:[];
         const localItems=Array.isArray(localWorkspace[collection])?localWorkspace[collection]:[];
         const serverIds=new Set(serverItems.map(item=>item&&item.id).filter(Boolean));
@@ -366,6 +367,7 @@ async function loadWorkspaceForUser(userId){
   }
   db.mockTests=db.mockTests||[];
   db.mistakes=db.mistakes||[];
+  db.notes=db.notes||[];
   render();
   refreshStreakFromServer();
   window.dispatchEvent(new CustomEvent('studyflow:data-updated',{detail:{db}}));
@@ -377,7 +379,7 @@ function go(v){
   document.body.classList.toggle('overview-view',v==='overview');
   $$('.view').forEach(x=>x.classList.toggle('active',x.id===`view-${v}`));
   $$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
-  let titles={overview:"Good morning. Let's make progress.",subjects:'Your subjects, your progress.',calendar:'Make time for what matters.',tasks:'Everything you need to get done.',reviews:'Turn mistakes into marks with test analysis.',focus:'A little focus goes a long way.',skills:'Build skills beyond the syllabus.',profile:'Performance analytics & scholar profile.'};
+  let titles={overview:"Good morning. Let's make progress.",subjects:'Your subjects, your progress.',calendar:'Make time for what matters.',tasks:'Everything you need to get done.',reviews:'Turn mistakes into marks with test analysis.',focus:'A little focus goes a long way.',skills:'Build skills beyond the syllabus.',notes:'Sticky board for thoughts, pointers & reminders.',profile:'Performance analytics & scholar profile.'};
   $('#page-title').textContent=titles[v]||'StudyFlow — Study command centre';
   if(v!=='focus')document.title='StudyFlow — Study command centre';
   render();
@@ -910,6 +912,7 @@ function calculateTopicAnalytics(mistakes){
 function renderReviews(){
   db.mockTests=db.mockTests||[];
   db.mistakes=db.mistakes||[];
+  db.notes=db.notes||[];
   const totalTests=db.mockTests.length;
   let totalScorePct=0;
   if(totalTests){
@@ -1883,7 +1886,7 @@ async function handleAutoExcelUpload(file,customTargetTestId=null){
     toast('Failed to read spreadsheet. Please ensure it is a valid .xlsx or .csv file with question columns.');
   }
 }
-function render(){renderOverview();renderSubjects();renderSkills();renderTasks();renderCalendar();renderReviews();updateStreakUI()}
+function render(){renderOverview();renderSubjects();renderSkills();renderNotes();renderTasks();renderCalendar();renderReviews();updateStreakUI()}
 function field(label,name,type='text',value='',extra=''){return `<div class="field"><label>${label}</label><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></div>`}
 function selectField(label,name,options,value=''){return `<div class="field"><label>${label}</label><select name="${name}">${options.map(o=>`<option ${o[0]===value?'selected':''} value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></div>`}
 function area(label,name,value=''){return `<div class="field"><label>${label}</label><textarea name="${name}">${esc(value)}</textarea></div>`}
@@ -2635,5 +2638,938 @@ $('#notify-btn').onclick=async()=>{if(!('Notification'in window)){toast('Browser
 function checkReminders(){if(!('Notification'in window)||Notification.permission!=='granted')return;let now=new Date(),date=todayISO(),hm=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;db.tasks.filter(t=>t.due===date&&t.reminder===hm&&!t.done).forEach(t=>new Notification('StudyFlow deadline reminder',{body:t.title}))}
 setInterval(checkReminders,30000);
 $('#today-date').textContent=new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});$('#today-label').textContent=new Date().getHours()<12?'GOOD MORNING':'YOUR STUDY SPACE';
+
+/* ==========================================================================
+   NOTES & POINTERS / TACTILE STICKY BOARD LOGIC
+   ========================================================================== */
+
+let notesFilter = 'all'; // 'all', 'pinned', 'pointers', 'notes', or 'tag:xyz'
+let notesSearchQuery = '';
+let quickJotColor = 'yellow';
+let quickJotType = 'pointers';
+let stickyModalFormat = 'pointers';
+let stickyModalColor = 'yellow';
+let boardTheme = localStorage.getItem('studyflow_notes_theme') || 'cork';
+let boardLayout = localStorage.getItem('studyflow_notes_layout') || 'scatter';
+let lastDeletedSticky = null;
+
+function fmtStickyDate(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  if (isToday) {
+    return 'Today, ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function getStickyTilt(n) {
+  if (typeof n.rotation === 'number') return n.rotation;
+  let hash = 0;
+  for (let i = 0; i < (n.id || '').length; i++) {
+    hash = ((hash << 5) - hash) + n.id.charCodeAt(i);
+  }
+  const tilt = ((Math.abs(hash) % 52) - 26) / 10; // -2.6 to +2.6 deg
+  n.rotation = tilt;
+  return tilt;
+}
+
+function seedDefaultNotesIfEmpty() {
+  if (Array.isArray(db.notes) && db.notes.length > 0) return;
+  db.notes = [
+    {
+      id: uid(),
+      title: 'Sticky Board & Pointers 📌',
+      type: 'pointers',
+      pointers: [
+        { id: uid(), text: 'Click "+ New Sticky Note" or drop a thought in the Quick Jot bar', done: false },
+        { id: uid(), text: 'Check off pointers right on the card as you revise', done: false },
+        { id: uid(), text: 'Pin critical formulas or traps to lock them in the VIP rack', done: true },
+        { id: uid(), text: 'Switch board atmospheres (Corkboard, Midnight, Craft, Whiteboard)', done: false }
+      ],
+      color: 'yellow',
+      pinStyle: 'pushpin',
+      paperStyle: 'lined',
+      tag: 'QuickTip',
+      pinned: true,
+      rotation: -1.8,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: uid(),
+      title: 'GATE CS / Exam Traps ⚡',
+      type: 'pointers',
+      pointers: [
+        { id: uid(), text: 'Dijkstra fails on negative edge weights (use Bellman-Ford)', done: false },
+        { id: uid(), text: 'LRU vs FIFO page replacement: Belady anomaly only happens in FIFO', done: false },
+        { id: uid(), text: 'Watch for null pointers & 1-based indexing in array questions', done: true },
+        { id: uid(), text: 'Eigenvalues of upper/lower triangular matrix = diagonal entries', done: false }
+      ],
+      color: 'mint',
+      pinStyle: 'tape',
+      paperStyle: 'lined',
+      tag: 'GATE',
+      pinned: true,
+      rotation: 1.5,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: uid(),
+      title: 'Calculus & Linear Algebra Sparks 📐',
+      type: 'note',
+      content: 'det(A·B) = det(A)·det(B)\nMatrix A is invertible iff det(A) ≠ 0.\nRank + Nullity = Number of columns (Dimension Theorem).\nFor orthogonal matrices: A^T · A = I.',
+      pointers: [],
+      color: 'peach',
+      pinStyle: 'pushpin',
+      paperStyle: 'grid',
+      tag: 'Formula',
+      pinned: false,
+      rotation: -2.2,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: uid(),
+      title: 'Daily Study Mindset 🎯',
+      type: 'note',
+      content: 'Small consistent steps add up.\nTwo deep focus sessions today beat 10 frantic hours before the exam.\nPlan less. Execute more. Turn mistakes into marks!',
+      pointers: [],
+      color: 'lavender',
+      pinStyle: 'tape',
+      paperStyle: 'blank',
+      tag: 'Motivation',
+      pinned: false,
+      rotation: 2.0,
+      createdAt: new Date().toISOString()
+    }
+  ];
+  save();
+}
+
+function stickyCardHtml(n) {
+  const tilt = getStickyTilt(n);
+  const color = n.color || 'yellow';
+  const paper = n.paperStyle || 'lined';
+  const pinStyle = n.pinStyle || 'pushpin';
+  const isPinned = Boolean(n.pinned);
+  const dateStr = fmtStickyDate(n.createdAt);
+
+  const attachmentHtml = `<div class="sticky-attachment pin-${esc(pinStyle)}"></div>`;
+
+  let bodyHtml = '';
+  if (n.type === 'pointers') {
+    const pointers = Array.isArray(n.pointers) ? n.pointers : [];
+    const doneCount = pointers.filter(p => p.done).length;
+    const totalCount = pointers.length;
+    const allDone = totalCount > 0 && doneCount === totalCount;
+
+    const itemsHtml = pointers.map(p => `
+      <li class="sticky-pointer-item ${p.done ? 'checked' : ''}" data-pointer-row="${esc(n.id)}:${esc(p.id)}">
+        <input type="checkbox" class="sticky-pointer-check" data-toggle-pointer="${esc(n.id)}:${esc(p.id)}" ${p.done ? 'checked' : ''} aria-label="Mark pointer done" />
+        <span class="sticky-pointer-text">${esc(p.text)}</span>
+        <button type="button" class="tiny-btn" data-delete-pointer="${esc(n.id)}:${esc(p.id)}" title="Delete pointer line" style="opacity:0.35;padding:0 2px;line-height:1;">×</button>
+      </li>
+    `).join('');
+
+    bodyHtml = `
+      <ul class="sticky-pointers-list">${itemsHtml}</ul>
+      <div class="sticky-pointer-progress">
+        <span>${doneCount} of ${totalCount} completed</span>
+        ${allDone ? '<span style="color:#16a34a;">🎉 All Mastered!</span>' : ''}
+      </div>
+      <div class="sticky-inline-add">
+        <input type="text" class="sticky-inline-input" placeholder="＋ Add pointer..." data-inline-add-input="${esc(n.id)}" maxlength="140" autocomplete="off" />
+        <button type="button" class="sticky-inline-add-btn" data-inline-add-btn="${esc(n.id)}">Add</button>
+      </div>
+    `;
+  } else {
+    bodyHtml = `<div class="sticky-note-text">${esc(n.content || '')}</div>`;
+  }
+
+  const tagHtml = n.tag ? `<button type="button" class="sticky-tag-pill" data-notes-tag="${esc(n.tag)}" title="Filter by #${esc(n.tag)}">#${esc(n.tag)}</button>` : '';
+
+  return `
+    <article class="sticky-card color-${esc(color)} texture-${esc(paper)} ${isPinned ? 'pinned' : ''}" style="--sticky-tilt: ${tilt}deg;" data-note-card-id="${esc(n.id)}">
+      ${attachmentHtml}
+      <div class="sticky-card-header">
+        <h3 class="sticky-card-title">${esc(n.title || 'Untitled Sticky')}</h3>
+        <div class="sticky-card-actions">
+          <button type="button" class="sticky-action-btn btn-pin ${isPinned ? 'is-pinned' : ''}" data-pin-note="${esc(n.id)}" title="${isPinned ? 'Unpin from VIP shelf' : 'Pin to VIP shelf'}">📌</button>
+          <button type="button" class="sticky-action-btn" data-color-popover-trigger="${esc(n.id)}" title="Change color">🎨</button>
+          <button type="button" class="sticky-action-btn" data-copy-note="${esc(n.id)}" title="Copy text to clipboard">📋</button>
+          <button type="button" class="sticky-action-btn" data-edit-note="${esc(n.id)}" title="Edit sticky note">✏️</button>
+          <button type="button" class="sticky-action-btn" data-delete-note="${esc(n.id)}" title="Delete sticky note">🗑️</button>
+        </div>
+      </div>
+      <div class="sticky-card-body">${bodyHtml}</div>
+      <div class="sticky-card-footer">
+        ${tagHtml}
+        <span class="sticky-date">${esc(dateStr)}</span>
+      </div>
+    </article>
+  `;
+}
+
+function renderNotes() {
+  const canvas = $('#sticky-board-canvas');
+  if (!canvas) return;
+
+  seedDefaultNotesIfEmpty();
+  const allNotes = Array.isArray(db.notes) ? db.notes : [];
+
+  // Update counts
+  const countAll = allNotes.length;
+  const countPinned = allNotes.filter(n => n.pinned).length;
+  const countPointers = allNotes.filter(n => n.type === 'pointers').length;
+  const countFreeform = allNotes.filter(n => n.type === 'note').length;
+
+  if ($('#count-all')) $('#count-all').textContent = countAll;
+  if ($('#count-pinned')) $('#count-pinned').textContent = countPinned;
+  if ($('#count-pointers')) $('#count-pointers').textContent = countPointers;
+  if ($('#count-notes')) $('#count-notes').textContent = countFreeform;
+
+  // Render tag filter chips
+  const tagsContainer = $('#notes-tag-filters');
+  if (tagsContainer) {
+    const uniqueTags = [...new Set(allNotes.map(n => n.tag).filter(Boolean))].sort();
+    tagsContainer.innerHTML = uniqueTags.map(tag => {
+      const isActive = notesFilter === `tag:${tag.toLowerCase()}`;
+      return `<button type="button" class="filter ${isActive ? 'active' : ''}" data-notes-tag="${esc(tag)}">#${esc(tag)}</button>`;
+    }).join('');
+  }
+
+  // Update filter buttons active state
+  $$('[data-notes-filter]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.notesFilter === notesFilter);
+  });
+
+  // Apply search & filter
+  const q = (notesSearchQuery || '').trim().toLowerCase();
+  const filteredNotes = allNotes.filter(n => {
+    // Filter check
+    if (notesFilter === 'pinned' && !n.pinned) return false;
+    if (notesFilter === 'pointers' && n.type !== 'pointers') return false;
+    if (notesFilter === 'notes' && n.type !== 'note') return false;
+    if (notesFilter.startsWith('tag:')) {
+      const targetTag = notesFilter.slice(4);
+      if (!n.tag || n.tag.toLowerCase() !== targetTag) return false;
+    }
+
+    // Search check
+    if (q) {
+      const titleMatch = (n.title || '').toLowerCase().includes(q);
+      const contentMatch = (n.content || '').toLowerCase().includes(q);
+      const tagMatch = (n.tag || '').toLowerCase().includes(q);
+      const pointersMatch = Array.isArray(n.pointers) && n.pointers.some(p => (p.text || '').toLowerCase().includes(q));
+      if (!titleMatch && !contentMatch && !tagMatch && !pointersMatch) return false;
+    }
+
+    return true;
+  });
+
+  // Apply theme & layout classes to canvas
+  canvas.className = `sticky-board-canvas theme-${boardTheme} layout-${boardLayout}`;
+
+  // Update theme & layout pills active states
+  $$('[data-board-theme]').forEach(btn => btn.classList.toggle('active', btn.dataset.boardTheme === boardTheme));
+  $$('[data-board-layout]').forEach(btn => btn.classList.toggle('active', btn.dataset.boardLayout === boardLayout));
+
+  const pinnedRack = $('#pinned-notes-rack');
+  const pinnedGrid = $('#pinned-notes-grid');
+  const boardGrid = $('#notes-board-grid');
+  const emptyState = $('#notes-empty-state');
+  const statusText = $('#board-status-text');
+
+  const isSpecificFilter = notesFilter !== 'all' || q.length > 0;
+
+  let pinnedList = [];
+  let unpinnedList = [];
+
+  if (isSpecificFilter) {
+    unpinnedList = filteredNotes;
+    if (pinnedRack) pinnedRack.style.display = 'none';
+  } else {
+    pinnedList = filteredNotes.filter(n => n.pinned);
+    unpinnedList = filteredNotes.filter(n => !n.pinned);
+
+    if (pinnedList.length > 0 && pinnedRack && pinnedGrid) {
+      pinnedRack.style.display = 'block';
+      pinnedGrid.innerHTML = pinnedList.map(n => stickyCardHtml(n)).join('');
+      if ($('#pinned-count-badge')) $('#pinned-count-badge').textContent = `${pinnedList.length} Pinned`;
+    } else if (pinnedRack) {
+      pinnedRack.style.display = 'none';
+    }
+  }
+
+  if (boardGrid) {
+    boardGrid.innerHTML = unpinnedList.map(n => stickyCardHtml(n)).join('');
+  }
+
+  const totalShown = isSpecificFilter ? unpinnedList.length : (pinnedList.length + unpinnedList.length);
+  if (totalShown === 0) {
+    if (emptyState) emptyState.style.display = 'flex';
+    if (boardGrid) boardGrid.style.display = 'none';
+  } else {
+    if (emptyState) emptyState.style.display = 'none';
+    if (boardGrid) boardGrid.style.display = 'grid';
+  }
+
+  if (statusText) {
+    if (q) {
+      statusText.textContent = `Found ${totalShown} result${totalShown === 1 ? '' : 's'} for "${notesSearchQuery}"`;
+    } else if (notesFilter.startsWith('tag:')) {
+      statusText.textContent = `Stickies tagged #${notesFilter.slice(4)} (${totalShown})`;
+    } else if (notesFilter === 'pinned') {
+      statusText.textContent = `VIP Pinned Stickies (${totalShown})`;
+    } else if (notesFilter === 'pointers') {
+      statusText.textContent = `Checkable Revision Pointers (${totalShown})`;
+    } else if (notesFilter === 'notes') {
+      statusText.textContent = `Freeform Study Notes (${totalShown})`;
+    } else {
+      statusText.textContent = pinnedList.length > 0 ? `Unpinned Stream (${unpinnedList.length})` : `All Sticky Notes & Pointers (${totalShown})`;
+    }
+  }
+}
+
+// Quick Jot Bar Submission
+function submitQuickJot() {
+  const input = $('#quick-jot-input');
+  const tagSelect = $('#quick-jot-tag');
+  const text = input ? input.value.trim() : '';
+  if (!text) {
+    if (input) input.focus();
+    return;
+  }
+
+  const tag = tagSelect ? tagSelect.value : 'QuickTip';
+  const newSticky = {
+    id: uid(),
+    title: text.length > 60 ? text.slice(0, 58) + '...' : text,
+    type: quickJotType,
+    pointers: quickJotType === 'pointers' ? [{ id: uid(), text, done: false }] : [],
+    content: quickJotType === 'note' ? text : '',
+    color: quickJotColor,
+    pinStyle: 'pushpin',
+    paperStyle: 'lined',
+    tag,
+    pinned: false,
+    rotation: ((Math.random() * 4.6) - 2.3),
+    createdAt: new Date().toISOString()
+  };
+
+  db.notes = db.notes || [];
+  db.notes.unshift(newSticky);
+  input.value = '';
+  save();
+  toast('📌 Sticky note placed on board!');
+}
+
+// Open Sticky Note Creator / Editor Modal
+function openStickyModal(editId = null) {
+  const dialog = $('#modal-sticky-note');
+  if (!dialog) return;
+
+  const idInput = $('#sticky-edit-id');
+  const titleInput = $('#sticky-input-title');
+  const tagInput = $('#sticky-input-tag');
+  const pinCheckbox = $('#sticky-is-pinned');
+  const pinStyleSelect = $('#sticky-pin-style');
+  const paperStyleSelect = $('#sticky-paper-style');
+  const contentInput = $('#sticky-input-content');
+  const modalTitle = $('#sticky-modal-title');
+  const pointersList = $('#sticky-pointers-list');
+
+  let currentNote = null;
+  if (editId) {
+    currentNote = (db.notes || []).find(n => n.id === editId);
+  }
+
+  if (currentNote) {
+    idInput.value = currentNote.id;
+    modalTitle.textContent = 'Edit Sticky Note';
+    titleInput.value = currentNote.title || '';
+    tagInput.value = currentNote.tag || '';
+    pinCheckbox.checked = Boolean(currentNote.pinned);
+    pinStyleSelect.value = currentNote.pinStyle || 'pushpin';
+    paperStyleSelect.value = currentNote.paperStyle || 'lined';
+    stickyModalColor = currentNote.color || 'yellow';
+    stickyModalFormat = currentNote.type || 'pointers';
+    contentInput.value = currentNote.content || '';
+
+    // Populate pointers list
+    pointersList.innerHTML = '';
+    const pointers = Array.isArray(currentNote.pointers) ? currentNote.pointers : [];
+    if (pointers.length === 0) {
+      addModalPointerRow('');
+    } else {
+      pointers.forEach(p => addModalPointerRow(p.text, p.done));
+    }
+  } else {
+    idInput.value = '';
+    modalTitle.textContent = 'Create Sticky Note';
+    titleInput.value = '';
+    tagInput.value = 'QuickTip';
+    pinCheckbox.checked = false;
+    pinStyleSelect.value = 'pushpin';
+    paperStyleSelect.value = 'lined';
+    stickyModalColor = 'yellow';
+    stickyModalFormat = 'pointers';
+    contentInput.value = '';
+
+    pointersList.innerHTML = '';
+    addModalPointerRow('');
+    addModalPointerRow('');
+    addModalPointerRow('');
+  }
+
+  // Update swatches active state
+  $$('#modal-color-palette .palette-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.color === stickyModalColor);
+  });
+
+  // Update format pills
+  updateModalFormatUI();
+  updateModalPointersHint();
+
+  dialog.showModal();
+}
+
+function updateModalFormatUI() {
+  const isPointers = stickyModalFormat === 'pointers';
+  $('#btn-format-pointers')?.classList.toggle('active', isPointers);
+  $('#btn-format-note')?.classList.toggle('active', !isPointers);
+
+  const pointersPane = $('#sticky-pointers-editor-section');
+  const notePane = $('#sticky-note-editor-section');
+  if (pointersPane) pointersPane.style.display = isPointers ? 'block' : 'none';
+  if (notePane) notePane.style.display = isPointers ? 'none' : 'block';
+}
+
+function updateModalPointersHint() {
+  const hint = $('#modal-pointers-count-hint');
+  const list = $('#sticky-pointers-list');
+  if (hint && list) {
+    const count = list.querySelectorAll('.pointer-edit-row').length;
+    hint.textContent = `${count} pointer${count === 1 ? '' : 's'}`;
+  }
+}
+
+function addModalPointerRow(text = '', done = false) {
+  const list = $('#sticky-pointers-list');
+  if (!list) return;
+
+  const row = document.createElement('div');
+  row.className = 'pointer-edit-row';
+  row.dataset.rowDone = done ? 'true' : 'false';
+  row.innerHTML = `
+    <span class="pointer-bullet-icon">⚡</span>
+    <input type="text" class="pointer-edit-input" placeholder="Type pointer line..." value="${esc(text)}" maxlength="160" autocomplete="off" />
+    <button type="button" class="btn-remove-pointer-row" title="Remove line">&times;</button>
+  `;
+  list.appendChild(row);
+
+  const input = row.querySelector('.pointer-edit-input');
+  if (!text && input) input.focus();
+
+  updateModalPointersHint();
+}
+
+// Export Notes to Markdown
+function openExportNotesModal() {
+  const dialog = $('#modal-export-notes');
+  const textarea = $('#export-notes-markdown');
+  if (!dialog || !textarea) return;
+
+  const notes = Array.isArray(db.notes) ? db.notes : [];
+  if (notes.length === 0) {
+    toast('No notes or pointers on board to export yet.');
+    return;
+  }
+
+  const lines = [
+    '# StudyFlow — Notes & Pointers Cheat-Sheet',
+    `*Generated on ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}*`,
+    '',
+    '---',
+    ''
+  ];
+
+  const pinned = notes.filter(n => n.pinned);
+  const unpinned = notes.filter(n => !n.pinned);
+
+  if (pinned.length > 0) {
+    lines.push('## 📌 VIP Pinned Pointers & Formulas');
+    lines.push('');
+    pinned.forEach(n => {
+      lines.push(`### ${n.title || 'Untitled'} ${n.tag ? `[#${n.tag}]` : ''}`);
+      if (n.type === 'pointers') {
+        (n.pointers || []).forEach(p => {
+          lines.push(`- [${p.done ? 'x' : ' '}] ${p.text}`);
+        });
+      } else {
+        lines.push(n.content || '');
+      }
+      lines.push('');
+    });
+    lines.push('---');
+    lines.push('');
+  }
+
+  if (unpinned.length > 0) {
+    lines.push('## 📝 Study Notes & General Pointers');
+    lines.push('');
+    unpinned.forEach(n => {
+      lines.push(`### ${n.title || 'Untitled'} ${n.tag ? `[#${n.tag}]` : ''}`);
+      if (n.type === 'pointers') {
+        (n.pointers || []).forEach(p => {
+          lines.push(`- [${p.done ? 'x' : ' '}] ${p.text}`);
+        });
+      } else {
+        lines.push(n.content || '');
+      }
+      lines.push('');
+    });
+  }
+
+  textarea.value = lines.join('\n');
+  dialog.showModal();
+}
+
+// Color Swatch Popover on Sticky Card
+function showColorPopover(noteId, triggerBtn) {
+  // Remove existing popovers
+  $$('.sticky-color-popover').forEach(p => p.remove());
+
+  const card = triggerBtn.closest('.sticky-card');
+  if (!card) return;
+
+  const popover = document.createElement('div');
+  popover.className = 'sticky-color-popover';
+  const colors = [
+    { key: 'yellow', hex: '#FFF59D', name: 'Yellow' },
+    { key: 'mint', hex: '#C8E6C9', name: 'Mint' },
+    { key: 'peach', hex: '#FFCCBC', name: 'Peach' },
+    { key: 'lavender', hex: '#E1BEE7', name: 'Lavender' },
+    { key: 'rose', hex: '#F8BBD0', name: 'Rose' },
+    { key: 'sky', hex: '#B3E5FC', name: 'Sky' },
+    { key: 'dark', hex: '#1E2530', name: 'Dark' }
+  ];
+
+  popover.innerHTML = colors.map(c => `
+    <button type="button" class="color-pop-dot" data-set-color="${noteId}:${c.key}" style="--pop-color: ${c.hex};" title="${c.name}"></button>
+  `).join('');
+
+  card.appendChild(popover);
+
+  const closeHandler = e => {
+    if (!popover.contains(e.target) && e.target !== triggerBtn) {
+      popover.remove();
+      document.removeEventListener('click', closeHandler);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeHandler), 10);
+}
+
+// Attach all Notes & Pointers Event Listeners
+function setupNotesEventListeners() {
+  // 1. Quick Jot Bar
+  const quickBar = $('#quick-jot-bar');
+  if (quickBar) {
+    quickBar.addEventListener('click', e => {
+      const typeBtn = e.target.closest('[data-quick-type]');
+      if (typeBtn) {
+        quickJotType = typeBtn.dataset.quickType;
+        $$('[data-quick-type]').forEach(b => b.classList.toggle('active', b === typeBtn));
+        return;
+      }
+
+      const colorDot = e.target.closest('#quick-jot-colors .color-dot');
+      if (colorDot) {
+        quickJotColor = colorDot.dataset.color;
+        $$('#quick-jot-colors .color-dot').forEach(b => b.classList.toggle('active', b === colorDot));
+        return;
+      }
+
+      if (e.target.id === 'quick-jot-submit' || e.target.closest('#quick-jot-submit')) {
+        submitQuickJot();
+      }
+    });
+
+    const quickInput = $('#quick-jot-input');
+    if (quickInput) {
+      quickInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submitQuickJot();
+        }
+      });
+    }
+  }
+
+  // 2. Toolbar: Search
+  const searchInput = $('#notes-search-input');
+  const searchClear = $('#notes-search-clear');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      notesSearchQuery = searchInput.value;
+      if (searchClear) searchClear.style.display = notesSearchQuery ? 'inline-block' : 'none';
+      renderNotes();
+    });
+  }
+  if (searchClear) {
+    searchClear.addEventListener('click', () => {
+      notesSearchQuery = '';
+      if (searchInput) searchInput.value = '';
+      searchClear.style.display = 'none';
+      renderNotes();
+    });
+  }
+
+  // 3. Toolbar: Filters & Tags
+  document.addEventListener('click', e => {
+    const filterBtn = e.target.closest('[data-notes-filter]');
+    if (filterBtn) {
+      notesFilter = filterBtn.dataset.notesFilter;
+      renderNotes();
+      return;
+    }
+
+    const tagBtn = e.target.closest('[data-notes-tag]');
+    if (tagBtn) {
+      const tag = tagBtn.dataset.notesTag.toLowerCase();
+      notesFilter = notesFilter === `tag:${tag}` ? 'all' : `tag:${tag}`;
+      renderNotes();
+      return;
+    }
+
+    // Themes
+    const themeBtn = e.target.closest('[data-board-theme]');
+    if (themeBtn) {
+      boardTheme = themeBtn.dataset.boardTheme;
+      localStorage.setItem('studyflow_notes_theme', boardTheme);
+      renderNotes();
+      return;
+    }
+
+    // Layout
+    const layoutBtn = e.target.closest('[data-board-layout]');
+    if (layoutBtn) {
+      boardLayout = layoutBtn.dataset.boardLayout;
+      localStorage.setItem('studyflow_notes_layout', boardLayout);
+      renderNotes();
+      return;
+    }
+
+    // Shuffle angles
+    if (e.target.id === 'btn-shuffle-angles' || e.target.closest('#btn-shuffle-angles')) {
+      (db.notes || []).forEach(n => {
+        n.rotation = Number(((Math.random() * 5.2) - 2.6).toFixed(1));
+      });
+      save();
+      toast('🔀 Shuffled sticky note tilts!');
+      return;
+    }
+
+    // Open Modal button
+    if (e.target.id === 'btn-add-sticky-note' || e.target.closest('#btn-add-sticky-note')) {
+      openStickyModal();
+      return;
+    }
+
+    // Export button
+    if (e.target.id === 'btn-export-notes' || e.target.closest('#btn-export-notes')) {
+      openExportNotesModal();
+      return;
+    }
+  });
+
+  // 4. Sticky Canvas Delegated Actions
+  const canvas = $('#sticky-board-canvas');
+  if (canvas) {
+    canvas.addEventListener('click', e => {
+      // Toggle pointer line
+      const checkEl = e.target.closest('[data-toggle-pointer]');
+      if (checkEl) {
+        const [noteId, pointerId] = checkEl.dataset.togglePointer.split(':');
+        const note = (db.notes || []).find(n => n.id === noteId);
+        if (note && Array.isArray(note.pointers)) {
+          const p = note.pointers.find(item => item.id === pointerId);
+          if (p) {
+            p.done = checkEl.checked;
+            save();
+            const allDone = note.pointers.length > 0 && note.pointers.every(item => item.done);
+            if (allDone && p.done) {
+              toast(`🎉 Mastered all pointers in "${note.title}"!`);
+            }
+          }
+        }
+        return;
+      }
+
+      // Delete pointer line
+      const delPointerBtn = e.target.closest('[data-delete-pointer]');
+      if (delPointerBtn) {
+        e.stopPropagation();
+        const [noteId, pointerId] = delPointerBtn.dataset.deletePointer.split(':');
+        const note = (db.notes || []).find(n => n.id === noteId);
+        if (note && Array.isArray(note.pointers)) {
+          note.pointers = note.pointers.filter(p => p.id !== pointerId);
+          save();
+        }
+        return;
+      }
+
+      // Inline add pointer button
+      const inlineAddBtn = e.target.closest('[data-inline-add-btn]');
+      if (inlineAddBtn) {
+        const noteId = inlineAddBtn.dataset.inlineAddBtn;
+        const input = canvas.querySelector(`[data-inline-add-input="${noteId}"]`);
+        if (input && input.value.trim()) {
+          const note = (db.notes || []).find(n => n.id === noteId);
+          if (note) {
+            note.pointers = note.pointers || [];
+            note.pointers.push({ id: uid(), text: input.value.trim(), done: false });
+            input.value = '';
+            save();
+          }
+        }
+        return;
+      }
+
+      // Pin / Unpin note
+      const pinBtn = e.target.closest('[data-pin-note]');
+      if (pinBtn) {
+        const noteId = pinBtn.dataset.pinNote;
+        const note = (db.notes || []).find(n => n.id === noteId);
+        if (note) {
+          note.pinned = !note.pinned;
+          save();
+          toast(note.pinned ? '📌 Pinned to VIP shelf!' : 'Unpinned sticky.');
+        }
+        return;
+      }
+
+      // Color popover trigger
+      const colorTrigger = e.target.closest('[data-color-popover-trigger]');
+      if (colorTrigger) {
+        e.stopPropagation();
+        const noteId = colorTrigger.dataset.colorPopoverTrigger;
+        showColorPopover(noteId, colorTrigger);
+        return;
+      }
+
+      // Set color from popover
+      const setColorBtn = e.target.closest('[data-set-color]');
+      if (setColorBtn) {
+        const [noteId, color] = setColorBtn.dataset.setColor.split(':');
+        const note = (db.notes || []).find(n => n.id === noteId);
+        if (note) {
+          note.color = color;
+          $$('.sticky-color-popover').forEach(p => p.remove());
+          save();
+        }
+        return;
+      }
+
+      // Copy note text
+      const copyBtn = e.target.closest('[data-copy-note]');
+      if (copyBtn) {
+        const noteId = copyBtn.dataset.copyNote;
+        const note = (db.notes || []).find(n => n.id === noteId);
+        if (note) {
+          let text = `${note.title || 'Untitled'}\n`;
+          if (note.type === 'pointers') {
+            text += (note.pointers || []).map(p => `• ${p.text} ${p.done ? '(Done)' : ''}`).join('\n');
+          } else {
+            text += note.content || '';
+          }
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+              toast('📋 Note copied to clipboard!');
+            }).catch(() => toast('Failed to copy.'));
+          }
+        }
+        return;
+      }
+
+      // Edit note
+      const editBtn = e.target.closest('[data-edit-note]');
+      if (editBtn) {
+        const noteId = editBtn.dataset.editNote;
+        openStickyModal(noteId);
+        return;
+      }
+
+      // Delete note
+      const deleteBtn = e.target.closest('[data-delete-note]');
+      if (deleteBtn) {
+        const noteId = deleteBtn.dataset.deleteNote;
+        const idx = (db.notes || []).findIndex(n => n.id === noteId);
+        if (idx !== -1) {
+          lastDeletedSticky = { ...db.notes[idx], index: idx };
+          db.notes.splice(idx, 1);
+          save();
+          toast('🗑️ Sticky note removed.');
+        }
+        return;
+      }
+    });
+
+    // Inline add pointer on Enter key
+    canvas.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const input = e.target.closest('[data-inline-add-input]');
+        if (input && input.value.trim()) {
+          e.preventDefault();
+          const noteId = input.dataset.inlineAddInput;
+          const note = (db.notes || []).find(n => n.id === noteId);
+          if (note) {
+            note.pointers = note.pointers || [];
+            note.pointers.push({ id: uid(), text: input.value.trim(), done: false });
+            input.value = '';
+            save();
+          }
+        }
+      }
+    });
+  }
+
+  // 5. Sticky Note Modal Form Handlers
+  const modalForm = $('#sticky-note-form');
+  if (modalForm) {
+    // Format switcher buttons
+    $('#btn-format-pointers')?.addEventListener('click', () => {
+      stickyModalFormat = 'pointers';
+      updateModalFormatUI();
+    });
+    $('#btn-format-note')?.addEventListener('click', () => {
+      stickyModalFormat = 'note';
+      updateModalFormatUI();
+    });
+
+    // Color Swatches
+    const palette = $('#modal-color-palette');
+    if (palette) {
+      palette.addEventListener('click', e => {
+        const swatch = e.target.closest('.palette-swatch');
+        if (swatch) {
+          stickyModalColor = swatch.dataset.color;
+          $$('#modal-color-palette .palette-swatch').forEach(s => s.classList.toggle('active', s === swatch));
+        }
+      });
+    }
+
+    // Add pointer row button
+    $('#btn-add-pointer-row')?.addEventListener('click', () => {
+      addModalPointerRow('');
+    });
+
+    // Remove pointer row button
+    $('#sticky-pointers-list')?.addEventListener('click', e => {
+      const removeBtn = e.target.closest('.btn-remove-pointer-row');
+      if (removeBtn) {
+        const row = removeBtn.closest('.pointer-edit-row');
+        if (row) {
+          row.remove();
+          updateModalPointersHint();
+        }
+      }
+    });
+
+    // Form submit
+    modalForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const editId = $('#sticky-edit-id')?.value;
+      const title = $('#sticky-input-title')?.value.trim() || 'Untitled Note';
+      const tag = $('#sticky-input-tag')?.value.trim() || 'QuickTip';
+      const pinned = Boolean($('#sticky-is-pinned')?.checked);
+      const pinStyle = $('#sticky-pin-style')?.value || 'pushpin';
+      const paperStyle = $('#sticky-paper-style')?.value || 'lined';
+      const content = $('#sticky-input-content')?.value.trim() || '';
+
+      // Collect pointers
+      const pointerRows = $$('#sticky-pointers-list .pointer-edit-row');
+      const pointers = [];
+      pointerRows.forEach(row => {
+        const input = row.querySelector('.pointer-edit-input');
+        const text = input ? input.value.trim() : '';
+        const wasDone = row.dataset.rowDone === 'true';
+        if (text) {
+          pointers.push({ id: uid(), text, done: wasDone });
+        }
+      });
+
+      db.notes = db.notes || [];
+
+      if (editId) {
+        const note = db.notes.find(n => n.id === editId);
+        if (note) {
+          note.title = title;
+          note.tag = tag;
+          note.pinned = pinned;
+          note.pinStyle = pinStyle;
+          note.paperStyle = paperStyle;
+          note.color = stickyModalColor;
+          note.type = stickyModalFormat;
+          note.content = content;
+          note.pointers = pointers;
+          note.updatedAt = new Date().toISOString();
+        }
+      } else {
+        const newSticky = {
+          id: uid(),
+          title,
+          type: stickyModalFormat,
+          pointers,
+          content,
+          color: stickyModalColor,
+          pinStyle,
+          paperStyle,
+          tag,
+          pinned,
+          rotation: Number(((Math.random() * 4.6) - 2.3).toFixed(1)),
+          createdAt: new Date().toISOString()
+        };
+        db.notes.unshift(newSticky);
+      }
+
+      save();
+      $('#modal-sticky-note')?.close();
+      toast(editId ? '✓ Sticky note updated!' : '📌 New sticky placed on board!');
+    });
+  }
+
+  // 6. Export Modal Handlers
+  $('#btn-copy-export-md')?.addEventListener('click', () => {
+    const textarea = $('#export-notes-markdown');
+    if (textarea && textarea.value) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(textarea.value).then(() => {
+          toast('📋 Markdown copied to clipboard!');
+        });
+      }
+    }
+  });
+
+  $('#btn-download-export-md')?.addEventListener('click', () => {
+    const textarea = $('#export-notes-markdown');
+    if (textarea && textarea.value) {
+      const blob = new Blob([textarea.value], { type: 'text/markdown;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `StudyFlow_Notes_Pointers_${todayISO()}.md`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast('⬇️ Downloaded notes cheat-sheet!');
+    }
+  });
+}
+
+setupNotesEventListeners();
+
 render();
 refreshStreakFromServer();
