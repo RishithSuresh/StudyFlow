@@ -7269,8 +7269,8 @@ dialog:not([open]) {
 .sticky-notes-rack-grid,
 .sticky-notes-board-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 30px 24px;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 22px 18px;
   align-items: start;
 }
 
@@ -7292,19 +7292,21 @@ dialog:not([open]) {
 }
 
 /* ==========================================================================
-   THE STICKY NOTE CARD (PHYSICAL VIBE)
+   THE STICKY NOTE CARD (COMPACT PREVIEW / GIST)
    ========================================================================== */
 
 .sticky-card {
   position: relative;
-  min-height: 240px;
-  border-radius: 3px 3px 20px 3px;
-  padding: 22px 18px 16px;
+  min-height: 155px;
+  max-height: 205px;
+  border-radius: 3px 3px 18px 3px;
+  padding: 16px 14px 10px;
   display: flex;
   flex-direction: column;
-  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
-  user-select: text;
+  transition: transform 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.22s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  user-select: none;
 }
 
 /* Scatter vs Grid layout */
@@ -7317,9 +7319,9 @@ dialog:not([open]) {
 }
 
 .sticky-card:hover {
-  transform: rotate(0deg) translateY(-6px) scale(1.025) !important;
+  transform: rotate(0deg) translateY(-5px) scale(1.03) !important;
   z-index: 15;
-  box-shadow: 0 22px 36px rgba(0, 0, 0, 0.22), 0 8px 14px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.2), 0 6px 10px rgba(0, 0, 0, 0.1);
 }
 
 /* Realistic Dog-eared Curled Corner */
@@ -7328,25 +7330,25 @@ dialog:not([open]) {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.15) 50%, rgba(0, 0, 0, 0.08) 60%, rgba(255, 255, 255, 0.45) 100%);
-  border-radius: 0 0 20px 0;
+  border-radius: 0 0 18px 0;
   box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.08);
   pointer-events: none;
   transition: width 0.2s ease, height 0.2s ease;
 }
 
 .sticky-card:hover::after {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   box-shadow: -3px -3px 6px rgba(0, 0, 0, 0.16);
 }
 
 /* Attachment Pin / Tape Accents */
 .sticky-attachment {
   position: absolute;
-  top: -8px;
+  top: -7px;
   left: 50%;
   transform: translateX(-50%);
   pointer-events: none;
@@ -7355,22 +7357,22 @@ dialog:not([open]) {
 
 /* Pushpin */
 .sticky-attachment.pin-pushpin {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #ff5252, #b71c1c);
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255,255,255,0.4);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255,255,255,0.4);
 }
 
 .sticky-card.pinned .sticky-attachment.pin-pushpin {
   background: radial-gradient(circle at 35% 35%, #ffd700, #b8860b);
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.7), 0 3px 6px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.7), 0 2px 5px rgba(0, 0, 0, 0.35);
 }
 
 /* Washi Tape */
 .sticky-attachment.pin-tape {
-  width: 76px;
-  height: 18px;
+  width: 64px;
+  height: 15px;
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(2px);
   border-left: 2px dashed rgba(0, 0, 0, 0.1);
@@ -7381,12 +7383,12 @@ dialog:not([open]) {
 
 /* Magnet */
 .sticky-attachment.pin-magnet {
-  width: 17px;
-  height: 17px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #3b82f6, #1d4ed8);
   border: 2px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 /* Minimal corner peel */
@@ -7399,26 +7401,31 @@ dialog:not([open]) {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .sticky-card-title {
   margin: 0;
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 750;
   line-height: 1.35;
   color: inherit;
   word-break: break-word;
+  max-height: 38px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .sticky-card-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
-  opacity: 0.85;
+  gap: 3px;
+  opacity: 0.8;
   transition: opacity 0.2s ease;
-  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .sticky-card:hover .sticky-card-actions {
@@ -7428,12 +7435,12 @@ dialog:not([open]) {
 .sticky-action-btn {
   border: 0;
   background: rgba(0, 0, 0, 0.05);
-  border-radius: 6px;
-  width: 24px;
-  height: 24px;
+  border-radius: 5px;
+  width: 20px;
+  height: 20px;
   display: grid;
   place-items: center;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   color: inherit;
   transition: background 0.15s ease, transform 0.15s ease;
@@ -7442,7 +7449,7 @@ dialog:not([open]) {
 
 .sticky-action-btn:hover {
   background: rgba(0, 0, 0, 0.12);
-  transform: scale(1.1);
+  transform: scale(1.15);
 }
 
 .sticky-action-btn.btn-pin.is-pinned {
@@ -7450,120 +7457,111 @@ dialog:not([open]) {
   background: rgba(217, 119, 6, 0.15);
 }
 
-/* Sticky Card Body */
+/* Card Body (Gist only) */
 .sticky-card-body {
   flex: 1;
-  font-size: 13px;
-  line-height: 1.55;
-  margin-bottom: 14px;
-  word-break: break-word;
+  overflow: hidden;
+  margin-bottom: 6px;
 }
 
-/* Pointers list on card */
-.sticky-pointers-list {
+.sticky-gist-badge {
+  font-size: 10px;
+  font-weight: 750;
+  opacity: 0.85;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+
+.sticky-gist-pointers-preview {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  gap: 3px;
+  font-size: 11.5px;
+  line-height: 1.35;
 }
 
-.sticky-pointer-item {
+.sticky-gist-item {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  line-height: 1.4;
-  cursor: pointer;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.sticky-pointer-check {
-  margin-top: 2px;
-  width: 15px;
-  height: 15px;
-  accent-color: var(--sf-navy);
-  cursor: pointer;
+.sticky-gist-item .gist-bullet {
+  font-size: 10.5px;
+  opacity: 0.7;
   flex-shrink: 0;
 }
 
-.sticky-pointer-text {
-  flex: 1;
-  transition: all 0.2s ease;
+.sticky-gist-item .gist-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.sticky-pointer-item.checked .sticky-pointer-text {
+.sticky-gist-item.checked .gist-text {
   text-decoration: line-through;
   opacity: 0.55;
 }
 
-/* Pointer Progress Badge */
-.sticky-pointer-progress {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 10px;
-  font-size: 11px;
-  font-weight: 700;
-  opacity: 0.75;
+.sticky-gist-more {
+  font-size: 10.5px;
+  opacity: 0.7;
+  font-style: italic;
+  margin-top: 3px;
 }
 
-/* Inline Add Pointer Input on Card */
-.sticky-inline-add {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 10px;
+.sticky-gist-note-preview {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  opacity: 0.85;
+  word-break: break-word;
 }
 
-.sticky-inline-input {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px dashed rgba(0, 0, 0, 0.18);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 11px;
-  outline: none;
-  color: inherit;
-}
-
-.sticky-inline-input::placeholder {
-  color: inherit;
-  opacity: 0.6;
-}
-
-.sticky-inline-add-btn {
-  border: 0;
-  background: rgba(0, 0, 0, 0.08);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: inherit;
-  padding: 4px 8px;
-  cursor: pointer;
-}
-
-.sticky-inline-add-btn:hover {
-  background: rgba(0, 0, 0, 0.14);
-}
-
-/* Note Text Body */
-.sticky-note-text {
-  white-space: pre-wrap;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-/* Sticky Card Footer */
+/* Card Footer */
 .sticky-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 11px;
-  border-top: 1px dashed rgba(0, 0, 0, 0.1);
-  padding-top: 10px;
+  gap: 6px;
+  font-size: 10.5px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  padding-top: 7px;
   margin-top: auto;
+}
+
+.sticky-open-pill {
+  font-size: 9.5px;
+  font-weight: 750;
+  opacity: 0.6;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 6px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sticky-card:hover .sticky-open-pill {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.12);
+  transform: translateX(1px);
+}
+
+.sticky-card.color-dark .sticky-open-pill {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sticky-card.color-dark:hover .sticky-open-pill {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .sticky-tag-pill {
@@ -8001,6 +7999,357 @@ dialog:not([open]) {
   line-height: 1.5;
   resize: vertical;
   outline: none;
+}
+
+/* Sticky Detail / Expanded Viewer Modal */
+.sticky-detail-dialog {
+  width: min(620px, calc(100% - 32px));
+  max-height: 88vh;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 4px 4px 24px 4px;
+  overflow: visible;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+}
+
+.sticky-detail-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+}
+
+.sticky-detail-container {
+  border-radius: 4px 4px 24px 4px;
+  padding: 26px 24px 20px;
+  position: relative;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.sticky-detail-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.16) 50%, rgba(0, 0, 0, 0.08) 60%, rgba(255, 255, 255, 0.45) 100%);
+  border-radius: 0 0 24px 0;
+  box-shadow: -2px -2px 5px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+}
+
+.sticky-detail-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.sticky-detail-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.sticky-detail-tag-pill {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.sticky-card.color-dark .sticky-detail-tag-pill,
+.sticky-detail-container.color-dark .sticky-detail-tag-pill {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.sticky-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sticky-detail-action-btn {
+  border: 0;
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  color: inherit;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sticky-detail-action-btn:hover {
+  background: rgba(0, 0, 0, 0.14);
+  transform: translateY(-1px);
+}
+
+.sticky-detail-action-btn.is-pinned {
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.18);
+}
+
+.sticky-detail-close-btn {
+  border: 0;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  cursor: pointer;
+  color: inherit;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.sticky-detail-close-btn:hover {
+  background: rgba(0, 0, 0, 0.18);
+  transform: scale(1.1);
+}
+
+.sticky-detail-header {
+  margin-bottom: 14px;
+}
+
+.sticky-detail-title {
+  margin: 0 0 6px;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.3;
+  word-break: break-word;
+  color: inherit;
+}
+
+.sticky-detail-subline {
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+.sticky-detail-body {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 18px;
+  padding-right: 4px;
+}
+
+.sticky-detail-full-text {
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sticky-detail-progress-section {
+  margin-bottom: 16px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.sticky-detail-progress-track {
+  height: 7px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.sticky-detail-progress-track span {
+  height: 100%;
+  background: #16a34a;
+  border-radius: 10px;
+  display: block;
+  transition: width 0.3s ease;
+}
+
+.sticky-detail-progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.sticky-detail-pointers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+.sticky-detail-pointer-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.sticky-detail-pointer-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.sticky-detail-check {
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+  accent-color: var(--sf-navy);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sticky-detail-pointer-text {
+  flex: 1;
+  word-break: break-word;
+  transition: all 0.2s ease;
+}
+
+.sticky-detail-pointer-item.checked .sticky-detail-pointer-text {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.sticky-detail-inline-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sticky-detail-add-input {
+  flex: 1;
+  border: 1px dashed rgba(0, 0, 0, 0.22);
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: inherit;
+  outline: none;
+}
+
+.sticky-detail-add-input:focus {
+  border-style: solid;
+  border-color: var(--sf-coral);
+}
+
+.sticky-detail-add-btn {
+  border: 0;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sticky-detail-add-btn:hover {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.sticky-detail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+  padding-top: 12px;
+  margin-top: auto;
+}
+
+.sticky-detail-colors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--dot-color);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.detail-color-dot:hover {
+  transform: scale(1.25);
+}
+
+.detail-color-dot.active {
+  border-color: currentColor;
+  transform: scale(1.15);
+}
+
+.sticky-detail-done-btn {
+  border: 0;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sticky-detail-done-btn:hover {
+  background: rgba(0, 0, 0, 0.16);
+}
+
+/* Dark mode adjustments in detail container */
+.sticky-detail-container.color-dark .sticky-detail-action-btn,
+.sticky-detail-container.color-dark .sticky-detail-close-btn,
+.sticky-detail-container.color-dark .sticky-detail-done-btn {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sticky-detail-container.color-dark .sticky-detail-action-btn:hover,
+.sticky-detail-container.color-dark .sticky-detail-close-btn:hover,
+.sticky-detail-container.color-dark .sticky-detail-done-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.sticky-detail-container.color-dark .sticky-detail-add-input {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.sticky-detail-container.color-dark .sticky-detail-progress-section {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sticky-detail-container.color-dark .sticky-detail-footer {
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 /* Responsive */

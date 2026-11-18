@@ -2757,57 +2757,175 @@ function stickyCardHtml(n) {
 
   const attachmentHtml = `<div class="sticky-attachment pin-${esc(pinStyle)}"></div>`;
 
-  let bodyHtml = '';
+  let gistHtml = '';
   if (n.type === 'pointers') {
     const pointers = Array.isArray(n.pointers) ? n.pointers : [];
     const doneCount = pointers.filter(p => p.done).length;
     const totalCount = pointers.length;
     const allDone = totalCount > 0 && doneCount === totalCount;
 
-    const itemsHtml = pointers.map(p => `
-      <li class="sticky-pointer-item ${p.done ? 'checked' : ''}" data-pointer-row="${esc(n.id)}:${esc(p.id)}">
-        <input type="checkbox" class="sticky-pointer-check" data-toggle-pointer="${esc(n.id)}:${esc(p.id)}" ${p.done ? 'checked' : ''} aria-label="Mark pointer done" />
-        <span class="sticky-pointer-text">${esc(p.text)}</span>
-        <button type="button" class="tiny-btn" data-delete-pointer="${esc(n.id)}:${esc(p.id)}" title="Delete pointer line" style="opacity:0.35;padding:0 2px;line-height:1;">×</button>
-      </li>
+    // Show top 2 items for the compact gist preview
+    const previewItems = pointers.slice(0, 2).map(p => `
+      <div class="sticky-gist-item ${p.done ? 'checked' : ''}">
+        <span class="gist-bullet">${p.done ? '✓' : '•'}</span>
+        <span class="gist-text">${esc(p.text)}</span>
+      </div>
     `).join('');
 
-    bodyHtml = `
-      <ul class="sticky-pointers-list">${itemsHtml}</ul>
-      <div class="sticky-pointer-progress">
-        <span>${doneCount} of ${totalCount} completed</span>
-        ${allDone ? '<span style="color:#16a34a;">🎉 All Mastered!</span>' : ''}
-      </div>
-      <div class="sticky-inline-add">
-        <input type="text" class="sticky-inline-input" placeholder="＋ Add pointer..." data-inline-add-input="${esc(n.id)}" maxlength="140" autocomplete="off" />
-        <button type="button" class="sticky-inline-add-btn" data-inline-add-btn="${esc(n.id)}">Add</button>
+    const moreCount = totalCount - 2;
+    const moreHtml = moreCount > 0 ? `<div class="sticky-gist-more">+${moreCount} more pointer${moreCount === 1 ? '' : 's'}</div>` : '';
+
+    gistHtml = `
+      <div class="sticky-gist-pointers-preview">
+        <div class="sticky-gist-badge">
+          <span>⚡ ${totalCount} pointer${totalCount === 1 ? '' : 's'}</span>
+          ${doneCount > 0 ? `<span>· ${doneCount} done</span>` : ''}
+          ${allDone ? '<span class="gist-done-badge">🎉</span>' : ''}
+        </div>
+        ${previewItems || '<div class="sticky-gist-more" style="font-style:normal;opacity:0.6;">No pointers yet.</div>'}
+        ${moreHtml}
       </div>
     `;
   } else {
-    bodyHtml = `<div class="sticky-note-text">${esc(n.content || '')}</div>`;
+    const text = (n.content || '').trim();
+    gistHtml = `
+      <p class="sticky-gist-note-preview">${esc(text || 'Empty note... Tap to open.')}</p>
+    `;
   }
 
-  const tagHtml = n.tag ? `<button type="button" class="sticky-tag-pill" data-notes-tag="${esc(n.tag)}" title="Filter by #${esc(n.tag)}">#${esc(n.tag)}</button>` : '';
+  const tagHtml = n.tag ? `<span class="sticky-tag-pill">#${esc(n.tag)}</span>` : '';
 
   return `
-    <article class="sticky-card color-${esc(color)} texture-${esc(paper)} ${isPinned ? 'pinned' : ''}" style="--sticky-tilt: ${tilt}deg;" data-note-card-id="${esc(n.id)}">
+    <article class="sticky-card color-${esc(color)} texture-${esc(paper)} ${isPinned ? 'pinned' : ''}" style="--sticky-tilt: ${tilt}deg;" data-note-card-id="${esc(n.id)}" title="Click to open full sticky note">
       ${attachmentHtml}
       <div class="sticky-card-header">
         <h3 class="sticky-card-title">${esc(n.title || 'Untitled Sticky')}</h3>
         <div class="sticky-card-actions">
           <button type="button" class="sticky-action-btn btn-pin ${isPinned ? 'is-pinned' : ''}" data-pin-note="${esc(n.id)}" title="${isPinned ? 'Unpin from VIP shelf' : 'Pin to VIP shelf'}">📌</button>
           <button type="button" class="sticky-action-btn" data-color-popover-trigger="${esc(n.id)}" title="Change color">🎨</button>
-          <button type="button" class="sticky-action-btn" data-copy-note="${esc(n.id)}" title="Copy text to clipboard">📋</button>
-          <button type="button" class="sticky-action-btn" data-edit-note="${esc(n.id)}" title="Edit sticky note">✏️</button>
           <button type="button" class="sticky-action-btn" data-delete-note="${esc(n.id)}" title="Delete sticky note">🗑️</button>
         </div>
       </div>
-      <div class="sticky-card-body">${bodyHtml}</div>
+      <div class="sticky-card-body">${gistHtml}</div>
       <div class="sticky-card-footer">
         ${tagHtml}
-        <span class="sticky-date">${esc(dateStr)}</span>
+        <span class="sticky-open-pill">Open ↗</span>
       </div>
     </article>
+  `;
+}
+
+let activeDetailNoteId = null;
+
+function openStickyDetailModal(noteId) {
+  const dialog = $('#modal-sticky-detail');
+  if (!dialog) return;
+
+  const note = (db.notes || []).find(n => n.id === noteId);
+  if (!note) return;
+
+  activeDetailNoteId = noteId;
+  renderStickyDetailContent(note);
+
+  if (!dialog.open) {
+    dialog.showModal();
+  }
+}
+
+function renderStickyDetailContent(n) {
+  const container = $('#sticky-detail-container');
+  if (!container) return;
+
+  const color = n.color || 'yellow';
+  const paper = n.paperStyle || 'lined';
+  const pinStyle = n.pinStyle || 'pushpin';
+  const isPinned = Boolean(n.pinned);
+  const dateStr = fmtStickyDate(n.createdAt);
+
+  const attachmentHtml = `<div class="sticky-attachment pin-${esc(pinStyle)}"></div>`;
+
+  let contentHtml = '';
+  if (n.type === 'pointers') {
+    const pointers = Array.isArray(n.pointers) ? n.pointers : [];
+    const doneCount = pointers.filter(p => p.done).length;
+    const totalCount = pointers.length;
+    const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+    const allDone = totalCount > 0 && doneCount === totalCount;
+
+    const itemsHtml = pointers.map(p => `
+      <li class="sticky-detail-pointer-item ${p.done ? 'checked' : ''}" data-detail-pointer-row="${esc(n.id)}:${esc(p.id)}">
+        <input type="checkbox" class="sticky-detail-check" data-detail-toggle-pointer="${esc(n.id)}:${esc(p.id)}" ${p.done ? 'checked' : ''} aria-label="Mark pointer done" />
+        <span class="sticky-detail-pointer-text">${esc(p.text)}</span>
+        <button type="button" class="tiny-btn" data-detail-delete-pointer="${esc(n.id)}:${esc(p.id)}" title="Delete pointer line" style="opacity:0.35;padding:0 4px;font-size:14px;line-height:1;">×</button>
+      </li>
+    `).join('');
+
+    contentHtml = `
+      <div class="sticky-detail-progress-section">
+        <div class="sticky-detail-progress-track"><span style="width: ${pct}%"></span></div>
+        <div class="sticky-detail-progress-label">
+          <span>${doneCount} of ${totalCount} completed (${pct}%)</span>
+          ${allDone ? '<span style="color:#16a34a;font-weight:700;">🎉 Mastered All!</span>' : ''}
+        </div>
+      </div>
+      <ul class="sticky-detail-pointers-list">${itemsHtml || '<li class="muted" style="font-size:12px;padding:8px 0;">No pointers yet. Add one below!</li>'}</ul>
+      <div class="sticky-detail-inline-add">
+        <input type="text" class="sticky-detail-add-input" placeholder="＋ Add another pointer... (Press Enter)" data-detail-add-input="${esc(n.id)}" maxlength="160" autocomplete="off" />
+        <button type="button" class="sticky-detail-add-btn" data-detail-add-btn="${esc(n.id)}">＋ Add</button>
+      </div>
+    `;
+  } else {
+    contentHtml = `
+      <div class="sticky-detail-full-text">${esc(n.content || '(Empty note)')}</div>
+    `;
+  }
+
+  const colors = [
+    { key: 'yellow', hex: '#FFF59D', title: 'Sunburst Yellow' },
+    { key: 'mint', hex: '#C8E6C9', title: 'Matcha Mint' },
+    { key: 'peach', hex: '#FFCCBC', title: 'Peach Blossom' },
+    { key: 'lavender', hex: '#E1BEE7', title: 'Lavender Mist' },
+    { key: 'rose', hex: '#F8BBD0', title: 'Blush Rose' },
+    { key: 'sky', hex: '#B3E5FC', title: 'Glacier Sky' },
+    { key: 'dark', hex: '#1E2530', title: 'Obsidian Slate' }
+  ];
+
+  const colorDotsHtml = colors.map(c => `
+    <button type="button" class="detail-color-dot ${c.key === color ? 'active' : ''}" data-detail-set-color="${esc(n.id)}:${c.key}" style="--dot-color: ${c.hex};" title="${c.title}"></button>
+  `).join('');
+
+  container.className = `sticky-detail-container color-${esc(color)} texture-${esc(paper)} ${isPinned ? 'pinned' : ''}`;
+  container.innerHTML = `
+    ${attachmentHtml}
+    <div class="sticky-detail-top-bar">
+      <div class="sticky-detail-eyebrow">
+        <span>${n.type === 'pointers' ? '⚡ CHECKLIST &amp; POINTERS' : '📝 STUDY NOTE'}</span>
+        ${n.tag ? `<span class="sticky-detail-tag-pill">#${esc(n.tag)}</span>` : ''}
+      </div>
+      <div class="sticky-detail-actions">
+        <button type="button" class="sticky-detail-action-btn ${isPinned ? 'is-pinned' : ''}" data-detail-pin="${esc(n.id)}" title="${isPinned ? 'Unpin' : 'Pin to VIP shelf'}">
+          📌 ${isPinned ? 'Pinned' : 'Pin'}
+        </button>
+        <button type="button" class="sticky-detail-action-btn" data-detail-copy="${esc(n.id)}" title="Copy text to clipboard">📋 Copy</button>
+        <button type="button" class="sticky-detail-action-btn" data-detail-edit="${esc(n.id)}" title="Edit in modal">✏️ Edit</button>
+        <button type="button" class="sticky-detail-action-btn" data-detail-delete="${esc(n.id)}" title="Delete sticky note">🗑️</button>
+        <button type="button" class="sticky-detail-close-btn" data-close-modal aria-label="Close dialog">&times;</button>
+      </div>
+    </div>
+
+    <div class="sticky-detail-header">
+      <h2 id="sticky-detail-title" class="sticky-detail-title">${esc(n.title || 'Untitled Sticky')}</h2>
+      <div class="sticky-detail-subline">
+        <span class="sticky-date">Created ${esc(dateStr)}</span>
+      </div>
+    </div>
+
+    <div class="sticky-detail-body">${contentHtml}</div>
+
+    <div class="sticky-detail-footer">
+      <div class="sticky-detail-colors" title="Change note color">${colorDotsHtml}</div>
+      <button type="button" class="sticky-detail-done-btn" data-close-modal>Done</button>
+    </div>
   `;
 }
 
@@ -3288,58 +3406,10 @@ function setupNotesEventListeners() {
   const canvas = $('#sticky-board-canvas');
   if (canvas) {
     canvas.addEventListener('click', e => {
-      // Toggle pointer line
-      const checkEl = e.target.closest('[data-toggle-pointer]');
-      if (checkEl) {
-        const [noteId, pointerId] = checkEl.dataset.togglePointer.split(':');
-        const note = (db.notes || []).find(n => n.id === noteId);
-        if (note && Array.isArray(note.pointers)) {
-          const p = note.pointers.find(item => item.id === pointerId);
-          if (p) {
-            p.done = checkEl.checked;
-            save();
-            const allDone = note.pointers.length > 0 && note.pointers.every(item => item.done);
-            if (allDone && p.done) {
-              toast(`🎉 Mastered all pointers in "${note.title}"!`);
-            }
-          }
-        }
-        return;
-      }
-
-      // Delete pointer line
-      const delPointerBtn = e.target.closest('[data-delete-pointer]');
-      if (delPointerBtn) {
-        e.stopPropagation();
-        const [noteId, pointerId] = delPointerBtn.dataset.deletePointer.split(':');
-        const note = (db.notes || []).find(n => n.id === noteId);
-        if (note && Array.isArray(note.pointers)) {
-          note.pointers = note.pointers.filter(p => p.id !== pointerId);
-          save();
-        }
-        return;
-      }
-
-      // Inline add pointer button
-      const inlineAddBtn = e.target.closest('[data-inline-add-btn]');
-      if (inlineAddBtn) {
-        const noteId = inlineAddBtn.dataset.inlineAddBtn;
-        const input = canvas.querySelector(`[data-inline-add-input="${noteId}"]`);
-        if (input && input.value.trim()) {
-          const note = (db.notes || []).find(n => n.id === noteId);
-          if (note) {
-            note.pointers = note.pointers || [];
-            note.pointers.push({ id: uid(), text: input.value.trim(), done: false });
-            input.value = '';
-            save();
-          }
-        }
-        return;
-      }
-
       // Pin / Unpin note
       const pinBtn = e.target.closest('[data-pin-note]');
       if (pinBtn) {
+        e.stopPropagation();
         const noteId = pinBtn.dataset.pinNote;
         const note = (db.notes || []).find(n => n.id === noteId);
         if (note) {
@@ -3362,6 +3432,7 @@ function setupNotesEventListeners() {
       // Set color from popover
       const setColorBtn = e.target.closest('[data-set-color]');
       if (setColorBtn) {
+        e.stopPropagation();
         const [noteId, color] = setColorBtn.dataset.setColor.split(':');
         const note = (db.notes || []).find(n => n.id === noteId);
         if (note) {
@@ -3372,10 +3443,122 @@ function setupNotesEventListeners() {
         return;
       }
 
-      // Copy note text
-      const copyBtn = e.target.closest('[data-copy-note]');
+      // Delete note from small card
+      const deleteBtn = e.target.closest('[data-delete-note]');
+      if (deleteBtn) {
+        e.stopPropagation();
+        const noteId = deleteBtn.dataset.deleteNote;
+        const idx = (db.notes || []).findIndex(n => n.id === noteId);
+        if (idx !== -1) {
+          lastDeletedSticky = { ...db.notes[idx], index: idx };
+          db.notes.splice(idx, 1);
+          save();
+          toast('🗑️ Sticky note removed.');
+        }
+        return;
+      }
+
+      // Click anywhere on small sticky card to open full content modal!
+      const card = e.target.closest('.sticky-card');
+      if (card && card.dataset.noteCardId) {
+        openStickyDetailModal(card.dataset.noteCardId);
+        return;
+      }
+    });
+  }
+
+  // 5. Sticky Note Detail Modal Handlers
+  const detailDialog = $('#modal-sticky-detail');
+  if (detailDialog) {
+    detailDialog.addEventListener('click', e => {
+      // Backdrop click closes dialog
+      if (e.target === detailDialog) {
+        detailDialog.close();
+        return;
+      }
+
+      // Checkbox toggle in detail modal
+      const checkEl = e.target.closest('[data-detail-toggle-pointer]');
+      if (checkEl) {
+        const [noteId, pointerId] = checkEl.dataset.detailTogglePointer.split(':');
+        const note = (db.notes || []).find(n => n.id === noteId);
+        if (note && Array.isArray(note.pointers)) {
+          const p = note.pointers.find(item => item.id === pointerId);
+          if (p) {
+            p.done = checkEl.checked;
+            save();
+            renderStickyDetailContent(note);
+            const allDone = note.pointers.length > 0 && note.pointers.every(item => item.done);
+            if (allDone && p.done) {
+              toast(`🎉 Mastered all pointers in "${note.title}"!`);
+            }
+          }
+        }
+        return;
+      }
+
+      // Delete pointer line in detail modal
+      const delPointerBtn = e.target.closest('[data-detail-delete-pointer]');
+      if (delPointerBtn) {
+        const [noteId, pointerId] = delPointerBtn.dataset.detailDeletePointer.split(':');
+        const note = (db.notes || []).find(n => n.id === noteId);
+        if (note && Array.isArray(note.pointers)) {
+          note.pointers = note.pointers.filter(p => p.id !== pointerId);
+          save();
+          renderStickyDetailContent(note);
+        }
+        return;
+      }
+
+      // Inline add pointer in detail modal
+      const addBtn = e.target.closest('[data-detail-add-btn]');
+      if (addBtn) {
+        const noteId = addBtn.dataset.detailAddBtn;
+        const input = detailDialog.querySelector(`[data-detail-add-input="${noteId}"]`);
+        if (input && input.value.trim()) {
+          const note = (db.notes || []).find(n => n.id === noteId);
+          if (note) {
+            note.pointers = note.pointers || [];
+            note.pointers.push({ id: uid(), text: input.value.trim(), done: false });
+            input.value = '';
+            save();
+            renderStickyDetailContent(note);
+          }
+        }
+        return;
+      }
+
+      // Color dot change in detail modal
+      const colorDot = e.target.closest('[data-detail-set-color]');
+      if (colorDot) {
+        const [noteId, color] = colorDot.dataset.detailSetColor.split(':');
+        const note = (db.notes || []).find(n => n.id === noteId);
+        if (note) {
+          note.color = color;
+          save();
+          renderStickyDetailContent(note);
+        }
+        return;
+      }
+
+      // Pin / Unpin in detail modal
+      const pinBtn = e.target.closest('[data-detail-pin]');
+      if (pinBtn) {
+        const noteId = pinBtn.dataset.detailPin;
+        const note = (db.notes || []).find(n => n.id === noteId);
+        if (note) {
+          note.pinned = !note.pinned;
+          save();
+          renderStickyDetailContent(note);
+          toast(note.pinned ? '📌 Pinned to VIP shelf!' : 'Unpinned sticky.');
+        }
+        return;
+      }
+
+      // Copy text in detail modal
+      const copyBtn = e.target.closest('[data-detail-copy]');
       if (copyBtn) {
-        const noteId = copyBtn.dataset.copyNote;
+        const noteId = copyBtn.dataset.detailCopy;
         const note = (db.notes || []).find(n => n.id === noteId);
         if (note) {
           let text = `${note.title || 'Untitled'}\n`;
@@ -3393,42 +3576,45 @@ function setupNotesEventListeners() {
         return;
       }
 
-      // Edit note
-      const editBtn = e.target.closest('[data-edit-note]');
+      // Edit in detail modal
+      const editBtn = e.target.closest('[data-detail-edit]');
       if (editBtn) {
-        const noteId = editBtn.dataset.editNote;
+        const noteId = editBtn.dataset.detailEdit;
+        detailDialog.close();
         openStickyModal(noteId);
         return;
       }
 
-      // Delete note
-      const deleteBtn = e.target.closest('[data-delete-note]');
+      // Delete in detail modal
+      const deleteBtn = e.target.closest('[data-detail-delete]');
       if (deleteBtn) {
-        const noteId = deleteBtn.dataset.deleteNote;
+        const noteId = deleteBtn.dataset.detailDelete;
         const idx = (db.notes || []).findIndex(n => n.id === noteId);
         if (idx !== -1) {
           lastDeletedSticky = { ...db.notes[idx], index: idx };
           db.notes.splice(idx, 1);
           save();
+          detailDialog.close();
           toast('🗑️ Sticky note removed.');
         }
         return;
       }
     });
 
-    // Inline add pointer on Enter key
-    canvas.addEventListener('keydown', e => {
+    // Enter key to add pointer in detail modal
+    detailDialog.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
-        const input = e.target.closest('[data-inline-add-input]');
+        const input = e.target.closest('[data-detail-add-input]');
         if (input && input.value.trim()) {
           e.preventDefault();
-          const noteId = input.dataset.inlineAddInput;
+          const noteId = input.dataset.detailAddInput;
           const note = (db.notes || []).find(n => n.id === noteId);
           if (note) {
             note.pointers = note.pointers || [];
             note.pointers.push({ id: uid(), text: input.value.trim(), done: false });
             input.value = '';
             save();
+            renderStickyDetailContent(note);
           }
         }
       }
